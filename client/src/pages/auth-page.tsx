@@ -27,6 +27,7 @@ export default function AuthPage() {
     defaultValues: {
       username: "",
       password: "",
+      role: "admin", // Добавляем роль по умолчанию
     },
   });
 
@@ -101,7 +102,11 @@ export default function AuthPage() {
 
               <TabsContent value="register">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+                  <form onSubmit={registerForm.handleSubmit((data) => {
+                    console.log('Form data:', data);
+                    console.log('Form errors:', registerForm.formState.errors);
+                    registerMutation.mutate(data);
+                  })} className="space-y-4">
                     <FormField
                       control={registerForm.control}
                       name="username"
