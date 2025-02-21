@@ -29,9 +29,9 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex">
-      {/* Absolute positioned language switcher */}
-      <div className="absolute top-4 right-4">
+    <div className="min-h-screen flex relative">
+      {/* Language switcher - fixed position */}
+      <div className="fixed top-4 right-4 z-50">
         <LanguageSwitcher />
       </div>
 
