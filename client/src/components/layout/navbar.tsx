@@ -30,11 +30,15 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex">
+      {/* Absolute positioned language switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow border-r bg-sidebar pt-5">
-          <div className="flex items-center justify-between px-4">
+          <div className="flex items-center px-4">
             <span className="text-xl font-semibold text-sidebar-foreground">Sports School CRM</span>
-            <LanguageSwitcher />
           </div>
           <div className="mt-8 flex flex-col flex-1">
             <nav className="flex-1 space-y-1 px-2">
