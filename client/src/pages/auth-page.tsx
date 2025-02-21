@@ -9,10 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DumbbellIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const { t } = useTranslation();
 
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -27,7 +30,7 @@ export default function AuthPage() {
     defaultValues: {
       username: "",
       password: "",
-      role: "admin", // Добавляем роль по умолчанию
+      role: "admin",
     },
   });
 
@@ -43,25 +46,28 @@ export default function AuthPage() {
           <div className="flex items-center justify-center md:justify-start gap-2 mb-8">
             <DumbbellIcon className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold">Sports School CRM</h1>
+            <div className="ml-4">
+              <LanguageSwitcher />
+            </div>
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
-            Manage Your Sports School with Ease
+            {t('auth.welcome')}
           </h2>
           <p className="text-lg text-muted-foreground">
-            Streamline student management, track attendance, and handle payments all in one place.
+            {t('auth.signInDescription')}
           </p>
         </div>
 
         <Card className="w-full">
           <CardHeader>
-            <CardTitle>Welcome Back</CardTitle>
-            <CardDescription>Sign in to access your account</CardDescription>
+            <CardTitle>{t('auth.welcome')}</CardTitle>
+            <CardDescription>{t('auth.signInDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+                <TabsTrigger value="login">{t('auth.login')}</TabsTrigger>
+                <TabsTrigger value="register">{t('auth.register')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -72,7 +78,7 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel>{t('auth.username')}</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
@@ -85,7 +91,7 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel>{t('auth.password')}</FormLabel>
                           <FormControl>
                             <Input type="password" {...field} />
                           </FormControl>
@@ -94,7 +100,7 @@ export default function AuthPage() {
                       )}
                     />
                     <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-                      {loginMutation.isPending ? "Signing in..." : "Sign in"}
+                      {loginMutation.isPending ? "Signing in..." : t('auth.login')}
                     </Button>
                   </form>
                 </Form>
@@ -102,17 +108,13 @@ export default function AuthPage() {
 
               <TabsContent value="register">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit((data) => {
-                    console.log('Form data:', data);
-                    console.log('Form errors:', registerForm.formState.errors);
-                    registerMutation.mutate(data);
-                  })} className="space-y-4">
+                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
                     <FormField
                       control={registerForm.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel>{t('auth.username')}</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
@@ -125,7 +127,7 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel>{t('auth.password')}</FormLabel>
                           <FormControl>
                             <Input type="password" {...field} />
                           </FormControl>
@@ -134,7 +136,7 @@ export default function AuthPage() {
                       )}
                     />
                     <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                      {registerMutation.isPending ? "Creating account..." : "Create account"}
+                      {registerMutation.isPending ? "Creating account..." : t('auth.createAccount')}
                     </Button>
                   </form>
                 </Form>

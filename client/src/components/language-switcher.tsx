@@ -12,13 +12,13 @@ export function LanguageSwitcher() {
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
+      variant="outline"
+      size="sm"
       onClick={toggleLanguage}
-      className="flex items-center gap-2"
+      className="flex items-center gap-2 px-3"
     >
       <Globe className="h-4 w-4" />
-      <span className="text-xs font-medium">{i18n.language.toUpperCase()}</span>
+      <span className="font-medium">{i18n.language === 'en' ? 'English' : 'Русский'}</span>
     </Button>
   );
 }
