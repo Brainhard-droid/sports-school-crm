@@ -29,18 +29,17 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex relative">
-      {/* Language switcher - fixed position */}
-      <div className="fixed top-4 right-4 z-50">
+    <div className="min-h-screen">
+      {/* Header */}
+      <div className="fixed top-0 right-0 left-0 h-16 bg-background border-b z-50 flex items-center justify-between px-4">
+        <div className="text-xl font-semibold">Sports School CRM</div>
         <LanguageSwitcher />
       </div>
 
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow border-r bg-sidebar pt-5">
-          <div className="flex items-center px-4">
-            <span className="text-xl font-semibold text-sidebar-foreground">Sports School CRM</span>
-          </div>
-          <div className="mt-8 flex flex-col flex-1">
+      <div className="flex pt-16">
+        {/* Sidebar */}
+        <div className="hidden md:flex md:w-64 md:flex-col">
+          <div className="flex flex-col flex-grow border-r bg-sidebar py-5">
             <nav className="flex-1 space-y-1 px-2">
               {navigation.map((item) => (
                 <Link key={item.name} href={item.href}>
@@ -68,10 +67,11 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col flex-1">
-        <main className="flex-1 bg-background">{children}</main>
+        {/* Main content */}
+        <div className="flex flex-col flex-1">
+          <main className="flex-1 bg-background">{children}</main>
+        </div>
       </div>
     </div>
   );
