@@ -45,7 +45,7 @@ export default function Students() {
     defaultValues: {
       firstName: "",
       lastName: "",
-      birthDate: new Date(),
+      birthDate: new Date().toISOString().split('T')[0],
       phoneNumber: "",
       parentName: "",
       parentPhone: "",
@@ -55,8 +55,13 @@ export default function Students() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
-      const res = await apiRequest("POST", "/api/students", data);
-      return res.json();
+      try {
+        const res = await apiRequest("POST", "/api/students", data);
+        return await res.json();
+      } catch (error) {
+        console.error('Error creating student:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
@@ -67,18 +72,11 @@ export default function Students() {
         description: "Student created successfully",
       });
     },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Student> }) => {
-      const res = await apiRequest("PATCH", `/api/students/${id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+    onError: (error: Error) => {
       toast({
-        title: "Success",
-        description: "Student updated successfully",
+        title: "Error creating student",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -101,7 +99,10 @@ export default function Students() {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
+                  onSubmit={form.handleSubmit((data) => {
+                    console.log('Form data:', data); // Debug log
+                    createMutation.mutate(data);
+                  })}
                   className="space-y-4"
                 >
                   <FormField
@@ -125,6 +126,22 @@ export default function Students() {
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
                           <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="birthDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Birth Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -169,8 +186,12 @@ export default function Students() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full">
-                    Create Student
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={createMutation.isPending}
+                  >
+                    {createMutation.isPending ? "Creating..." : "Create Student"}
                   </Button>
                 </form>
               </Form>
@@ -183,6 +204,7 @@ export default function Students() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Birth Date</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Parent</TableHead>
                 <TableHead>Parent Phone</TableHead>
@@ -195,6 +217,9 @@ export default function Students() {
                 <TableRow key={student.id}>
                   <TableCell>
                     {student.firstName} {student.lastName}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(student.birthDate).toLocaleDateString()}
                   </TableCell>
                   <TableCell>{student.phoneNumber}</TableCell>
                   <TableCell>{student.parentName}</TableCell>

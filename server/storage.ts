@@ -60,7 +60,12 @@ export class PostgresStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const result = await this.db.insert(students).values(student).returning();
+    // Преобразуем строку даты в объект Date
+    const studentData = {
+      ...student,
+      birthDate: new Date(student.birthDate)
+    };
+    const result = await this.db.insert(students).values(studentData).returning();
     return result[0];
   }
 
