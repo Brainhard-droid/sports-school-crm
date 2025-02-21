@@ -4,23 +4,27 @@ import {
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment,
   users, students, groups, schedules, attendance, payments
 } from "@shared/schema";
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import { eq, and } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
+import { neon, neonConfig } from '@neondatabase/serverless';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
 const PostgresSessionStore = connectPg(session);
 
 export class PostgresStorage implements IStorage {
-  private sql;
   private db;
   sessionStore: session.Store;
 
   constructor() {
+    // Force neon to use HTTP protocol
+    neonConfig.useHTTP = true;
+    // Create the client
     const sql = neon(process.env.DATABASE_URL!);
-    this.sql = sql;
+    // Initialize drizzle
     this.db = drizzle(sql);
+
+    // Setup session store
     this.sessionStore = new PostgresSessionStore({
       conObject: {
         connectionString: process.env.DATABASE_URL,
