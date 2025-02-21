@@ -9,13 +9,15 @@ import {
   CreditCard,
   LogOut,
 } from "lucide-react";
+import { LanguageSwitcher } from "../language-switcher";
+import { useTranslation } from "react-i18next";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Students", href: "/students", icon: Users },
-  { name: "Groups", href: "/groups", icon: Group },
-  { name: "Attendance", href: "/attendance", icon: Calendar },
-  { name: "Payments", href: "/payments", icon: CreditCard },
+  { name: "navigation.dashboard", href: "/", icon: LayoutDashboard },
+  { name: "navigation.students", href: "/students", icon: Users },
+  { name: "navigation.groups", href: "/groups", icon: Group },
+  { name: "navigation.attendance", href: "/attendance", icon: Calendar },
+  { name: "navigation.payments", href: "/payments", icon: CreditCard },
 ];
 
 type LayoutProps = {
@@ -24,13 +26,15 @@ type LayoutProps = {
 
 export function Layout({ children }: LayoutProps) {
   const { user, logoutMutation } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex">
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow border-r bg-sidebar pt-5">
-          <div className="flex items-center px-4">
+          <div className="flex items-center justify-between px-4">
             <span className="text-xl font-semibold text-sidebar-foreground">Sports School CRM</span>
+            <LanguageSwitcher />
           </div>
           <div className="mt-8 flex flex-col flex-1">
             <nav className="flex-1 space-y-1 px-2">
@@ -38,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
                 <Link key={item.name} href={item.href}>
                   <a className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent">
                     <item.icon className="mr-3 h-5 w-5" />
-                    {item.name}
+                    {t(item.name)}
                   </a>
                 </Link>
               ))}
@@ -53,7 +57,7 @@ export function Layout({ children }: LayoutProps) {
                     onClick={() => logoutMutation.mutate()}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
+                    {t('navigation.signOut')}
                   </Button>
                 </div>
               </div>

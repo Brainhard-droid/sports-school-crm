@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "welcome": "Добро пожаловать",
+    "signInDescription": "Войдите в свою учетную запись",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "login": "Вход",
+    "register": "Регистрация",
+    "createAccount": "Создать аккаунт"
+  },
+  "navigation": {
+    "dashboard": "Панель управления",
+    "students": "Ученики",
+    "groups": "Группы",
+    "attendance": "Посещаемость",
+    "payments": "Платежи",
+    "signOut": "Выйти"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "totalStudents": "Всего учеников",
+    "activeGroups": "Активные группы",
+    "monthlyRevenue": "Доход за месяц",
+    "averageGroupSize": "Средний размер группы"
+  }
+}

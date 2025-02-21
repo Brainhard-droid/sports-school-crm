@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "welcome": "Welcome Back",
+    "signInDescription": "Sign in to access your account",
+    "username": "Username",
+    "password": "Password",
+    "login": "Login",
+    "register": "Register",
+    "createAccount": "Create account"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "students": "Students",
+    "groups": "Groups",
+    "attendance": "Attendance",
+    "payments": "Payments",
+    "signOut": "Sign out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalStudents": "Total Students",
+    "activeGroups": "Active Groups",
+    "monthlyRevenue": "Monthly Revenue",
+    "averageGroupSize": "Average Group Size"
+  }
+}
