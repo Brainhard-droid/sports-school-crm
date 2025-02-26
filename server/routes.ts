@@ -78,11 +78,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/students", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const parsed = insertStudentSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    const student = await storage.createStudent(parsed.data);
-    res.status(201).json(student);
+    try {
+      console.log('Creating student, auth status:', req.isAuthenticated());
+      console.log('Request body:', req.body);
+
+      if (!req.isAuthenticated()) {
+        console.log('User not authenticated');
+        return res.sendStatus(401);
+      }
+
+      const parsed = insertStudentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        console.log('Validation error:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+
+      console.log('Validated data:', parsed.data);
+      const student = await storage.createStudent(parsed.data);
+      console.log('Created student:', student);
+
+      res.status(201).json(student);
+    } catch (error) {
+      console.error('Error in student creation:', error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.patch("/api/students/:id", async (req, res) => {

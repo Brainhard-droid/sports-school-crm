@@ -91,13 +91,22 @@ export class PostgresStorage implements IStorage {
 
   async createStudent(student: InsertStudent): Promise<Student> {
     try {
-      const [result] = await db.insert(students).values({
+      console.log('Starting student creation with data:', student);
+      console.log('Converting date:', student.birthDate);
+      const dateString = new Date(student.birthDate).toISOString();
+      console.log('Converted date:', dateString);
+
+      const studentData = {
         ...student,
-        birthDate: new Date(student.birthDate).toISOString()
-      }).returning();
+        birthDate: dateString
+      };
+      console.log('Final student data:', studentData);
+
+      const [result] = await db.insert(students).values(studentData).returning();
+      console.log('Database response:', result);
       return result;
     } catch (error) {
-      console.error('Error creating student:', error);
+      console.error('Detailed error creating student:', error);
       throw error;
     }
   }
