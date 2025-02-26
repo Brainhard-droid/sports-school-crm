@@ -12,26 +12,44 @@ import { Loader2, UserPlus, Pencil } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 export default function StudentsPage() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
-  // Fetch students data
   const { data: students, isLoading, error } = useQuery<Student[]>({
     queryKey: ["/api/students"],
     queryFn: async () => {
+      if (!user) {
+        setLocation('/auth');
+        throw new Error('Unauthorized');
+      }
+
       const response = await fetch('/api/students', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
       });
+
+      if (response.status === 401) {
+        setLocation('/auth');
+        throw new Error('Unauthorized');
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch students');
       }
+
       return response.json();
-    }
+    },
+    enabled: !!user,
   });
 
-  // Form setup for new student
   const form = useForm<InsertStudent>({
     resolver: zodResolver(insertStudentSchema),
     defaultValues: {
@@ -45,7 +63,6 @@ export default function StudentsPage() {
     },
   });
 
-  // Mutation for creating new student
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
       const res = await fetch('/api/students', {
@@ -56,9 +73,16 @@ export default function StudentsPage() {
         body: JSON.stringify(data),
         credentials: 'include'
       });
+
+      if (res.status === 401) {
+        setLocation('/auth');
+        throw new Error('Unauthorized');
+      }
+
       if (!res.ok) {
         throw new Error('Failed to create student');
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -70,10 +94,10 @@ export default function StudentsPage() {
         description: "Студент успешно добавлен",
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Ошибка",
-        description: "Не удалось добавить студента",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -83,7 +107,6 @@ export default function StudentsPage() {
     await createMutation.mutateAsync(data);
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <Layout>
@@ -94,12 +117,11 @@ export default function StudentsPage() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Layout>
         <div className="p-6 text-red-500">
-          <p>Ошибка загрузки данных</p>
+          <p>Ошибка загрузки данных: {error.message}</p>
         </div>
       </Layout>
     );
