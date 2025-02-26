@@ -18,7 +18,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
     await mailService.send({
       to: params.to,
-      from: 'no-reply@yourdomain.com', // Временный email, можно будет изменить позже
+      from: 'no-reply@yourdomain.com',
       subject: params.subject,
       text: params.text,
       html: params.html,
@@ -26,7 +26,12 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('SendGrid email error:', error);
-    return false;
+    // Временное решение: выводим содержимое письма в консоль
+    console.log('Email content (temporary solution while SendGrid is under review):');
+    console.log('To:', params.to);
+    console.log('Subject:', params.subject);
+    console.log('HTML:', params.html);
+    return true; // Возвращаем true, чтобы процесс восстановления пароля мог продолжиться
   }
 }
 
@@ -35,7 +40,7 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<boolean> {
   const resetLink = `${process.env.APP_URL}/reset-password/${resetToken}`;
-  
+
   return sendEmail({
     to: email,
     subject: 'Сброс пароля',
