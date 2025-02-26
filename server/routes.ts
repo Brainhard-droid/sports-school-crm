@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, hashPassword } from "./auth"; // Import hashPassword
+import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { insertStudentSchema, insertGroupSchema, insertScheduleSchema, insertAttendanceSchema, insertPaymentSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
@@ -12,10 +12,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Password Reset
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
+    console.log('Received password reset request for email:', email);
 
     try {
       const user = await storage.getUserByEmail(email);
       if (!user) {
+        console.log('User not found for email:', email);
         // Don't reveal whether a user exists
         return res.json({ success: true });
       }
@@ -24,14 +26,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resetToken = randomBytes(32).toString('hex');
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
+      console.log('Generated reset token for user:', user.id);
+
       // Save token to user
       await storage.updateUser(user.id, {
         resetToken,
         resetTokenExpiry
       });
 
+      console.log('Updated user with reset token');
+
       // Send email
-      await sendPasswordResetEmail(email, resetToken);
+      const emailSent = await sendPasswordResetEmail(email, resetToken);
+      console.log('Password reset email sent:', emailSent);
 
       res.json({ success: true });
     } catch (error) {

@@ -15,12 +15,18 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
+    console.log('Attempting to send email via Resend:');
+    console.log('To:', params.to);
+    console.log('Subject:', params.subject);
+
     await resend.emails.send({
       from: 'no-reply@resend.dev',
       to: params.to,
       subject: params.subject,
       html: params.html || params.text || '',
     });
+
+    console.log('Email sent successfully');
     return true;
   } catch (error) {
     console.error('Resend email error:', error);
@@ -38,6 +44,7 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<boolean> {
   const resetLink = `${process.env.APP_URL}/reset-password/${resetToken}`;
+  console.log('Generated reset link:', resetLink);
 
   return sendEmail({
     to: email,
