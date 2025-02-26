@@ -2,15 +2,32 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import { storage } from "./storage";
 
 const app = express();
 
-// Важно: добавляем эти middleware до всех остальных
+// Basic middleware
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add CORS middleware
+// Session middleware должен быть до CORS
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your-secret-key",
+  resave: true,
+  saveUninitialized: true,
+  store: storage.sessionStore,
+  name: 'sid',
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax'
+  }
+}));
+
+// CORS middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.header('Access-Control-Allow-Origin', origin || '*');
@@ -25,7 +42,7 @@ app.use((req, res, next) => {
   }
 });
 
-// Добавляем логирование для отладки
+// Debug middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

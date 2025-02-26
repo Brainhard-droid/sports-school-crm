@@ -29,39 +29,9 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: true,
-    saveUninitialized: true,
-    store: storage.sessionStore,
-    name: 'sid',
-    cookie: {
-      secure: false, // set to true if using https
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax'
-    }
-  };
-
-  app.use((req, res, next) => {
-    console.log('Before session middleware:');
-    console.log('Headers:', req.headers);
-    console.log('Cookies:', req.cookies);
-    next();
-  });
-
-  app.use(session(sessionSettings));
+  // Инициализация Passport после сессии
   app.use(passport.initialize());
   app.use(passport.session());
-
-  // Debug middleware
-  app.use((req, res, next) => {
-    console.log('Session ID:', req.sessionID);
-    console.log('Session:', req.session);
-    console.log('Is Authenticated:', req.isAuthenticated());
-    console.log('User:', req.user);
-    next();
-  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -130,7 +100,6 @@ export function setupAuth(app: Express) {
         console.log('Session after login:', req.session);
         console.log('Cookies to be set:', res.getHeader('Set-Cookie'));
 
-        // Set cookie explicitly
         res.cookie('sid', req.sessionID, {
           httpOnly: true,
           secure: false,
