@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import { storage } from "./storage";
 import { setupAuth } from "./auth";
 
 const app = express();
@@ -11,10 +13,12 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// CORS middleware должен быть до сессии
+// CORS middleware BEFORE session
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  res.header('Access-Control-Allow-Origin', origin);
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Set-Cookie');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -27,7 +31,22 @@ app.use((req, res, next) => {
   }
 });
 
-// Setup authentication (includes session middleware)
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your-secret-key",
+  resave: false,
+  saveUninitialized: false,
+  store: storage.sessionStore,
+  name: 'sid',
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'none'
+  }
+}));
+
+// Setup authentication
 setupAuth(app);
 
 // Debug middleware

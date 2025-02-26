@@ -9,34 +9,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UserPlus, Pencil } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Students() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   console.log('Rendering Students component');
 
@@ -45,18 +27,31 @@ export default function Students() {
     queryFn: async () => {
       console.log('Fetching students...');
       const response = await fetch('/api/students', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
+
       console.log('Students response:', response);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (response.status === 401) {
+        setLocation('/auth');
+        throw new Error('Unauthorized - Please log in again');
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to fetch students:', errorText);
         throw new Error(errorText || 'Failed to fetch students');
       }
+
       const data = await response.json();
       console.log('Fetched students:', data);
       return data;
-    }
+    },
+    retry: false
   });
 
   const form = useForm<InsertStudent>({
@@ -130,7 +125,6 @@ export default function Students() {
     }
   };
 
-  // Показываем состояние загрузки
   if (isLoading) {
     return (
       <Layout>
@@ -141,7 +135,6 @@ export default function Students() {
     );
   }
 
-  // Показываем ошибку, если она есть
   if (error) {
     return (
       <Layout>

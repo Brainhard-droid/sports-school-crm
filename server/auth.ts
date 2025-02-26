@@ -1,7 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
-import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
@@ -29,24 +28,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Session middleware должен быть первым
-  app.use(session({
-    secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    store: storage.sessionStore,
-    name: 'sid',
-    cookie: {
-      secure: false,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-      path: '/',
-      domain: '.riker.replit.dev'
-    }
-  }));
-
-  // Инициализация Passport после сессии
+  // Initialize Passport
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -115,9 +97,6 @@ export function setupAuth(app: Express) {
 
         console.log('Login successful');
         console.log('Session after login:', req.session);
-        console.log('Cookies to be set:', res.getHeader('Set-Cookie'));
-
-
         res.json(user);
       });
     })(req, res, next);

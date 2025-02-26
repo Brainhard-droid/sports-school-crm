@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, hashPassword } from "./auth";
+import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertStudentSchema, insertGroupSchema, insertScheduleSchema, insertAttendanceSchema, insertPaymentSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
@@ -14,7 +14,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Getting students, auth status:', req.isAuthenticated());
       console.log('Session:', req.session);
+      console.log('Session ID:', req.sessionID);
       console.log('User:', req.user);
+      console.log('Request cookies:', req.cookies);
+      console.log('Request headers:', req.headers);
 
       if (!req.isAuthenticated()) {
         console.log('User not authenticated');
