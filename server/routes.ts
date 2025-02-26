@@ -72,9 +72,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Students
   app.get("/api/students", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const students = await storage.getStudents();
-    res.json(students);
+    try {
+      console.log('Getting students, auth status:', req.isAuthenticated());
+
+      if (!req.isAuthenticated()) {
+        console.log('User not authenticated');
+        return res.sendStatus(401);
+      }
+
+      const students = await storage.getStudents();
+      console.log('Retrieved students:', students.length);
+      res.json(students);
+    } catch (error) {
+      console.error('Error getting students:', error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.post("/api/students", async (req, res) => {

@@ -56,8 +56,13 @@ export default function Students() {
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
       try {
-        const res = await apiRequest("POST", "/api/students", data);
-        return await res.json();
+        console.log('Sending student data:', data);
+        const res = await apiRequest("POST", "/api/students", data, {
+          credentials: 'include'
+        });
+        const result = await res.json();
+        console.log('Server response:', result);
+        return result;
       } catch (error) {
         console.error('Error creating student:', error);
         throw error;
@@ -73,6 +78,7 @@ export default function Students() {
       });
     },
     onError: (error: Error) => {
+      console.error('Mutation error:', error);
       toast({
         title: "Error creating student",
         description: error.message,
@@ -80,6 +86,15 @@ export default function Students() {
       });
     },
   });
+
+  const onSubmit = async (data: InsertStudent) => {
+    try {
+      console.log('Form submission data:', data);
+      await createMutation.mutateAsync(data);
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  };
 
   return (
     <Layout>
@@ -99,10 +114,7 @@ export default function Students() {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => {
-                    console.log('Form data:', data); // Debug log
-                    createMutation.mutate(data);
-                  })}
+                  onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
@@ -112,7 +124,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="First name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -125,7 +137,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="Last name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -154,7 +166,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="Phone number" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -167,7 +179,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>Parent Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="Parent name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -180,7 +192,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>Parent Phone</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="Parent phone" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -225,18 +237,11 @@ export default function Students() {
                   <TableCell>{student.parentName}</TableCell>
                   <TableCell>{student.parentPhone}</TableCell>
                   <TableCell>
-                    <Button
-                      variant={student.active ? "default" : "secondary"}
-                      size="sm"
-                      onClick={() =>
-                        updateMutation.mutate({
-                          id: student.id,
-                          data: { active: !student.active },
-                        })
-                      }
-                    >
-                      {student.active ? "Active" : "Inactive"}
-                    </Button>
+                    <span className={`px-2 py-1 rounded-full text-sm ${
+                      student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {student.active ? 'Active' : 'Inactive'}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon">
