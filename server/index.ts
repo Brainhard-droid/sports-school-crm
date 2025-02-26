@@ -15,25 +15,26 @@ app.use(express.urlencoded({ extended: false }));
 // Session middleware должен быть до CORS
 app.use(session({
   secret: process.env.SESSION_SECRET || "your-secret-key",
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   store: storage.sessionStore,
   name: 'sid',
   cookie: {
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax'
+    sameSite: 'lax',
+    path: '/'
   }
 }));
 
 // CORS middleware
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Set-Cookie');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Expose-Headers', 'Set-Cookie');
 
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);

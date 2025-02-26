@@ -41,6 +41,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior, credentials = "include" }) =>
   async ({ queryKey }) => {
+    const options = {
+      credentials: 'include' as const,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
     console.log('Making query request:', queryKey[0]);
     const res = await fetch(queryKey[0] as string, {
       credentials,
