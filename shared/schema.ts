@@ -7,6 +7,9 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  email: text("email").notNull(), // Add email field for password reset
 });
 
 export const students = pgTable("students", {
@@ -56,6 +59,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   role: true,
+  email: true,
 });
 
 export const insertStudentSchema = createInsertSchema(students);

@@ -11,11 +11,54 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DumbbellIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { useState } from "react";
+import * as z from 'zod';
+import { apiRequest } from "@/utils/api";
+import { toast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useMutation } from "@tanstack/react-query";
+
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
   const { t } = useTranslation();
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const forgotPasswordForm = useForm({
+    resolver: zodResolver(
+      z.object({
+        email: z.string().email(t('auth.invalidEmail')),
+      })
+    ),
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: { email: string }) => {
+      const res = await apiRequest("POST", "/api/forgot-password", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t('auth.checkEmail'),
+        description: t('auth.resetLinkSent'),
+      });
+      setShowForgotPassword(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('auth.error'),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -99,6 +142,16 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+                    <div className="flex justify-between items-center mt-2">
+                      <Button
+                        variant="link"
+                        type="button"
+                        className="px-0 text-sm"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        {t('auth.forgotPassword')}
+                      </Button>
+                    </div>
                     <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
                       {loginMutation.isPending ? "Signing in..." : t('auth.login')}
                     </Button>
@@ -142,6 +195,47 @@ export default function AuthPage() {
                 </Form>
               </TabsContent>
             </Tabs>
+            <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('auth.resetPassword')}</DialogTitle>
+                  <DialogDescription>
+                    {t('auth.resetPasswordDescription')}
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...forgotPasswordForm}>
+                  <form
+                    onSubmit={forgotPasswordForm.handleSubmit((data) =>
+                      forgotPasswordMutation.mutate(data)
+                    )}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={forgotPasswordForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('auth.email')}</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={forgotPasswordMutation.isPending}
+                    >
+                      {forgotPasswordMutation.isPending
+                        ? t('auth.sending')
+                        : t('auth.sendResetLink')}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       </div>

@@ -1,11 +1,67 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth"; // Import hashPassword
 import { storage } from "./storage";
 import { insertStudentSchema, insertGroupSchema, insertScheduleSchema, insertAttendanceSchema, insertPaymentSchema } from "@shared/schema";
+import { randomBytes } from "crypto";
+import { sendPasswordResetEmail } from "./services/email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+
+  // Password Reset
+  app.post("/api/forgot-password", async (req, res) => {
+    const { email } = req.body;
+
+    try {
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal whether a user exists
+        return res.json({ success: true });
+      }
+
+      // Generate reset token
+      const resetToken = randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Save token to user
+      await storage.updateUser(user.id, {
+        resetToken,
+        resetTokenExpiry
+      });
+
+      // Send email
+      await sendPasswordResetEmail(email, resetToken);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, password } = req.body;
+
+    try {
+      const user = await storage.getUserByResetToken(token);
+      if (!user || !user.resetTokenExpiry || new Date() > new Date(user.resetTokenExpiry)) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      // Update password and clear reset token
+      await storage.updateUser(user.id, {
+        password: await hashPassword(password),
+        resetToken: null,
+        resetTokenExpiry: null
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   // Students
   app.get("/api/students", async (req, res) => {

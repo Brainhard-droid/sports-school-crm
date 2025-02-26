@@ -5,7 +5,7 @@ import {
   users, students, groups, schedules, attendance, payments
 } from "@shared/schema";
 import { drizzle } from 'drizzle-orm/neon-http';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { neon, neonConfig } from '@neondatabase/serverless';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -46,8 +46,27 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email));
+    return result[0];
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.resetToken, token));
+    return result[0];
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const result = await this.db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
     return result[0];
   }
 
@@ -116,8 +135,8 @@ export class PostgresStorage implements IStorage {
       .where(and(eq(attendance.groupId, groupId), eq(attendance.date, date)));
   }
 
-  async createAttendance(attendance: InsertAttendance): Promise<Attendance> {
-    const result = await this.db.insert(attendance).values(attendance).returning();
+  async createAttendance(data: InsertAttendance): Promise<Attendance> {
+    const result = await this.db.insert(attendance).values(data).returning();
     return result[0];
   }
 
