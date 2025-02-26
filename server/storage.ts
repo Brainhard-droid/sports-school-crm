@@ -4,26 +4,17 @@ import {
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment,
   users, students, groups, schedules, attendance, payments
 } from "@shared/schema";
-import { drizzle } from 'drizzle-orm/neon-http';
-import { eq, and, isNull } from 'drizzle-orm';
-import { neon, neonConfig } from '@neondatabase/serverless';
+import { eq, and } from 'drizzle-orm';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { db } from './db';
 
 const PostgresSessionStore = connectPg(session);
 
 export class PostgresStorage implements IStorage {
-  private db;
   sessionStore: session.Store;
 
   constructor() {
-    // Force neon to use HTTP protocol
-    neonConfig.useHTTP = true;
-    // Create the client
-    const sql = neon(process.env.DATABASE_URL!);
-    // Initialize drizzle
-    this.db = drizzle(sql);
-
     // Setup session store
     this.sessionStore = new PostgresSessionStore({
       conObject: {
@@ -37,120 +28,123 @@ export class PostgresStorage implements IStorage {
 
   // Users
   async getUser(id: number): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.id, id));
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.username, username));
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.email, email));
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async getUserByResetToken(token: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.resetToken, token));
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.resetToken, token));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await this.db.insert(users).values(insertUser).returning();
-    return result[0];
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User> {
-    const result = await this.db
+    const [user] = await db
       .update(users)
       .set(data)
       .where(eq(users.id, id))
       .returning();
-    return result[0];
+    return user;
   }
 
   // Students
   async getStudents(): Promise<Student[]> {
-    return await this.db.select().from(students);
+    return await db.select().from(students);
   }
 
   async getStudent(id: number): Promise<Student | undefined> {
-    const result = await this.db.select().from(students).where(eq(students.id, id));
-    return result[0];
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    // Преобразуем строку даты в объект Date
-    const studentData = {
+    const [result] = await db.insert(students).values({
       ...student,
-      birthDate: new Date(student.birthDate)
-    };
-    const result = await this.db.insert(students).values(studentData).returning();
-    return result[0];
+      birthDate: new Date(student.birthDate).toISOString()
+    }).returning();
+    return result;
   }
 
   async updateStudent(id: number, student: Partial<Student>): Promise<Student> {
-    const result = await this.db
+    const [result] = await db
       .update(students)
       .set(student)
       .where(eq(students.id, id))
       .returning();
-    return result[0];
+    return result;
   }
 
   // Groups
   async getGroups(): Promise<Group[]> {
-    return await this.db.select().from(groups);
+    return await db.select().from(groups);
   }
 
   async getGroup(id: number): Promise<Group | undefined> {
-    const result = await this.db.select().from(groups).where(eq(groups.id, id));
-    return result[0];
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group;
   }
 
   async createGroup(group: InsertGroup): Promise<Group> {
-    const result = await this.db.insert(groups).values(group).returning();
-    return result[0];
+    const [result] = await db.insert(groups).values(group).returning();
+    return result;
   }
 
   // Schedules
   async getSchedules(groupId?: number): Promise<Schedule[]> {
     if (groupId) {
-      return await this.db.select().from(schedules).where(eq(schedules.groupId, groupId));
+      return await db.select().from(schedules).where(eq(schedules.groupId, groupId));
     }
-    return await this.db.select().from(schedules);
+    return await db.select().from(schedules);
   }
 
   async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
-    const result = await this.db.insert(schedules).values(schedule).returning();
-    return result[0];
+    const [result] = await db.insert(schedules).values(schedule).returning();
+    return result;
   }
 
   // Attendance
   async getAttendance(groupId: number, date: Date): Promise<Attendance[]> {
-    return await this.db
+    return await db
       .select()
       .from(attendance)
-      .where(and(eq(attendance.groupId, groupId), eq(attendance.date, date)));
+      .where(
+        and(
+          eq(attendance.groupId, groupId),
+          eq(attendance.date, date.toISOString().split('T')[0])
+        )
+      );
   }
 
   async createAttendance(data: InsertAttendance): Promise<Attendance> {
-    const result = await this.db.insert(attendance).values(data).returning();
-    return result[0];
+    const [result] = await db.insert(attendance).values(data).returning();
+    return result;
   }
 
   // Payments
   async getPayments(studentId?: number): Promise<Payment[]> {
     if (studentId) {
-      return await this.db.select().from(payments).where(eq(payments.studentId, studentId));
+      return await db.select().from(payments).where(eq(payments.studentId, studentId));
     }
-    return await this.db.select().from(payments);
+    return await db.select().from(payments);
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const result = await this.db.insert(payments).values(payment).returning();
-    return result[0];
+    const [result] = await db.insert(payments).values(payment).returning();
+    return result;
   }
 }
 
