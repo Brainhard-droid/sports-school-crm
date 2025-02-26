@@ -5,7 +5,8 @@ type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 export async function apiRequest(
   method: HttpMethod,
   path: string,
-  body?: unknown
+  body?: unknown,
+  options: RequestInit = {}
 ): Promise<Response> {
   const response = await fetch(path, {
     method,
@@ -14,6 +15,7 @@ export async function apiRequest(
     },
     body: body ? JSON.stringify(body) : undefined,
     credentials: "include",
+    ...options
   });
 
   if (!response.ok) {

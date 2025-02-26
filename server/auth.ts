@@ -32,7 +32,7 @@ export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "your-secret-key",
     resave: true,
-    saveUninitialized: false,
+    saveUninitialized: true,
     store: storage.sessionStore,
     name: 'sid',
     cookie: {
@@ -42,6 +42,13 @@ export function setupAuth(app: Express) {
       sameSite: 'lax'
     }
   };
+
+  app.use((req, res, next) => {
+    console.log('Before session middleware:');
+    console.log('Headers:', req.headers);
+    console.log('Cookies:', req.cookies);
+    next();
+  });
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
@@ -59,7 +66,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log('Attempting login for username:', username);
+        console.log('Login attempt for:', username);
         const user = await storage.getUserByUsername(username);
 
         if (!user) {
@@ -68,12 +75,13 @@ export function setupAuth(app: Express) {
         }
 
         const isValid = await comparePasswords(password, user.password);
-        console.log('Password valid:', isValid);
+        console.log('Password validation result:', isValid);
 
         if (!isValid) {
           return done(null, false);
         }
 
+        console.log('User authenticated successfully:', user.id);
         return done(null, user);
       } catch (error) {
         console.error('Login error:', error);
@@ -91,6 +99,7 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
       const user = await storage.getUser(id);
+      console.log('Deserialized user:', user);
       done(null, user);
     } catch (error) {
       console.error('Deserialization error:', error);
@@ -98,13 +107,14 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Routes
   app.post("/api/login", (req, res, next) => {
+    console.log('Login request received:', req.body);
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error('Authentication error:', err);
         return next(err);
       }
+
       if (!user) {
         console.log('Authentication failed');
         return res.status(401).json({ message: "Authentication failed" });
@@ -115,7 +125,19 @@ export function setupAuth(app: Express) {
           console.error('Login error:', err);
           return next(err);
         }
-        console.log('Login successful, session:', req.session);
+
+        console.log('Login successful');
+        console.log('Session after login:', req.session);
+        console.log('Cookies to be set:', res.getHeader('Set-Cookie'));
+
+        // Set explicit cookie header
+        res.cookie('sid', req.sessionID, {
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60 * 1000
+        });
+
         res.json(user);
       });
     })(req, res, next);
