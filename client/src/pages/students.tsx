@@ -277,31 +277,39 @@ export default function Students() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students?.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    {student.firstName} {student.lastName}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(student.birthDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{student.phoneNumber}</TableCell>
-                  <TableCell>{student.parentName}</TableCell>
-                  <TableCell>{student.parentPhone}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-sm ${
-                      student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {student.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+              {!students?.length ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4">
+                    No students found
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                students.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      {student.firstName} {student.lastName}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(student.birthDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>{student.phoneNumber}</TableCell>
+                    <TableCell>{student.parentName}</TableCell>
+                    <TableCell>{student.parentPhone}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-sm ${
+                        student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {student.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
