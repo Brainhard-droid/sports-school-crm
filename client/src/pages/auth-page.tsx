@@ -73,6 +73,7 @@ export default function AuthPage() {
     defaultValues: {
       username: "",
       password: "",
+      email: "",
       role: "admin",
     },
   });
@@ -183,6 +184,19 @@ export default function AuthPage() {
                           <FormLabel>{t('auth.password')}</FormLabel>
                           <FormControl>
                             <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('auth.email')}</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
