@@ -19,14 +19,14 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     console.log('To:', params.to);
     console.log('Subject:', params.subject);
 
-    await resend.emails.send({
+    const data = await resend.emails.send({
       from: 'no-reply@resend.dev',
       to: params.to,
       subject: params.subject,
       html: params.html || params.text || '',
     });
 
-    console.log('Email sent successfully');
+    console.log('Email sent successfully', data);
     return true;
   } catch (error) {
     console.error('Resend email error:', error);
