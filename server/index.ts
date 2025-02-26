@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import connectPgSimple from "connect-pg-simple";
 
 const app = express();
 
@@ -34,12 +35,20 @@ app.use((req, res, next) => {
   }
 });
 
+const PostgresStore = connectPgSimple(session);
+
 // Session configuration
 app.use(session({
+  store: new PostgresStore({
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: false,
+    },
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || "your-secret-key",
-  resave: true,
-  saveUninitialized: true,
-  store: storage.sessionStore,
+  resave: false,
+  saveUninitialized: false,
   name: 'sid',
   cookie: {
     secure: false, // Set to true in production with HTTPS
