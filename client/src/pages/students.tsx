@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {  queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -36,7 +37,10 @@ import { UserPlus, Pencil } from "lucide-react";
 export default function Students() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { data: students } = useQuery<Student[]>({ 
+
+  console.log('Rendering Students component');
+
+  const { data: students, isLoading, error } = useQuery<Student[]>({ 
     queryKey: ["/api/students"],
     queryFn: async () => {
       console.log('Fetching students...');
@@ -45,9 +49,13 @@ export default function Students() {
       });
       console.log('Students response:', response);
       if (!response.ok) {
-        throw new Error('Failed to fetch students');
+        const errorText = await response.text();
+        console.error('Failed to fetch students:', errorText);
+        throw new Error(errorText || 'Failed to fetch students');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Fetched students:', data);
+      return data;
     }
   });
 
@@ -121,6 +129,31 @@ export default function Students() {
       console.error('Form submission error:', error);
     }
   };
+
+  // Показываем состояние загрузки
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Показываем ошибку, если она есть
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-6 text-red-500">
+          <h1 className="text-2xl font-bold">Error</h1>
+          <p>{error.message}</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  console.log('Rendering students table with data:', students);
 
   return (
     <Layout>
