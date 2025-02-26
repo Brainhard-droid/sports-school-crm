@@ -1,11 +1,10 @@
-import { MailService } from '@sendgrid/mail';
+import { Resend } from 'resend';
 
-if (!process.env.SENDGRID_API_KEY) {
-  throw new Error("SENDGRID_API_KEY environment variable must be set");
+if (!process.env.RESEND_API_KEY) {
+  throw new Error("RESEND_API_KEY environment variable must be set");
 }
 
-const mailService = new MailService();
-mailService.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface EmailParams {
   to: string;
@@ -16,18 +15,17 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    await mailService.send({
+    await resend.emails.send({
+      from: 'no-reply@resend.dev',
       to: params.to,
-      from: 'no-reply@yourdomain.com',
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+      html: params.html || params.text || '',
     });
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('Resend email error:', error);
     // Временное решение: выводим содержимое письма в консоль
-    console.log('Email content (temporary solution while SendGrid is under review):');
+    console.log('Email content (temporary solution):');
     console.log('To:', params.to);
     console.log('Subject:', params.subject);
     console.log('HTML:', params.html);
