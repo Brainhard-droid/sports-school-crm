@@ -43,7 +43,8 @@ export async function sendPasswordResetEmail(
   email: string,
   resetToken: string
 ): Promise<boolean> {
-  const resetLink = `${process.env.APP_URL}/reset-password/${resetToken}`;
+  // Используем window.location.origin с клиента или хардкодим URL для разработки
+  const resetLink = `https://2644c3d0-7e0b-49ec-ae79-4cb7aaf0a317-00-etncsd5juxsk.riker.replit.dev/reset-password/${resetToken}`;
   console.log('Generated reset link:', resetLink);
 
   return sendEmail({
