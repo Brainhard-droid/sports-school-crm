@@ -12,9 +12,10 @@ app.use(express.urlencoded({ extended: false }));
 
 // Add CORS middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const origin = req.headers.origin;
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Set-Cookie');
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
@@ -33,6 +34,7 @@ app.use((req, res, next) => {
   console.log('Headers:', req.headers);
   console.log('Cookies:', req.cookies);
   console.log('Session:', req.session);
+  console.log('Authentication status:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
 
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
@@ -49,11 +51,6 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });

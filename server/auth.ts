@@ -130,7 +130,6 @@ export function setupAuth(app: Express) {
         console.log('Session after login:', req.session);
         console.log('Cookies to be set:', res.getHeader('Set-Cookie'));
 
-        // Set explicit cookie header
         res.cookie('sid', req.sessionID, {
           httpOnly: true,
           secure: false,
@@ -145,36 +144,51 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log('Registration attempt for:', req.body.username);
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
+        console.log('Username already exists');
         return res.status(400).json({ message: "Username already exists" });
       }
 
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
         ...req.body,
+        role: "admin",
         password: hashedPassword,
-        role: "admin"
       });
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error('Auto-login after registration failed:', err);
+          return next(err);
+        }
+        console.log('Registration and auto-login successful for user:', user.id);
+        console.log('Session after registration:', req.session);
         res.status(201).json(user);
       });
     } catch (error) {
+      console.error('Registration error:', error);
       next(error);
     }
   });
 
   app.post("/api/logout", (req, res, next) => {
+    console.log('Logout request for user:', req.user?.id);
     req.logout((err) => {
-      if (err) return next(err);
+      if (err) {
+        console.error('Logout error:', err);
+        return next(err);
+      }
+      console.log('Logout successful');
       res.sendStatus(200);
     });
   });
 
   app.get("/api/user", (req, res) => {
-    console.log('/api/user called, authenticated:', req.isAuthenticated());
+    console.log('User info request. Authenticated:', req.isAuthenticated());
+    console.log('Current user:', req.user);
+    console.log('Session:', req.session);
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
     }

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import {  queryClient } from "@/lib/queryClient";
 import {
   Table,
   TableBody,
@@ -37,7 +37,18 @@ export default function Students() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { data: students } = useQuery<Student[]>({ 
-    queryKey: ["/api/students"]
+    queryKey: ["/api/students"],
+    queryFn: async () => {
+      console.log('Fetching students...');
+      const response = await fetch('/api/students', {
+        credentials: 'include'
+      });
+      console.log('Students response:', response);
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+      return response.json();
+    }
   });
 
   const form = useForm<InsertStudent>({
@@ -56,15 +67,25 @@ export default function Students() {
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
       try {
-        console.log('Sending student data:', data);
-        const res = await apiRequest("POST", "/api/students", data, {
+        console.log('Creating student with data:', data);
+        const res = await fetch('/api/students', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
           credentials: 'include'
         });
-        const result = await res.json();
-        console.log('Server response:', result);
-        return result;
+
+        console.log('Create student response:', res);
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || 'Failed to create student');
+        }
+
+        return res.json();
       } catch (error) {
-        console.error('Error creating student:', error);
+        console.error('Error in createMutation:', error);
         throw error;
       }
     },
