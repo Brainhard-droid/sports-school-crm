@@ -31,10 +31,10 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: true,
-    saveUninitialized: true,
-    store: storage.sessionStore,
     name: 'sports_school_sid',
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
     proxy: true,
     cookie: {
       secure: false,
@@ -56,15 +56,20 @@ export function setupAuth(app: Express) {
       try {
         console.log('Attempting login for username:', username);
         const user = await storage.getUserByUsername(username);
+
         if (!user) {
           console.log('User not found');
-          return done(null, false);
+          return done(null, false, { message: 'Incorrect username.' });
         }
+
         const isValid = await comparePasswords(password, user.password);
         console.log('Password valid:', isValid);
+
         if (!isValid) {
-          return done(null, false);
+          return done(null, false, { message: 'Incorrect password.' });
         }
+
+        console.log('Authentication successful for user:', user.id);
         return done(null, user);
       } catch (error) {
         console.error('Login error:', error);
@@ -82,10 +87,12 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
       const user = await storage.getUser(id);
+
       if (!user) {
         console.log('User not found during deserialization');
         return done(null, false);
       }
+
       console.log('User deserialized successfully:', user.id);
       done(null, user);
     } catch (error) {
@@ -95,29 +102,36 @@ export function setupAuth(app: Express) {
   });
 
   app.use((req, res, next) => {
+    console.log('---Session Debug---');
     console.log('Session ID:', req.sessionID);
     console.log('Is authenticated:', req.isAuthenticated());
     console.log('User:', req.user);
     console.log('Session:', req.session);
+    console.log('Cookies:', req.cookies);
+    console.log('----------------');
     next();
   });
 
   app.post("/api/login", (req, res, next) => {
     console.log('Login attempt for:', req.body.username);
+
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error('Authentication error:', err);
         return next(err);
       }
+
       if (!user) {
-        console.log('Authentication failed');
-        return res.status(401).json({ message: "Authentication failed" });
+        console.log('Authentication failed:', info?.message);
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
+
       req.logIn(user, (err) => {
         if (err) {
           console.error('Login error:', err);
           return next(err);
         }
+
         console.log('Login successful for user:', user.id);
         console.log('Session after login:', req.session);
         res.status(200).json(user);
@@ -128,6 +142,7 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       console.log('Registration attempt for:', req.body.username);
+
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
         console.log('Username already exists');
@@ -178,9 +193,11 @@ export function setupAuth(app: Express) {
     console.log('User info request. Authenticated:', req.isAuthenticated());
     console.log('Current user:', req.user);
     console.log('Session:', req.session);
+
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
     }
+
     res.json(req.user);
   });
 }

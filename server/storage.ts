@@ -20,10 +20,11 @@ export class PostgresStorage implements IStorage {
       conObject: {
         connectionString: process.env.DATABASE_URL,
       },
-      tableName: 'session',
       createTableIfMissing: true,
+      tableName: 'session',
       pruneSessionInterval: 60 * 60,
-      errorLog: console.error
+      keepExpired: false,
+      errorLog: console.error,
     });
   }
 
