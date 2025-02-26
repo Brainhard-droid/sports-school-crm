@@ -2,8 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
-import session from "express-session";
-import { storage } from "./storage";
+import { setupAuth } from "./auth";
 
 const app = express();
 
@@ -12,24 +11,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware должен быть до CORS
-app.use(session({
-  secret: process.env.SESSION_SECRET || "your-secret-key",
-  resave: false,
-  saveUninitialized: false,
-  store: storage.sessionStore,
-  name: 'sid',
-  cookie: {
-    secure: false,
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax',
-    path: '/',
-    domain: '.riker.replit.dev'
-  }
-}));
-
-// CORS middleware
+// CORS middleware должен быть до сессии
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
@@ -43,6 +25,9 @@ app.use((req, res, next) => {
     next();
   }
 });
+
+// Setup authentication (includes session middleware)
+setupAuth(app);
 
 // Debug middleware
 app.use((req, res, next) => {
