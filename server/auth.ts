@@ -31,18 +31,30 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
+    resave: true,
     saveUninitialized: false,
     store: storage.sessionStore,
+    name: 'sid',
     cookie: {
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: false, // set to true if using https
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax'
     }
   };
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Debug middleware
+  app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
+    console.log('Is Authenticated:', req.isAuthenticated());
+    console.log('User:', req.user);
+    next();
+  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -81,18 +93,29 @@ export function setupAuth(app: Express) {
       const user = await storage.getUser(id);
       done(null, user);
     } catch (error) {
+      console.error('Deserialization error:', error);
       done(error);
     }
   });
 
-  // Basic routes
+  // Routes
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Authentication failed" });
+      if (err) {
+        console.error('Authentication error:', err);
+        return next(err);
+      }
+      if (!user) {
+        console.log('Authentication failed');
+        return res.status(401).json({ message: "Authentication failed" });
+      }
 
       req.logIn(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error('Login error:', err);
+          return next(err);
+        }
+        console.log('Login successful, session:', req.session);
         res.json(user);
       });
     })(req, res, next);
@@ -129,6 +152,7 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
+    console.log('/api/user called, authenticated:', req.isAuthenticated());
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
     }
