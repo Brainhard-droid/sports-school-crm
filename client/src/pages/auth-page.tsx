@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DumbbellIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as z from 'zod';
 import { apiRequest } from "@/utils/api";
 import { toast } from "@/components/ui/use-toast";
@@ -24,11 +24,16 @@ import {
 } from "@/components/ui/dialog";
 import { useMutation } from "@tanstack/react-query";
 
-
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const forgotPasswordForm = useForm({
@@ -78,10 +83,6 @@ export default function AuthPage() {
     },
   });
 
-  if (user) {
-    setLocation("/");
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
