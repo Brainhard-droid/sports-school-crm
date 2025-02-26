@@ -24,6 +24,13 @@ import {
 } from "@/components/ui/dialog";
 import { useMutation } from "@tanstack/react-query";
 
+const loginFormSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormData = z.infer<typeof loginFormSchema>;
+
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
@@ -65,8 +72,8 @@ export default function AuthPage() {
     },
   });
 
-  const loginForm = useForm<InsertUser>({
-    resolver: zodResolver(insertUserSchema),
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginFormSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -83,6 +90,31 @@ export default function AuthPage() {
     },
   });
 
+  const onLoginSubmit = async (data: LoginFormData) => {
+    try {
+      await loginMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: t('auth.error'),
+        description: error instanceof Error ? error.message : "Login failed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onRegisterSubmit = async (data: InsertUser) => {
+    try {
+      await registerMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: t('auth.error'),
+        description: error instanceof Error ? error.message : "Registration failed",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -117,7 +149,7 @@ export default function AuthPage() {
 
               <TabsContent value="login">
                 <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                     <FormField
                       control={loginForm.control}
                       name="username"
@@ -163,7 +195,7 @@ export default function AuthPage() {
 
               <TabsContent value="register">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                     <FormField
                       control={registerForm.control}
                       name="username"
@@ -210,6 +242,7 @@ export default function AuthPage() {
                 </Form>
               </TabsContent>
             </Tabs>
+
             <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
               <DialogContent>
                 <DialogHeader>
