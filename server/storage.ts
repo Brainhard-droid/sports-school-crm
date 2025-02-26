@@ -15,25 +15,19 @@ export class PostgresStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Setup session store
     this.sessionStore = new PostgresSessionStore({
       conObject: {
         connectionString: process.env.DATABASE_URL,
       },
       createTableIfMissing: true,
-      tableName: 'session',
-      pruneSessionInterval: 60 * 60,
-      keepExpired: false,
-      errorLog: console.error,
+      tableName: 'session'
     });
   }
 
   // Users
   async getUser(id: number): Promise<User | undefined> {
     try {
-      console.log('Getting user by id:', id);
       const [user] = await db.select().from(users).where(eq(users.id, id));
-      console.log('Found user:', user);
       return user;
     } catch (error) {
       console.error('Error getting user:', error);
@@ -43,9 +37,7 @@ export class PostgresStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      console.log('Getting user by username:', username);
       const [user] = await db.select().from(users).where(eq(users.username, username));
-      console.log('Found user:', user);
       return user;
     } catch (error) {
       console.error('Error getting user by username:', error);
@@ -55,9 +47,7 @@ export class PostgresStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      console.log('Getting user by email:', email);
       const [user] = await db.select().from(users).where(eq(users.email, email));
-      console.log('Found user:', user);
       return user;
     } catch (error) {
       console.error('Error getting user by email:', error);
@@ -72,9 +62,7 @@ export class PostgresStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
-      console.log('Creating user:', insertUser);
       const [user] = await db.insert(users).values(insertUser).returning();
-      console.log('Created user:', user);
       return user;
     } catch (error) {
       console.error('Error creating user:', error);
@@ -103,12 +91,10 @@ export class PostgresStorage implements IStorage {
 
   async createStudent(student: InsertStudent): Promise<Student> {
     try {
-      console.log('Creating student:', student);
       const [result] = await db.insert(students).values({
         ...student,
         birthDate: new Date(student.birthDate).toISOString()
       }).returning();
-      console.log('Created student:', result);
       return result;
     } catch (error) {
       console.error('Error creating student:', error);
