@@ -29,7 +29,9 @@ export class PostgresStorage implements IStorage {
       conObject: {
         connectionString: process.env.DATABASE_URL,
       },
+      tableName: 'session',
       createTableIfMissing: true,
+      pruneSessionInterval: false
     });
   }
 
