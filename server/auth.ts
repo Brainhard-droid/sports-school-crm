@@ -31,9 +31,13 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
-    saveUninitialized: false,
+    resave: true, 
+    saveUninitialized: true, 
     store: storage.sessionStore,
+    cookie: {
+      secure: false, 
+      maxAge: 1000 * 60 * 60 * 24 
+    }
   };
 
   app.set("trust proxy", 1);
@@ -43,19 +47,38 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user || !(await comparePasswords(password, user.password))) {
+          return done(null, false);
+        }
         return done(null, user);
+      } catch (error) {
+        return done(error);
       }
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    console.log('Serializing user:', user.id);
+    done(null, user.id);
+  });
+
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      console.log('Deserializing user:', id);
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Is authenticated:', req.isAuthenticated());
+    console.log('User:', req.user);
+    next();
   });
 
   app.post("/api/register", async (req, res, next) => {
@@ -64,7 +87,6 @@ export function setupAuth(app: Express) {
       return res.status(400).send("Username already exists");
     }
 
-    // Check if email already exists
     const existingEmail = await storage.getUserByEmail(req.body.email);
     if (existingEmail) {
       return res.status(400).send("Email already exists");
@@ -72,7 +94,7 @@ export function setupAuth(app: Express) {
 
     const user = await storage.createUser({
       ...req.body,
-      role: "admin", // For simplicity, all users are admins
+      role: "admin", 
       password: await hashPassword(req.body.password),
     });
 
