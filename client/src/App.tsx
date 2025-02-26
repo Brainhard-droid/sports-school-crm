@@ -8,19 +8,19 @@ import { ProtectedRoute } from "./lib/protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-import Students from "@/pages/students";
+import StudentsPage from "@/pages/students";
 import Groups from "@/pages/groups";
 import Attendance from "@/pages/attendance";
 import Payments from "@/pages/payments";
-import ResetPassword from "@/pages/reset-password"; // Add import
+import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      <Route path="/reset-password/:token" component={ResetPassword} /> {/* Add reset password route */}
+      <Route path="/reset-password/:token" component={ResetPassword} />
       <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/students" component={Students} />
+      <ProtectedRoute path="/students" component={StudentsPage} />
       <ProtectedRoute path="/groups" component={Groups} />
       <ProtectedRoute path="/attendance" component={Attendance} />
       <ProtectedRoute path="/payments" component={Payments} />

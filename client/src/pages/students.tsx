@@ -15,12 +15,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { UserPlus, Pencil } from "lucide-react";
 import { useLocation } from "wouter";
 
-export default function Students() {
+export default function StudentsPage() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  console.log('Rendering Students component');
+  console.log('Rendering StudentsPage component');
 
   const { data: students, isLoading, error } = useQuery<Student[]>({ 
     queryKey: ["/api/students"],
@@ -69,33 +69,21 @@ export default function Students() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
-      try {
-        console.log('Creating student with data:', data);
-        const res = await fetch('/api/students', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-          credentials: 'include'
-        });
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include'
+      });
 
-        console.log('Create student response:', res);
-        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error('Server error response:', errorText);
-          throw new Error(errorText || 'Failed to create student');
-        }
-
-        const result = await res.json();
-        console.log('Created student:', result);
-        return result;
-      } catch (error) {
-        console.error('Error in createMutation:', error);
-        throw error;
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to create student');
       }
+
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
@@ -107,7 +95,6 @@ export default function Students() {
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error);
       toast({
         title: "Error creating student",
         description: error.message,
@@ -118,7 +105,6 @@ export default function Students() {
 
   const onSubmit = async (data: InsertStudent) => {
     try {
-      console.log('Form submission data:', data);
       await createMutation.mutateAsync(data);
     } catch (error) {
       console.error('Form submission error:', error);
@@ -146,8 +132,6 @@ export default function Students() {
     );
   }
 
-  console.log('Rendering students table with data:', students);
-
   return (
     <Layout>
       <div className="p-6">
@@ -165,10 +149,7 @@ export default function Students() {
                 <DialogTitle>Add New Student</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-4"
-                >
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="firstName"
@@ -202,10 +183,7 @@ export default function Students() {
                       <FormItem>
                         <FormLabel>Birth Date</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field}
-                          />
+                          <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
