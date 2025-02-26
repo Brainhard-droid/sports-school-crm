@@ -9,6 +9,45 @@ import { sendPasswordResetEmail } from "./services/email";
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  // Students
+  app.get("/api/students", async (req, res) => {
+    try {
+      console.log('Getting students, auth status:', req.isAuthenticated());
+      console.log('Session:', req.session);
+      console.log('User:', req.user);
+
+      if (!req.isAuthenticated()) {
+        console.log('User not authenticated');
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const students = await storage.getStudents();
+      console.log('Retrieved students:', students.length);
+      res.json(students);
+    } catch (error) {
+      console.error('Error getting students:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Groups
+  app.get("/api/groups", async (req, res) => {
+    try {
+      console.log('Getting groups, auth status:', req.isAuthenticated());
+      console.log('Session:', req.session);
+
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const groups = await storage.getGroups();
+      res.json(groups);
+    } catch (error) {
+      console.error('Error getting groups:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Password Reset
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
@@ -70,25 +109,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Students
-  app.get("/api/students", async (req, res) => {
-    try {
-      console.log('Getting students, auth status:', req.isAuthenticated());
-
-      if (!req.isAuthenticated()) {
-        console.log('User not authenticated');
-        return res.sendStatus(401);
-      }
-
-      const students = await storage.getStudents();
-      console.log('Retrieved students:', students.length);
-      res.json(students);
-    } catch (error) {
-      console.error('Error getting students:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   app.post("/api/students", async (req, res) => {
     try {
       console.log('Creating student, auth status:', req.isAuthenticated());
@@ -123,12 +143,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(student);
   });
 
-  // Groups
-  app.get("/api/groups", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const groups = await storage.getGroups();
-    res.json(groups);
-  });
 
   app.post("/api/groups", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
