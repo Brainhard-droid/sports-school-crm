@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const students = await storage.getStudents();
-      console.log('Retrieved students:', students.length);
+      console.log('Retrieved students:', students);
       res.json(students);
     } catch (error) {
       console.error('Error getting students:', error);
