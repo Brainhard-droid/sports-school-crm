@@ -78,12 +78,17 @@ export default function Students() {
         });
 
         console.log('Create student response:', res);
+        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+
         if (!res.ok) {
           const errorText = await res.text();
+          console.error('Server error response:', errorText);
           throw new Error(errorText || 'Failed to create student');
         }
 
-        return res.json();
+        const result = await res.json();
+        console.log('Created student:', result);
+        return result;
       } catch (error) {
         console.error('Error in createMutation:', error);
         throw error;

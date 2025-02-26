@@ -66,7 +66,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log('Login attempt for:', username);
+        console.log('Attempting login for username:', username);
         const user = await storage.getUserByUsername(username);
 
         if (!user) {
@@ -130,6 +130,7 @@ export function setupAuth(app: Express) {
         console.log('Session after login:', req.session);
         console.log('Cookies to be set:', res.getHeader('Set-Cookie'));
 
+        // Set cookie explicitly
         res.cookie('sid', req.sessionID, {
           httpOnly: true,
           secure: false,
