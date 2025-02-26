@@ -20,11 +20,12 @@ app.use(session({
   store: storage.sessionStore,
   name: 'sid',
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: 'lax',
-    path: '/'
+    path: '/',
+    domain: '.riker.replit.dev'
   }
 }));
 
