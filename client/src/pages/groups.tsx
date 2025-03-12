@@ -321,6 +321,84 @@ export default function Groups() {
           </DialogContent>
         </Dialog>
 
+        {/* Диалог добавления расписания */}
+        <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Добавить расписание</DialogTitle>
+              <DialogDescription>
+                Выберите дни недели и укажите время занятий
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Выберите дни недели</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {DAYS_OF_WEEK.map((day) => (
+                    <div key={day.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`day-${day.id}`}
+                        checked={selectedDays.includes(day.id)}
+                        onCheckedChange={() => handleDayChange(day.id)}
+                      />
+                      <label
+                        htmlFor={`day-${day.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {day.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedDays.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Время занятий</h4>
+                  {selectedDays.map((dayId) => (
+                    <div key={dayId} className="space-y-2">
+                      <p className="text-sm">{DAYS_OF_WEEK.find(d => d.id === dayId)?.name}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm">Начало</label>
+                          <Input
+                            type="time"
+                            value={scheduleTimes[dayId]?.startTime || "09:00"}
+                            onChange={(e) => handleTimeChange(dayId, 'startTime', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm">Окончание</label>
+                          <Input
+                            type="time"
+                            value={scheduleTimes[dayId]?.endTime || "10:00"}
+                            onChange={(e) => handleTimeChange(dayId, 'endTime', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => handleScheduleSubmit(selectedGroup!.id)}
+                disabled={selectedDays.length === 0 || createScheduleMutation.isPending}
+              >
+                {createScheduleMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Сохранение...
+                  </>
+                ) : (
+                  "Сохранить расписание"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {groups?.map((group) => (
             <Card
