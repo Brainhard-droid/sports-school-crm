@@ -31,15 +31,18 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Users, Calendar } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Groups() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { data: groups } = useQuery<Group[]>({ 
-    queryKey: ["/api/groups"] 
+  const [, setLocation] = useLocation();
+
+  const { data: groups } = useQuery<Group[]>({
+    queryKey: ["/api/groups"],
   });
-  const { data: schedules } = useQuery<Schedule[]>({ 
-    queryKey: ["/api/schedules"] 
+  const { data: schedules } = useQuery<Schedule[]>({
+    queryKey: ["/api/schedules"],
   });
 
   const form = useForm<InsertGroup>({
@@ -96,7 +99,7 @@ export default function Groups() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Groups</h1>
+          <h1 className="text-3xl font-bold">Группы</h1>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -110,7 +113,9 @@ export default function Groups() {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => createGroupMutation.mutate(data))}
+                  onSubmit={form.handleSubmit((data) =>
+                    createGroupMutation.mutate(data)
+                  )}
                   className="space-y-4"
                 >
                   <FormField
@@ -149,7 +154,9 @@ export default function Groups() {
                           <Input
                             type="number"
                             {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -167,7 +174,11 @@ export default function Groups() {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {groups?.map((group) => (
-            <Card key={group.id}>
+            <Card
+              key={group.id}
+              className="cursor-pointer transition-shadow hover:shadow-lg"
+              onClick={() => setLocation(`/groups/${group.id}`)}
+            >
               <CardHeader>
                 <CardTitle>{group.name}</CardTitle>
                 <CardDescription>{group.description}</CardDescription>
@@ -176,23 +187,30 @@ export default function Groups() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
-                      Max Students: {group.maxStudents}
+                      Максимум учеников: {group.maxStudents}
                     </span>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Calendar className="mr-2 h-4 w-4" />
-                          Add Schedule
+                          Добавить расписание
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent onClick={(e) => e.stopPropagation()}>
                         <DialogHeader>
-                          <DialogTitle>Add Schedule</DialogTitle>
+                          <DialogTitle>Добавить расписание</DialogTitle>
                         </DialogHeader>
                         <Form {...scheduleForm}>
                           <form
                             onSubmit={scheduleForm.handleSubmit((data) =>
-                              createScheduleMutation.mutate({ ...data, groupId: group.id })
+                              createScheduleMutation.mutate({
+                                ...data,
+                                groupId: group.id,
+                              })
                             )}
                             className="space-y-4"
                           >
@@ -203,7 +221,12 @@ export default function Groups() {
                                 <FormItem>
                                   <FormLabel>Day of Week</FormLabel>
                                   <FormControl>
-                                    <Input type="number" min="1" max="7" {...field} />
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="7"
+                                      {...field}
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -244,7 +267,7 @@ export default function Groups() {
                     </Dialog>
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Schedule</h4>
+                    <h4 className="text-sm font-medium">Расписание</h4>
                     {schedules
                       ?.filter((s) => s.groupId === group.id)
                       .map((schedule) => (
@@ -252,7 +275,7 @@ export default function Groups() {
                           key={schedule.id}
                           className="text-sm text-muted-foreground"
                         >
-                          Day {schedule.dayOfWeek}: {schedule.startTime} -{" "}
+                          День {schedule.dayOfWeek}: {schedule.startTime} -{" "}
                           {schedule.endTime}
                         </div>
                       ))}

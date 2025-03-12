@@ -58,6 +58,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/groups/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const group = await storage.getGroup(id);
+
+      if (!group) {
+        return res.status(404).json({ error: "Group not found" });
+      }
+
+      res.json(group);
+    } catch (error) {
+      console.error('Error getting group:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Password Reset
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;

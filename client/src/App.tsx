@@ -10,6 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import StudentsPage from "@/pages/students";
 import Groups from "@/pages/groups";
+import GroupDetails from "@/pages/group-details"; // Добавляем новую страницу
 import Attendance from "@/pages/attendance";
 import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
@@ -22,6 +23,7 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/students" component={StudentsPage} />
       <ProtectedRoute path="/groups" component={Groups} />
+      <ProtectedRoute path="/groups/:id" component={GroupDetails} />
       <ProtectedRoute path="/attendance" component={Attendance} />
       <ProtectedRoute path="/payments" component={Payments} />
       <Route component={NotFound} />
