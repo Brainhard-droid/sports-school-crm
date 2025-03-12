@@ -8,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Calendar } from "lucide-react";
+import { Users, Calendar, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -19,6 +20,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -32,10 +35,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+const DAYS_OF_WEEK = [
+  { id: 1, name: "Понедельник" },
+  { id: 2, name: "Вторник" },
+  { id: 3, name: "Среда" },
+  { id: 4, name: "Четверг" },
+  { id: 5, name: "Пятница" },
+  { id: 6, name: "Суббота" },
+  { id: 7, name: "Воскресенье" },
+];
+
 export default function Groups() {
   const [open, setOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduleTimes, setScheduleTimes] = useState<{ [key: number]: { startTime: string; endTime: string } }>({});
   const { toast } = useToast();
 
   const { data: groups } = useQuery<Group[]>({
@@ -46,7 +62,6 @@ export default function Groups() {
     queryKey: ["/api/schedules"],
   });
 
-  // Получение списка студентов в группе
   const { data: groupStudents } = useQuery({
     queryKey: ["/api/group-students", selectedGroup?.id],
     queryFn: async () => {
@@ -99,18 +114,66 @@ export default function Groups() {
   });
 
   const createScheduleMutation = useMutation({
-    mutationFn: async (data: InsertSchedule) => {
-      const res = await apiRequest("POST", "/api/schedules", data);
-      return res.json();
+    mutationFn: async (data: { groupId: number; schedules: InsertSchedule[] }) => {
+      const promises = data.schedules.map(schedule =>
+        apiRequest("POST", "/api/schedules", schedule)
+      );
+      await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      setScheduleDialogOpen(false);
+      setSelectedDays([]);
+      setScheduleTimes({});
       toast({
-        title: "Success",
-        description: "Schedule created successfully",
+        title: "Успешно",
+        description: "Расписание добавлено",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
+
+  const handleDayChange = (dayId: number) => {
+    setSelectedDays(prev => {
+      const isSelected = prev.includes(dayId);
+      if (isSelected) {
+        const newTimes = { ...scheduleTimes };
+        delete newTimes[dayId];
+        setScheduleTimes(newTimes);
+        return prev.filter(id => id !== dayId);
+      } else {
+        setScheduleTimes(prev => ({
+          ...prev,
+          [dayId]: { startTime: "09:00", endTime: "10:00" }
+        }));
+        return [...prev, dayId];
+      }
+    });
+  };
+
+  const handleTimeChange = (dayId: number, field: 'startTime' | 'endTime', value: string) => {
+    setScheduleTimes(prev => ({
+      ...prev,
+      [dayId]: { ...prev[dayId], [field]: value }
+    }));
+  };
+
+  const handleScheduleSubmit = async (groupId: number) => {
+    const schedules = selectedDays.map(dayId => ({
+      groupId,
+      dayOfWeek: dayId,
+      startTime: scheduleTimes[dayId].startTime,
+      endTime: scheduleTimes[dayId].endTime
+    }));
+
+    await createScheduleMutation.mutateAsync({ groupId, schedules });
+  };
 
   return (
     <Layout>
@@ -189,7 +252,6 @@ export default function Groups() {
           </Dialog>
         </div>
 
-        {/* Модальное окно деталей группы */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
@@ -251,7 +313,7 @@ export default function Groups() {
                       key={schedule.id}
                       className="text-sm text-muted-foreground"
                     >
-                      День {schedule.dayOfWeek}: {schedule.startTime} - {schedule.endTime}
+                      {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
                     </div>
                   ))}
               </div>
@@ -279,82 +341,18 @@ export default function Groups() {
                     <span className="text-sm text-muted-foreground">
                       Максимум учеников: {group.maxStudents}
                     </span>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          Добавить расписание
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent onClick={(e) => e.stopPropagation()}>
-                        <DialogHeader>
-                          <DialogTitle>Добавить расписание</DialogTitle>
-                        </DialogHeader>
-                        <Form {...scheduleForm}>
-                          <form
-                            onSubmit={scheduleForm.handleSubmit((data) =>
-                              createScheduleMutation.mutate({
-                                ...data,
-                                groupId: group.id,
-                              })
-                            )}
-                            className="space-y-4"
-                          >
-                            <FormField
-                              control={scheduleForm.control}
-                              name="dayOfWeek"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>День недели</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="7"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={scheduleForm.control}
-                              name="startTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Время начала</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={scheduleForm.control}
-                              name="endTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Время окончания</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <Button type="submit" className="w-full">
-                              Добавить расписание
-                            </Button>
-                          </form>
-                        </Form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedGroup(group);
+                        setScheduleDialogOpen(true);
+                      }}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Добавить расписание
+                    </Button>
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Расписание</h4>
@@ -365,8 +363,7 @@ export default function Groups() {
                           key={schedule.id}
                           className="text-sm text-muted-foreground"
                         >
-                          День {schedule.dayOfWeek}: {schedule.startTime} -{" "}
-                          {schedule.endTime}
+                          {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
                         </div>
                       ))}
                   </div>
