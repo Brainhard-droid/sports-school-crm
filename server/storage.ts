@@ -1,8 +1,8 @@
 import { IStorage } from "./interfaces";
 import {
-  User, Student, Group, Schedule, Attendance, Payment,
-  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment,
-  users, students, groups, schedules, attendance, payments
+  User, Student, Group, Schedule, Attendance, Payment, StudentGroup,
+  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
+  users, students, groups, schedules, attendance, payments, studentGroups
 } from "@shared/schema";
 import { eq, and } from 'drizzle-orm';
 import session from "express-session";
@@ -177,6 +177,41 @@ export class PostgresStorage implements IStorage {
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const [result] = await db.insert(payments).values(payment).returning();
     return result;
+  }
+
+  // Новые методы для работы с группами студентов
+  async getStudentGroups(studentId: number): Promise<StudentGroup[]> {
+    return await db
+      .select()
+      .from(studentGroups)
+      .where(eq(studentGroups.studentId, studentId));
+  }
+
+  async getGroupStudents(groupId: number): Promise<StudentGroup[]> {
+    return await db
+      .select()
+      .from(studentGroups)
+      .where(eq(studentGroups.groupId, groupId));
+  }
+
+  async addStudentToGroup(data: InsertStudentGroup): Promise<StudentGroup> {
+    const [result] = await db
+      .insert(studentGroups)
+      .values(data)
+      .returning();
+    return result;
+  }
+
+  async removeStudentFromGroup(studentId: number, groupId: number): Promise<void> {
+    await db
+      .update(studentGroups)
+      .set({ active: false })
+      .where(
+        and(
+          eq(studentGroups.studentId, studentId),
+          eq(studentGroups.groupId, groupId)
+        )
+      );
   }
 }
 

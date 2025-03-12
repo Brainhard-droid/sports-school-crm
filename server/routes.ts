@@ -2,7 +2,14 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertStudentSchema, insertGroupSchema, insertScheduleSchema, insertAttendanceSchema, insertPaymentSchema } from "@shared/schema";
+import {
+  insertStudentSchema,
+  insertGroupSchema,
+  insertScheduleSchema,
+  insertAttendanceSchema,
+  insertPaymentSchema,
+  insertStudentGroupSchema
+} from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
 
@@ -204,6 +211,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(payment);
   });
 
+  // Добавляем новый маршрут для управления связями студентов и групп
+  app.post("/api/student-groups", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.sendStatus(401);
+      }
+
+      const parsed = insertStudentGroupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const studentGroup = await storage.addStudentToGroup(parsed.data);
+      res.status(201).json(studentGroup);
+    } catch (error) {
+      console.error('Error adding student to group:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/student-groups/:studentId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const studentId = parseInt(req.params.studentId);
+      const groups = await storage.getStudentGroups(studentId);
+      res.json(groups);
+    } catch (error) {
+      console.error('Error getting student groups:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/group-students/:groupId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const groupId = parseInt(req.params.groupId);
+      const students = await storage.getGroupStudents(groupId);
+      res.json(students);
+    } catch (error) {
+      console.error('Error getting group students:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Assuming hashPassword function exists elsewhere, you need to import it.
+async function hashPassword(password: string): Promise<string> {
+  //Implementation for hashing password
+  throw new Error("hashPassword function not implemented");
 }

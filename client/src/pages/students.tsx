@@ -1,26 +1,43 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/navbar";
-import { Student, InsertStudent, insertStudentSchema } from "@shared/schema";
+import { Student, InsertStudent, insertStudentSchema, Group, InsertStudentGroup } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient } from "@/lib/queryClient";
-import { Loader2, UserPlus, Pencil } from "lucide-react";
+import { Loader2, UserPlus, Pencil, MoreVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function StudentsPage() {
   const [open, setOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
+  // Получение списка студентов
   const { data: students, isLoading, error } = useQuery<Student[]>({
     queryKey: ["/api/students"],
     queryFn: async () => {
@@ -50,6 +67,21 @@ export default function StudentsPage() {
     enabled: !!user,
   });
 
+  // Получение списка групп
+  const { data: groups } = useQuery<Group[]>({
+    queryKey: ["/api/groups"],
+    queryFn: async () => {
+      const response = await fetch('/api/groups', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch groups');
+      }
+      return response.json();
+    }
+  });
+
+  // Форма для создания нового студента
   const form = useForm<InsertStudent>({
     resolver: zodResolver(insertStudentSchema),
     defaultValues: {
@@ -63,6 +95,7 @@ export default function StudentsPage() {
     },
   });
 
+  // Мутация для создания студента
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
       const res = await fetch('/api/students', {
@@ -103,8 +136,55 @@ export default function StudentsPage() {
     },
   });
 
+  // Мутация для добавления студента в группу
+  const addToGroupMutation = useMutation({
+    mutationFn: async (data: InsertStudentGroup) => {
+      const res = await fetch('/api/student-groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to add student to group');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      setIsGroupDialogOpen(false);
+      setSelectedStudent(null);
+      setSelectedGroup("");
+      toast({
+        title: "Успешно",
+        description: "Студент добавлен в группу",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = async (data: InsertStudent) => {
     await createMutation.mutateAsync(data);
+  };
+
+  const handleAddToGroup = async () => {
+    if (!selectedStudent || !selectedGroup) return;
+
+    await addToGroupMutation.mutateAsync({
+      studentId: selectedStudent.id,
+      groupId: parseInt(selectedGroup),
+      active: true,
+    });
   };
 
   if (isLoading) {
@@ -236,6 +316,42 @@ export default function StudentsPage() {
           </Dialog>
         </div>
 
+        {/* Диалог добавления в группу */}
+        <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Добавить ученика в группу</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-2">
+                <label>Выберите группу</label>
+                <Select
+                  value={selectedGroup}
+                  onValueChange={setSelectedGroup}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите группу" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups?.map((group) => (
+                      <SelectItem key={group.id} value={group.id.toString()}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                onClick={handleAddToGroup}
+                disabled={!selectedGroup || addToGroupMutation.isPending}
+                className="w-full"
+              >
+                {addToGroupMutation.isPending ? "Добавление..." : "Добавить в группу"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -276,9 +392,28 @@ export default function StudentsPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => {
+                            // TODO: Implement edit functionality
+                          }}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Редактировать
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedStudent(student);
+                            setIsGroupDialogOpen(true);
+                          }}>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Добавить в группу
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

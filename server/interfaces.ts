@@ -1,7 +1,7 @@
 import { Store } from "express-session";
 import {
-  User, Student, Group, Schedule, Attendance, Payment,
-  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment,
+  User, Student, Group, Schedule, Attendance, Payment, StudentGroup,
+  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -25,6 +25,12 @@ export interface IStorage {
   getGroups(): Promise<Group[]>;
   getGroup(id: number): Promise<Group | undefined>;
   createGroup(group: InsertGroup): Promise<Group>;
+
+  // Student Groups
+  getStudentGroups(studentId: number): Promise<StudentGroup[]>;
+  getGroupStudents(groupId: number): Promise<StudentGroup[]>;
+  addStudentToGroup(studentGroup: InsertStudentGroup): Promise<StudentGroup>;
+  removeStudentFromGroup(studentId: number, groupId: number): Promise<void>;
 
   // Schedules
   getSchedules(groupId?: number): Promise<Schedule[]>;
