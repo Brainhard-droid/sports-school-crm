@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Users, Calendar } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,19 +31,35 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Users, Calendar } from "lucide-react";
-import { useLocation } from "wouter";
 
 export default function Groups() {
   const [open, setOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
   });
+
   const { data: schedules } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
+  });
+
+  // Получение списка студентов в группе
+  const { data: groupStudents } = useQuery({
+    queryKey: ["/api/group-students", selectedGroup?.id],
+    queryFn: async () => {
+      if (!selectedGroup) return null;
+      const response = await fetch(`/api/group-students/${selectedGroup.id}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch group students');
+      }
+      return response.json();
+    },
+    enabled: !!selectedGroup,
   });
 
   const form = useForm<InsertGroup>({
@@ -50,7 +67,7 @@ export default function Groups() {
     defaultValues: {
       name: "",
       description: "",
-      trainer: 1, // Default to first trainer
+      trainer: 1,
       maxStudents: 10,
     },
   });
@@ -104,12 +121,12 @@ export default function Groups() {
             <DialogTrigger asChild>
               <Button>
                 <Users className="mr-2 h-4 w-4" />
-                New Group
+                Создать группу
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Group</DialogTitle>
+                <DialogTitle>Создать новую группу</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form
@@ -123,7 +140,7 @@ export default function Groups() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Group Name</FormLabel>
+                        <FormLabel>Название группы</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -136,7 +153,7 @@ export default function Groups() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Описание</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -149,7 +166,7 @@ export default function Groups() {
                     name="maxStudents"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Max Students</FormLabel>
+                        <FormLabel>Максимум учеников</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -164,7 +181,7 @@ export default function Groups() {
                     )}
                   />
                   <Button type="submit" className="w-full">
-                    Create Group
+                    Создать группу
                   </Button>
                 </form>
               </Form>
@@ -172,12 +189,85 @@ export default function Groups() {
           </Dialog>
         </div>
 
+        {/* Модальное окно деталей группы */}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{selectedGroup?.name}</DialogTitle>
+              <CardDescription>{selectedGroup?.description}</CardDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">Тренер</h3>
+                  <p>ID: {selectedGroup?.trainer}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">Максимум учеников</h3>
+                  <p>{selectedGroup?.maxStudents}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Ученики группы</h3>
+                {!groupStudents?.length ? (
+                  <p className="text-muted-foreground">В группе нет учеников</p>
+                ) : (
+                  <div className="border rounded-lg">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="px-4 py-2 text-left">ФИО</th>
+                          <th className="px-4 py-2 text-left">Телефон</th>
+                          <th className="px-4 py-2 text-left">Статус</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupStudents.map((student) => (
+                          <tr key={student.id} className="border-b">
+                            <td className="px-4 py-2">{student.firstName} {student.lastName}</td>
+                            <td className="px-4 py-2">{student.phoneNumber}</td>
+                            <td className="px-4 py-2">
+                              <span className={`px-2 py-1 rounded-full text-sm ${
+                                student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {student.active ? 'Активный' : 'Неактивный'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Расписание</h3>
+                {schedules
+                  ?.filter((s) => s.groupId === selectedGroup?.id)
+                  .map((schedule) => (
+                    <div
+                      key={schedule.id}
+                      className="text-sm text-muted-foreground"
+                    >
+                      День {schedule.dayOfWeek}: {schedule.startTime} - {schedule.endTime}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {groups?.map((group) => (
             <Card
               key={group.id}
               className="cursor-pointer transition-shadow hover:shadow-lg"
-              onClick={() => setLocation(`/groups/${group.id}`)}
+              onClick={() => {
+                setSelectedGroup(group);
+                setIsDetailsOpen(true);
+              }}
             >
               <CardHeader>
                 <CardTitle>{group.name}</CardTitle>
@@ -219,7 +309,7 @@ export default function Groups() {
                               name="dayOfWeek"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Day of Week</FormLabel>
+                                  <FormLabel>День недели</FormLabel>
                                   <FormControl>
                                     <Input
                                       type="number"
@@ -237,7 +327,7 @@ export default function Groups() {
                               name="startTime"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Start Time</FormLabel>
+                                  <FormLabel>Время начала</FormLabel>
                                   <FormControl>
                                     <Input type="time" {...field} />
                                   </FormControl>
@@ -250,7 +340,7 @@ export default function Groups() {
                               name="endTime"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>End Time</FormLabel>
+                                  <FormLabel>Время окончания</FormLabel>
                                   <FormControl>
                                     <Input type="time" {...field} />
                                   </FormControl>
@@ -259,7 +349,7 @@ export default function Groups() {
                               )}
                             />
                             <Button type="submit" className="w-full">
-                              Add Schedule
+                              Добавить расписание
                             </Button>
                           </form>
                         </Form>

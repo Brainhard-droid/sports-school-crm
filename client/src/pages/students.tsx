@@ -32,6 +32,7 @@ export default function StudentsPage() {
   const [open, setOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -95,6 +96,11 @@ export default function StudentsPage() {
     },
   });
 
+  // Форма для редактирования студента
+  const editForm = useForm<InsertStudent>({
+    resolver: zodResolver(insertStudentSchema),
+  });
+
   // Мутация для создания студента
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
@@ -125,6 +131,43 @@ export default function StudentsPage() {
       toast({
         title: "Успешно",
         description: "Студент успешно добавлен",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Мутация для обновления студента
+  const updateMutation = useMutation({
+    mutationFn: async (data: { id: number; student: Partial<InsertStudent> }) => {
+      const res = await fetch(`/api/students/${data.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data.student),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update student');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      setIsEditDialogOpen(false);
+      setSelectedStudent(null);
+      editForm.reset();
+      toast({
+        title: "Успешно",
+        description: "Информация о студенте обновлена",
       });
     },
     onError: (error) => {
@@ -184,6 +227,14 @@ export default function StudentsPage() {
       studentId: selectedStudent.id,
       groupId: parseInt(selectedGroup),
       active: true,
+    });
+  };
+
+  const handleEdit = async (data: InsertStudent) => {
+    if (!selectedStudent) return;
+    await updateMutation.mutateAsync({
+      id: selectedStudent.id,
+      student: data
     });
   };
 
@@ -316,6 +367,104 @@ export default function StudentsPage() {
           </Dialog>
         </div>
 
+        {/* Диалог редактирования */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Редактировать ученика</DialogTitle>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите имя" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Фамилия</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите фамилию" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Дата рождения</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Телефон</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите телефон" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="parentName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя родителя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите имя родителя" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="parentPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Телефон родителя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите телефон родителя" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
         {/* Диалог добавления в группу */}
         <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
           <DialogContent>
@@ -400,7 +549,9 @@ export default function StudentsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                           <DropdownMenuItem onClick={() => {
-                            // TODO: Implement edit functionality
+                            setSelectedStudent(student);
+                            editForm.reset(student);
+                            setIsEditDialogOpen(true);
                           }}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Редактировать
