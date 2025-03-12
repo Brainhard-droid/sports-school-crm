@@ -213,6 +213,62 @@ export class PostgresStorage implements IStorage {
         )
       );
   }
+
+  // Новый метод для получения детальной информации о студентах группы
+  async getGroupStudentsWithDetails(groupId: number): Promise<Student[]> {
+    const result = await db
+      .select({
+        id: students.id,
+        firstName: students.firstName,
+        lastName: students.lastName,
+        birthDate: students.birthDate,
+        phoneNumber: students.phoneNumber,
+        parentName: students.parentName,
+        parentPhone: students.parentPhone,
+        active: studentGroups.active,
+      })
+      .from(studentGroups)
+      .innerJoin(students, eq(students.id, studentGroups.studentId))
+      .where(eq(studentGroups.groupId, groupId));
+
+    return result;
+  }
+
+  // Метод для обновления статуса студента
+  async updateStudentStatus(id: number, active: boolean): Promise<Student> {
+    const [student] = await db
+      .update(students)
+      .set({ active })
+      .where(eq(students.id, id))
+      .returning();
+    return student;
+  }
+
+  // Метод для удаления студента
+  async deleteStudent(id: number): Promise<void> {
+    await db
+      .delete(studentGroups)
+      .where(eq(studentGroups.studentId, id));
+
+    await db
+      .delete(students)
+      .where(eq(students.id, id));
+  }
+
+  // Метод для удаления группы
+  async deleteGroup(id: number): Promise<void> {
+    await db
+      .delete(studentGroups)
+      .where(eq(studentGroups.groupId, id));
+
+    await db
+      .delete(schedules)
+      .where(eq(schedules.groupId, id));
+
+    await db
+      .delete(groups)
+      .where(eq(groups.id, id));
+  }
 }
 
 export const storage = new PostgresStorage();

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Calendar, Loader2 } from "lucide-react";
+import { Users, Calendar, Loader2, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
@@ -34,6 +34,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const DAYS_OF_WEEK = [
   { id: 1, name: "Понедельник" },
@@ -53,6 +63,8 @@ export default function Groups() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleTimes, setScheduleTimes] = useState<{ [key: number]: { startTime: string; endTime: string } }>({});
   const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
@@ -139,6 +151,35 @@ export default function Groups() {
     },
   });
 
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/groups/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete group');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      setIsDeleteDialogOpen(false);
+      setGroupToDelete(null);
+      toast({
+        title: "Успешно",
+        description: "Группа удалена",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDayChange = (dayId: number) => {
     setSelectedDays(prev => {
       const isSelected = prev.includes(dayId);
@@ -173,6 +214,11 @@ export default function Groups() {
     }));
 
     await createScheduleMutation.mutateAsync({ groupId, schedules });
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+    await deleteGroupMutation.mutateAsync(groupToDelete.id);
   };
 
   return (
@@ -419,18 +465,33 @@ export default function Groups() {
                     <span className="text-sm text-muted-foreground">
                       Максимум учеников: {group.maxStudents}
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedGroup(group);
-                        setScheduleDialogOpen(true);
-                      }}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Добавить расписание
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGroup(group);
+                          setScheduleDialogOpen(true);
+                        }}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Добавить расписание
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGroupToDelete(group);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Удалить
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Расписание</h4>
@@ -450,6 +511,33 @@ export default function Groups() {
             </Card>
           ))}
         </div>
+        {/* Диалог подтверждения удаления */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Это действие нельзя отменить. Группа и все связанные с ней данные будут полностью удалены из системы.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteGroup}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteGroupMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Удаление...
+                  </>
+                ) : (
+                  "Удалить"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

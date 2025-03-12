@@ -8,12 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient } from "@/lib/queryClient";
-import { Loader2, UserPlus, Pencil, MoreVertical } from "lucide-react";
+import { Loader2, UserPlus, Pencil, MoreVertical, Archive, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +43,7 @@ export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -216,6 +227,70 @@ export default function StudentsPage() {
     },
   });
 
+  // Мутация для изменения статуса студента (архивация/активация)
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+      const res = await fetch(`/api/students/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ active }),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update student status');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "Успешно",
+        description: "Статус студента обновлен",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Мутация для удаления студента
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/students/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete student');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      setIsDeleteDialogOpen(false);
+      setSelectedStudent(null);
+      toast({
+        title: "Успешно",
+        description: "Студент удален",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = async (data: InsertStudent) => {
     await createMutation.mutateAsync(data);
   };
@@ -235,6 +310,18 @@ export default function StudentsPage() {
     await updateMutation.mutateAsync({
       id: selectedStudent.id,
       student: data
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!selectedStudent) return;
+    await deleteMutation.mutateAsync(selectedStudent.id);
+  };
+
+  const handleToggleStatus = async (student: Student) => {
+    await toggleStatusMutation.mutateAsync({
+      id: student.id,
+      active: !student.active
     });
   };
 
@@ -354,8 +441,8 @@ export default function StudentsPage() {
                       </FormItem>
                     )}
                   />
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full"
                     disabled={createMutation.isPending}
                   >
@@ -453,8 +540,8 @@ export default function StudentsPage() {
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full"
                   disabled={updateMutation.isPending}
                 >
@@ -490,7 +577,7 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button 
+              <Button
                 onClick={handleAddToGroup}
                 disabled={!selectedGroup || addToGroupMutation.isPending}
                 className="w-full"
@@ -563,6 +650,20 @@ export default function StudentsPage() {
                             <UserPlus className="mr-2 h-4 w-4" />
                             Добавить в группу
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(student)}>
+                            <Archive className="mr-2 h-4 w-4" />
+                            {student.active ? 'Архивировать' : 'Активировать'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Удалить
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -573,6 +674,33 @@ export default function StudentsPage() {
           </Table>
         </div>
       </div>
+      {/* Диалог подтверждения удаления */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Студент будет полностью удален из системы.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Удаление...
+                </>
+              ) : (
+                "Удалить"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

@@ -262,6 +262,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Изменяем endpoint для получения студентов группы
+  app.get("/api/group-students/:groupId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const groupId = parseInt(req.params.groupId);
+      const groupStudents = await storage.getGroupStudentsWithDetails(groupId);
+      res.json(groupStudents);
+    } catch (error) {
+      console.error('Error getting group students:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Добавляем endpoint для архивирования/активации студента
+  app.patch("/api/students/:id/status", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { active } = req.body;
+
+      const student = await storage.updateStudentStatus(id, active);
+      res.json(student);
+    } catch (error) {
+      console.error('Error updating student status:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Добавляем endpoint для удаления студента
+  app.delete("/api/students/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      await storage.deleteStudent(id);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Добавляем endpoint для удаления группы
+  app.delete("/api/groups/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      await storage.deleteGroup(id);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   app.get("/api/group-students/:groupId", async (req, res) => {
     try {
       if (!req.isAuthenticated()) return res.sendStatus(401);
