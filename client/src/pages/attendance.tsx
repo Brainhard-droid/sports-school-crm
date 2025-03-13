@@ -32,12 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  X, 
-  Check, 
-  Loader2, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  Loader2,
   Download,
   MoreVertical,
   MessageCircle,
@@ -46,11 +46,11 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 // Add comment dialog component
-const CommentDialog = ({ 
-  isOpen, 
-  onClose, 
-  date, 
-  groupId, 
+const CommentDialog = ({
+  isOpen,
+  onClose,
+  date,
+  groupId,
   existingComment,
   onSave,
 }: {
@@ -276,9 +276,14 @@ export default function AttendancePage() {
       status: keyof typeof AttendanceStatus;
     }) => {
       setIsBulkLoading(true); // Set loading state to true
-      const res = await apiRequest("POST", "/api/attendance/bulk", data);
-      if (!res.ok) throw new Error('Failed to update bulk attendance');
-      return res.json();
+      try {
+        const res = await apiRequest("POST", "/api/attendance/bulk", data);
+        if (!res.ok) throw new Error('Failed to update bulk attendance');
+        return res.json();
+      } catch (error) {
+        console.error('Error updating bulk attendance:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -293,7 +298,6 @@ export default function AttendancePage() {
         title: "Успешно",
         description: "Посещаемость обновлена",
       });
-      setIsBulkLoading(false); // Set loading state to false
     },
     onError: (error) => {
       console.error('Error marking attendance:', error);
@@ -302,7 +306,9 @@ export default function AttendancePage() {
         description: "Не удалось обновить посещаемость",
         variant: "destructive",
       });
-      setIsBulkLoading(false); // Set loading state to false
+    },
+    onSettled: () => {
+      setIsBulkLoading(false); // Set loading state to false regardless of success/failure
     },
   });
 
@@ -414,7 +420,7 @@ export default function AttendancePage() {
           `"${student.lastName} ${student.firstName}"`,
           ...scheduleDates.map(date => {
             const status = getAttendanceStatus(student.id, date);
-            return status === AttendanceStatus.PRESENT ? "✓" : 
+            return status === AttendanceStatus.PRESENT ? "✓" :
                    status === AttendanceStatus.ABSENT ? "×" : "";
           }),
           `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
@@ -533,8 +539,8 @@ export default function AttendancePage() {
                       );
 
                       return (
-                        <TableHead 
-                          key={date.toISOString()} 
+                        <TableHead
+                          key={date.toISOString()}
                           className="text-center min-w-[40px] border-r last:border-r-0"
                         >
                           <div className="flex items-center justify-center gap-1">
@@ -546,19 +552,30 @@ export default function AttendancePage() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                  <MoreVertical className="h-4 w-4" />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  disabled={isBulkLoading}
+                                >
+                                  {isBulkLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MoreVertical className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "PRESENT")}
+                                  disabled={isBulkLoading}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Отметить всех
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "ABSENT")}
+                                  disabled={isBulkLoading}
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Отметить отсутствие
@@ -629,7 +646,7 @@ export default function AttendancePage() {
                               </TableCell>
                             );
                           })}
-                          <TableCell 
+                          <TableCell
                             className={`text-center border-l ${
                               lowAttendance ? 'text-red-600' : ''
                             }`}

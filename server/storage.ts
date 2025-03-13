@@ -588,7 +588,8 @@ export class PostgresStorage implements IStorage {
     try {
       const students = await this.getGroupStudentsWithDetails(groupId);
 
-      for (const student of students) {
+      // Используем Promise.all для параллельного выполнения обновлений
+      await Promise.all(students.map(async (student) => {
         const existingAttendance = await db
           .select()
           .from(attendance)
@@ -615,7 +616,7 @@ export class PostgresStorage implements IStorage {
               status,
             });
         }
-      }
+      }));
     } catch (error) {
       console.error('Error updating bulk attendance:', error);
       throw error;
