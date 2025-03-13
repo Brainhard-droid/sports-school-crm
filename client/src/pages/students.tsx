@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient } from "@/lib/queryClient";
-import { Loader2, UserPlus, Pencil, MoreVertical, Archive, Trash2, Filter } from "lucide-react";
+import { Loader2, UserPlus, Pencil, MoreVertical, Archive, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Select,
@@ -65,7 +65,7 @@ export default function StudentsPage() {
   const { user } = useAuth();
   const [filters, setFilters] = useState({
     searchTerm: "",
-    groupId: "",
+    groupId: "all", 
     showArchived: false,
   });
 
@@ -79,16 +79,8 @@ export default function StudentsPage() {
       }
 
       const response = await fetch('/api/students', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        }
+        credentials: 'include'
       });
-
-      if (response.status === 401) {
-        setLocation('/auth');
-        throw new Error('Unauthorized');
-      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch students');
@@ -102,15 +94,6 @@ export default function StudentsPage() {
   // Получение списка групп
   const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
-    queryFn: async () => {
-      const response = await fetch('/api/groups', {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch groups');
-      }
-      return response.json();
-    }
   });
 
   // Фильтрация студентов
@@ -122,7 +105,7 @@ export default function StudentsPage() {
       (student.parentName?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ?? false) ||
       (student.parentPhone?.includes(filters.searchTerm) ?? false);
 
-    const matchesGroup = !filters.groupId || (student.groups?.some(g => g.id.toString() === filters.groupId) ?? false);
+    const matchesGroup = filters.groupId === "all" || (student.groups?.some(g => g.id.toString() === filters.groupId) ?? false);
     const matchesArchived = filters.showArchived ? true : student.active;
 
     return matchesSearch && matchesGroup && matchesArchived;
@@ -499,7 +482,7 @@ export default function StudentsPage() {
               <SelectValue placeholder="Фильтр по группе" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Все группы</SelectItem>
+              <SelectItem value="all">Все группы</SelectItem>
               {groups?.map((group) => (
                 <SelectItem key={group.id} value={group.id.toString()}>
                   {group.name}
