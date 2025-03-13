@@ -406,7 +406,12 @@ export class PostgresStorage implements IStorage {
     try {
       const [result] = await db
         .insert(attendance)
-        .values(data)
+        .values({
+          studentId: data.studentId,
+          groupId: data.groupId,
+          date: data.date,
+          status: data.status,
+        })
         .returning();
       return result;
     } catch (error) {

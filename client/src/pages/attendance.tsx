@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/navbar";
-import { Student, Group, Attendance, AttendanceStatus, InsertAttendance } from "@shared/schema";
+import { Student, Group, Attendance, AttendanceStatus } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -90,20 +90,38 @@ export default function AttendancePage() {
   });
 
   const markAttendanceMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      studentId,
+      date,
+      status,
+    }: {
       studentId: number;
       date: Date;
       status: keyof typeof AttendanceStatus;
     }) => {
-      const attendance = {
-        studentId: data.studentId,
-        groupId: selectedGroup!.id,
-        date: format(data.date, "yyyy-MM-dd"),
-        status: data.status,
-      };
+      const existingAttendance = attendance?.find(
+        (a) =>
+          a.studentId === studentId &&
+          format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+      );
 
-      const res = await apiRequest("POST", "/api/attendance", attendance);
-      return res.json();
+      if (existingAttendance) {
+        // Update existing attendance record
+        const res = await apiRequest("PATCH", `/api/attendance/${existingAttendance.id}`, {
+          status,
+        });
+        return res.json();
+      } else {
+        // Create new attendance record
+        const newAttendance = {
+          studentId,
+          groupId: selectedGroup!.id,
+          date: format(date, "yyyy-MM-dd"),
+          status,
+        };
+        const res = await apiRequest("POST", "/api/attendance", newAttendance);
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -116,9 +134,10 @@ export default function AttendancePage() {
       });
     },
     onError: (error) => {
+      console.error('Error marking attendance:', error);
       toast({
         title: "Ошибка",
-        description: error.message,
+        description: "Не удалось отметить посещаемость",
         variant: "destructive",
       });
     },
