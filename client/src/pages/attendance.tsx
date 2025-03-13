@@ -32,12 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Check,
-  Loader2,
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Check, 
+  Loader2, 
   Download,
   MoreVertical,
   MessageCircle,
@@ -46,11 +46,11 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 // Add comment dialog component
-const CommentDialog = ({
-  isOpen,
-  onClose,
-  date,
-  groupId,
+const CommentDialog = ({ 
+  isOpen, 
+  onClose, 
+  date, 
+  groupId, 
   existingComment,
   onSave,
 }: {
@@ -94,7 +94,6 @@ export default function AttendancePage() {
     date: Date | null;
     comment?: DateComment;
   }>({ isOpen: false, date: null });
-  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Get active groups
@@ -237,28 +236,12 @@ export default function AttendancePage() {
   // Add mutation for date comments
   const dateCommentMutation = useMutation({
     mutationFn: async (data: { groupId: number; date: string; comment: string }) => {
-      const existingComment = dateComments?.find(
-        (c) => format(new Date(c.date), "yyyy-MM-dd") === data.date
-      );
-
-      if (existingComment) {
-        const res = await apiRequest("PATCH", `/api/date-comments/${existingComment.id}`, {
-          comment: data.comment,
-        });
-        return res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/date-comments", data);
-        return res.json();
-      }
+      const res = await apiRequest("POST", "/api/date-comments", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "/api/date-comments",
-          selectedGroup?.id,
-          selectedMonth.getMonth() + 1,
-          selectedMonth.getFullYear(),
-        ],
+        queryKey: ["/api/date-comments", selectedGroup?.id],
       });
       setCommentDialogData({ isOpen: false, date: null });
       toast({
@@ -268,98 +251,27 @@ export default function AttendancePage() {
     },
   });
 
-  // Mutation for bulk attendance
+  // Add mutation for bulk attendance
   const bulkAttendanceMutation = useMutation({
-    mutationFn: async ({
-      groupId,
-      date,
-      status,
-    }: {
+    mutationFn: async (data: {
       groupId: number;
       date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
-      const res = await apiRequest("POST", "/api/attendance/bulk", {
-        groupId,
-        date,
-        status,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to update bulk attendance");
-      }
-
+      const res = await apiRequest("POST", "/api/attendance/bulk", data);
+      if (!res.ok) throw new Error('Failed to update bulk attendance');
       return res.json();
     },
-    onMutate: async (variables) => {
-      setLoadingDates((prev) => new Set([...prev, variables.date]));
-    },
-    onSuccess: (newAttendance) => {
-      // Обновляем кэш с новыми данными
-      queryClient.setQueryData(
-        [
-          "/api/attendance",
-          selectedGroup?.id,
-          selectedMonth.getMonth() + 1,
-          selectedMonth.getFullYear(),
-        ],
-        (old: Attendance[] = []) => {
-          // Удаляем старые записи для этой даты и группы
-          const filtered = old.filter(
-            (record) =>
-              !newAttendance.some(
-                (newRecord) =>
-                  newRecord.date === record.date &&
-                  newRecord.groupId === record.groupId
-              )
-          );
-          // Добавляем новые записи
-          return [...filtered, ...newAttendance];
-        }
-      );
-
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/attendance", selectedGroup?.id],
+      });
       toast({
         title: "Успешно",
         description: "Посещаемость обновлена",
       });
     },
-    onError: (error) => {
-      console.error("Error in bulk attendance update:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить посещаемость",
-        variant: "destructive",
-      });
-    },
-    onSettled: (_, __, variables) => {
-      setLoadingDates((prev) => {
-        const next = new Set(prev);
-        next.delete(variables.date);
-        return next;
-      });
-    },
   });
-
-  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
-    if (!selectedGroup) return;
-
-    const formattedDate = format(date, "yyyy-MM-dd");
-    try {
-      await bulkAttendanceMutation.mutateAsync({
-        groupId: selectedGroup.id,
-        date: formattedDate,
-        status,
-      });
-    } catch (error) {
-      console.error("Error in handleBulkAttendance:", error);
-      toast({
-        title: "Ошибка",
-        description: "Произошла ошибка при обновлении посещаемости",
-        variant: "destructive"
-      })
-    }
-  };
 
   const handleMarkAttendance = (studentId: number, date: Date) => {
     if (!selectedGroup) return;
@@ -395,6 +307,15 @@ export default function AttendancePage() {
     });
   };
 
+  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
+    if (!selectedGroup) return;
+
+    await bulkAttendanceMutation.mutate({
+      groupId: selectedGroup.id,
+      date: format(date, "yyyy-MM-dd"),
+      status,
+    });
+  };
 
   const getAttendanceStatus = (studentId: number, date: Date) => {
     const record = attendance?.find(
@@ -416,9 +337,9 @@ export default function AttendancePage() {
 
   // Calculate attendance statistics for a student
   const getStudentStats = (studentId: number) => {
-    const studentAttendance = attendance?.filter((a) => a.studentId === studentId) || [];
+    const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
     const totalClasses = scheduleDates?.length || 0;
-    const attended = studentAttendance.filter((a) => a.status === AttendanceStatus.PRESENT).length;
+    const attended = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
     const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
     return { attended, totalClasses, percentage };
   };
@@ -431,14 +352,14 @@ export default function AttendancePage() {
     const totalClasses = scheduleDates.length;
     const totalPossibleAttendances = totalStudents * totalClasses;
 
-    const totalPresent = attendance?.filter((a) => a.status === AttendanceStatus.PRESENT).length || 0;
+    const totalPresent = attendance?.filter(a => a.status === AttendanceStatus.PRESENT).length || 0;
     const averageAttendance = Math.round((totalPresent / totalPossibleAttendances) * 100);
 
     return { averageAttendance };
   };
 
   // Filter students
-  const filteredStudents = students?.filter((student) => {
+  const filteredStudents = students?.filter(student => {
     const fullName = `${student.lastName} ${student.firstName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
@@ -450,17 +371,17 @@ export default function AttendancePage() {
     if (format === 'csv') {
       const headers = [
         "Ученик",
-        ...scheduleDates.map((date) => `"${format(date, "d MMM", { locale: ru })} (${format(date, "EEE", { locale: ru })})"`),
+        ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
         "Посещаемость"
       ];
 
-      const rows = students.map((student) => {
+      const rows = students.map(student => {
         const stats = getStudentStats(student.id);
         return [
-          `"${student.lastName} ${student.firstName}"`,
-          ...scheduleDates.map((date) => {
+          `${student.lastName} ${student.firstName}`,
+          ...scheduleDates.map(date => {
             const status = getAttendanceStatus(student.id, date);
-            return status === AttendanceStatus.PRESENT ? "✓" :
+            return status === AttendanceStatus.PRESENT ? "✓" : 
                    status === AttendanceStatus.ABSENT ? "×" : "";
           }),
           `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
@@ -469,10 +390,10 @@ export default function AttendancePage() {
 
       const csvContent = [
         headers.join(","),
-        ...rows.map((row) => row.join(","))
+        ...rows.map(row => row.join(","))
       ].join("\n");
 
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+      const blob = new Blob([csvContent], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -488,11 +409,6 @@ export default function AttendancePage() {
         description: "Экспорт в PDF будет доступен в ближайшее время",
       });
     }
-  };
-
-  const isDateLoading = (date: Date) => {
-    const formattedDate = format(date, "yyyy-MM-dd");
-    return loadingDates.has(formattedDate);
   };
 
   return (
@@ -582,11 +498,10 @@ export default function AttendancePage() {
                       const dateComment = dateComments?.find(
                         (c) => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
                       );
-                      const formattedDate = format(date, "yyyy-MM-dd");
 
                       return (
-                        <TableHead
-                          key={date.toISOString()}
+                        <TableHead 
+                          key={date.toISOString()} 
                           className="text-center min-w-[40px] border-r last:border-r-0"
                         >
                           <div className="flex items-center justify-center gap-1">
@@ -598,30 +513,19 @@ export default function AttendancePage() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  disabled={isDateLoading(date)}
-                                >
-                                  {isDateLoading(date) ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <MoreVertical className="h-4 w-4" />
-                                  )}
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                  <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "PRESENT")}
-                                  disabled={isDateLoading(date)}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Отметить всех
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "ABSENT")}
-                                  disabled={isDateLoading(date)}
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Отметить отсутствие
@@ -692,9 +596,9 @@ export default function AttendancePage() {
                               </TableCell>
                             );
                           })}
-                          <TableCell
+                          <TableCell 
                             className={`text-center border-l ${
-                              lowAttendance ? "text-red-600" : ""
+                              lowAttendance ? 'text-red-600' : ''
                             }`}
                           >
                             {stats.percentage}% ({stats.attended}/{stats.totalClasses})
