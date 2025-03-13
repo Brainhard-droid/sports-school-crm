@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/navbar";
-import { Student, Group, Attendance, InsertAttendance, insertAttendanceSchema } from "@shared/schema";
+import { Student, Group, Attendance, AttendanceStatus, InsertAttendance } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -13,160 +19,250 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+import { ChevronLeft, ChevronRight, X, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { CalendarIcon, CheckCircle, XCircle } from "lucide-react";
+import { ru } from "date-fns/locale";
 
 export default function AttendancePage() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const { toast } = useToast();
 
-  const { data: groups } = useQuery<Group[]>({ 
-    queryKey: ["/api/groups"] 
+  // Get active groups
+  const { data: groups } = useQuery<Group[]>({
+    queryKey: ["/api/groups"],
   });
-  const { data: students } = useQuery<Student[]>({ 
-    queryKey: ["/api/students"] 
+
+  // Get schedule dates for selected group and month
+  const { data: scheduleDates } = useQuery<Date[]>({
+    queryKey: [
+      "/api/groups",
+      selectedGroup?.id,
+      "schedule-dates",
+      selectedMonth.getMonth() + 1,
+      selectedMonth.getFullYear(),
+    ],
+    queryFn: async () => {
+      if (!selectedGroup) return [];
+      const res = await apiRequest(
+        "GET",
+        `/api/groups/${selectedGroup.id}/schedule-dates?month=${
+          selectedMonth.getMonth() + 1
+        }&year=${selectedMonth.getFullYear()}`
+      );
+      const dates = await res.json();
+      return dates.map((d: string) => new Date(d));
+    },
+    enabled: !!selectedGroup,
   });
+
+  // Get students in selected group
+  const { data: students } = useQuery<Student[]>({
+    queryKey: ["/api/group-students", selectedGroup?.id],
+    queryFn: async () => {
+      if (!selectedGroup) return [];
+      const res = await apiRequest("GET", `/api/group-students/${selectedGroup.id}`);
+      return res.json();
+    },
+    enabled: !!selectedGroup,
+  });
+
+  // Get attendance records for selected month
   const { data: attendance } = useQuery<Attendance[]>({
-    queryKey: ["/api/attendance", selectedGroup, selectedDate],
-    enabled: !!selectedGroup && !!selectedDate,
+    queryKey: [
+      "/api/attendance",
+      selectedGroup?.id,
+      selectedMonth.getMonth() + 1,
+      selectedMonth.getFullYear(),
+    ],
+    queryFn: async () => {
+      if (!selectedGroup) return [];
+      const res = await apiRequest(
+        "GET",
+        `/api/attendance?groupId=${selectedGroup.id}&month=${
+          selectedMonth.getMonth() + 1
+        }&year=${selectedMonth.getFullYear()}`
+      );
+      return res.json();
+    },
+    enabled: !!selectedGroup,
   });
 
   const markAttendanceMutation = useMutation({
-    mutationFn: async (data: InsertAttendance) => {
-      const res = await apiRequest("POST", "/api/attendance", data);
+    mutationFn: async (data: {
+      studentId: number;
+      date: Date;
+      status: keyof typeof AttendanceStatus;
+    }) => {
+      const attendance = {
+        studentId: data.studentId,
+        groupId: selectedGroup!.id,
+        date: format(data.date, "yyyy-MM-dd"),
+        status: data.status,
+      };
+
+      const res = await apiRequest("POST", "/api/attendance", attendance);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/attendance", selectedGroup, selectedDate] 
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/attendance",
+          selectedGroup?.id,
+          selectedMonth.getMonth() + 1,
+          selectedMonth.getFullYear(),
+        ],
       });
+    },
+    onError: (error) => {
       toast({
-        title: "Success",
-        description: "Attendance marked successfully",
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
 
-  const handleMarkAttendance = (studentId: number, present: boolean) => {
+  const handleMarkAttendance = (studentId: number, date: Date) => {
     if (!selectedGroup) return;
-    
-    markAttendanceMutation.mutate({
-      studentId,
-      groupId: parseInt(selectedGroup),
-      date: selectedDate,
-      present,
-    });
+
+    const existingAttendance = attendance?.find(
+      (a) =>
+        a.studentId === studentId &&
+        format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+
+    let nextStatus: keyof typeof AttendanceStatus;
+    if (!existingAttendance || existingAttendance.status === AttendanceStatus.NOT_MARKED) {
+      nextStatus = "PRESENT";
+    } else if (existingAttendance.status === AttendanceStatus.PRESENT) {
+      nextStatus = "ABSENT";
+    } else {
+      nextStatus = "NOT_MARKED";
+    }
+
+    markAttendanceMutation.mutate({ studentId, date, status: nextStatus });
+  };
+
+  const getAttendanceStatus = (studentId: number, date: Date) => {
+    const record = attendance?.find(
+      (a) =>
+        a.studentId === studentId &&
+        format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+
+    return record?.status || AttendanceStatus.NOT_MARKED;
+  };
+
+  const handlePreviousMonth = () => {
+    setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)));
   };
 
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6">Attendance</h1>
+        <h1 className="text-3xl font-bold mb-6">Посещаемость</h1>
 
-        <div className="flex gap-4 mb-6">
-          <div className="w-[200px]">
-            <Select
-              value={selectedGroup}
-              onValueChange={setSelectedGroup}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Group" />
-              </SelectTrigger>
-              <SelectContent>
-                {groups?.map((group) => (
-                  <SelectItem key={group.id} value={group.id.toString()}>
-                    {group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="relative">
-            <Button
-              variant="outline"
-              className="w-[200px] justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {format(selectedDate, "PPP")}
-            </Button>
-            <div className="absolute top-10 z-10">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
-              />
-            </div>
-          </div>
+        {/* Groups List */}
+        <div className="space-y-2 mb-6">
+          {groups
+            ?.filter((g) => g.active)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((group) => (
+              <Button
+                key={group.id}
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => setSelectedGroup(group)}
+              >
+                {group.name}
+              </Button>
+            ))}
         </div>
 
-        {selectedGroup && (
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students?.map((student) => {
-                  const studentAttendance = attendance?.find(
-                    (a) => a.studentId === student.id
-                  );
+        {/* Attendance Modal */}
+        <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
+          <DialogContent className="max-w-[95vw] w-fit">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle>{selectedGroup?.name}</DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedGroup(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </DialogHeader>
 
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell>
-                        {student.firstName} {student.lastName}
-                      </TableCell>
-                      <TableCell>
-                        {studentAttendance ? (
-                          studentAttendance.present ? (
-                            <span className="text-green-600">Present</span>
-                          ) : (
-                            <span className="text-red-600">Absent</span>
-                          )
-                        ) : (
-                          <span className="text-muted-foreground">Not marked</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleMarkAttendance(student.id, true)}
-                          >
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleMarkAttendance(student.id, false)}
-                          >
-                            <XCircle className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-lg font-medium">
+                {format(selectedMonth, "LLLL yyyy", { locale: ru })}
+              </span>
+              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Attendance Table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Ученик</TableHead>
+                    {scheduleDates?.map((date) => (
+                      <TableHead key={date.toISOString()} className="text-center min-w-[40px]">
+                        {format(date, "d")}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students
+                    ?.sort((a, b) =>
+                      `${a.lastName} ${a.firstName}`.localeCompare(
+                        `${b.lastName} ${b.firstName}`
+                      )
+                    )
+                    .map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">
+                          {student.lastName} {student.firstName}
+                        </TableCell>
+                        {scheduleDates?.map((date) => {
+                          const status = getAttendanceStatus(student.id, date);
+                          return (
+                            <TableCell
+                              key={date.toISOString()}
+                              className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50"
+                              onClick={() => handleMarkAttendance(student.id, date)}
+                            >
+                              {markAttendanceMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mx-auto animate-spin" />
+                              ) : status === AttendanceStatus.PRESENT ? (
+                                <Check className="h-4 w-4 mx-auto text-green-600" />
+                              ) : status === AttendanceStatus.ABSENT ? (
+                                <X className="h-4 w-4 mx-auto text-red-600" />
+                              ) : null}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

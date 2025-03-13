@@ -4,7 +4,7 @@ import {
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
   users, students, groups, schedules, attendance, payments, studentGroups
 } from "@shared/schema";
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from './db';
@@ -381,21 +381,83 @@ export class PostgresStorage implements IStorage {
   }
 
   // Attendance
-  async getAttendance(groupId: number, date: Date): Promise<Attendance[]> {
-    return await db
-      .select()
-      .from(attendance)
-      .where(
-        and(
-          eq(attendance.groupId, groupId),
-          eq(attendance.date, date.toISOString().split('T')[0])
-        )
-      );
+  async getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]> {
+    try {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+
+      return await db
+        .select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.groupId, groupId),
+            gte(attendance.date, startDate),
+            lte(attendance.date, endDate)
+          )
+        );
+    } catch (error) {
+      console.error('Error getting attendance:', error);
+      throw error;
+    }
   }
 
   async createAttendance(data: InsertAttendance): Promise<Attendance> {
-    const [result] = await db.insert(attendance).values(data).returning();
-    return result;
+    try {
+      const [result] = await db
+        .insert(attendance)
+        .values(data)
+        .returning();
+      return result;
+    } catch (error) {
+      console.error('Error creating attendance:', error);
+      throw error;
+    }
+  }
+
+  async updateAttendance(id: number, data: Partial<Attendance>): Promise<Attendance> {
+    try {
+      const [result] = await db
+        .update(attendance)
+        .set(data)
+        .where(eq(attendance.id, id))
+        .returning();
+      return result;
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      throw error;
+    }
+  }
+
+  async getGroupScheduleDates(groupId: number, month: number, year: number): Promise<Date[]> {
+    try {
+      // Get group's schedule
+      const groupSchedules = await db
+        .select()
+        .from(schedules)
+        .where(eq(schedules.groupId, groupId));
+
+      // Get all days of the month
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+      const daysInMonth = endDate.getDate();
+
+      // Filter dates based on schedule
+      const scheduleDates: Date[] = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month - 1, day);
+        const dayOfWeek = date.getDay() || 7; // Convert Sunday (0) to 7
+
+        if (groupSchedules.some(schedule => schedule.dayOfWeek === dayOfWeek)) {
+          scheduleDates.push(date);
+        }
+      }
+
+      return scheduleDates;
+    } catch (error) {
+      console.error('Error getting schedule dates:', error);
+      throw error;
+    }
   }
 
   // Метод для обновления статуса группы

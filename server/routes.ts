@@ -8,7 +8,8 @@ import {
   insertScheduleSchema,
   insertAttendanceSchema,
   insertPaymentSchema,
-  insertStudentGroupSchema
+  insertStudentGroupSchema,
+  AttendanceStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
@@ -241,21 +242,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Attendance
+  // Updated Attendance routes
   app.get("/api/attendance", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { groupId, date } = req.query;
-    if (!groupId || !date) return res.status(400).send("Missing groupId or date");
-    const attendance = await storage.getAttendance(parseInt(groupId as string), new Date(date as string));
-    res.json(attendance);
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const { groupId, month, year } = req.query;
+      if (!groupId || !month || !year) {
+        return res.status(400).send("Missing groupId, month or year");
+      }
+
+      const attendance = await storage.getAttendance(
+        parseInt(groupId as string),
+        parseInt(month as string),
+        parseInt(year as string)
+      );
+      res.json(attendance);
+    } catch (error) {
+      console.error('Error getting attendance:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
   });
 
   app.post("/api/attendance", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const parsed = insertAttendanceSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    const attendance = await storage.createAttendance(parsed.data);
-    res.status(201).json(attendance);
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const parsed = insertAttendanceSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      const attendance = await storage.createAttendance(parsed.data);
+      res.status(201).json(attendance);
+    } catch (error) {
+      console.error('Error creating attendance:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/attendance/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (!Object.values(AttendanceStatus).includes(status)) {
+        return res.status(400).json({ error: "Invalid attendance status" });
+      }
+
+      const attendance = await storage.updateAttendance(id, { status });
+      res.json(attendance);
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Additional endpoints for the attendance feature
+  app.get("/api/groups/:groupId/schedule-dates", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const groupId = parseInt(req.params.groupId);
+      const { month, year } = req.query;
+
+      if (!month || !year) {
+        return res.status(400).send("Missing month or year");
+      }
+
+      const dates = await storage.getGroupScheduleDates(
+        groupId,
+        parseInt(month as string),
+        parseInt(year as string)
+      );
+
+      res.json(dates);
+    } catch (error) {
+      console.error('Error getting schedule dates:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
   });
 
   // Payments

@@ -41,12 +41,21 @@ export const schedules = pgTable("schedules", {
   endTime: text("end_time").notNull(),
 });
 
+// Define attendance status enum
+export const AttendanceStatus = {
+  NOT_MARKED: "NOT_MARKED",
+  PRESENT: "PRESENT",
+  ABSENT: "ABSENT",
+} as const;
+
+export type AttendanceStatusType = typeof AttendanceStatus[keyof typeof AttendanceStatus];
+
 export const attendance = pgTable("attendance", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
   groupId: integer("group_id").notNull(),
   date: date("date").notNull(),
-  present: boolean("present").notNull(),
+  status: text("status").notNull().default(AttendanceStatus.NOT_MARKED),
 });
 
 export const payments = pgTable("payments", {
@@ -95,7 +104,12 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertStudentSchema = createInsertSchema(students);
 export const insertGroupSchema = createInsertSchema(groups);
 export const insertScheduleSchema = createInsertSchema(schedules);
-export const insertAttendanceSchema = createInsertSchema(attendance);
+
+// Update attendance schema to include status
+export const insertAttendanceSchema = createInsertSchema(attendance).extend({
+  status: z.enum([AttendanceStatus.NOT_MARKED, AttendanceStatus.PRESENT, AttendanceStatus.ABSENT])
+});
+
 export const insertPaymentSchema = createInsertSchema(payments);
 export const insertStudentGroupSchema = createInsertSchema(studentGroups);
 
