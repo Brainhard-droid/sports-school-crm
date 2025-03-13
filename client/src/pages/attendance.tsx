@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -190,13 +191,7 @@ export default function AttendancePage() {
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <DialogTitle>{selectedGroup?.name}</DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedGroup(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <DialogClose />
               </div>
             </DialogHeader>
 
@@ -217,10 +212,13 @@ export default function AttendancePage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Ученик</TableHead>
+                  <TableRow className="border-b">
+                    <TableHead className="min-w-[200px] border-r">Ученик</TableHead>
                     {scheduleDates?.map((date) => (
-                      <TableHead key={date.toISOString()} className="text-center min-w-[40px]">
+                      <TableHead 
+                        key={date.toISOString()} 
+                        className="text-center min-w-[40px] border-r last:border-r-0"
+                      >
                         {format(date, "d")}
                       </TableHead>
                     ))}
@@ -234,8 +232,8 @@ export default function AttendancePage() {
                       )
                     )
                     .map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={student.id} className="border-b">
+                        <TableCell className="font-medium border-r">
                           {student.lastName} {student.firstName}
                         </TableCell>
                         {scheduleDates?.map((date) => {
@@ -243,7 +241,7 @@ export default function AttendancePage() {
                           return (
                             <TableCell
                               key={date.toISOString()}
-                              className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50"
+                              className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50 border-r last:border-r-0"
                               onClick={() => handleMarkAttendance(student.id, date)}
                             >
                               {markAttendanceMutation.isPending ? (
