@@ -95,6 +95,7 @@ export default function AttendancePage() {
     comment?: DateComment;
   }>({ isOpen: false, date: null });
   const [isBulkLoading, setIsBulkLoading] = useState(false); // Added loading state for bulk actions
+  const [bulkLoadingDates, setBulkLoadingDates] = useState<string[]>([]); // Add bulk loading state for individual dates
   const { toast } = useToast();
 
   // Get active groups
@@ -268,52 +269,76 @@ export default function AttendancePage() {
     },
   });
 
-  // Add mutation for bulk attendance
+  // Mutation for bulk attendance
   const bulkAttendanceMutation = useMutation({
     mutationFn: async (data: {
       groupId: number;
       date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
-      setIsBulkLoading(true); // Set loading state to true when starting
-      try {
-        const res = await apiRequest("POST", "/api/attendance/bulk", data);
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Failed to update bulk attendance');
-        }
-        return res.json();
-      } catch (error) {
-        console.error('Error updating bulk attendance:', error);
-        throw error;
+      const res = await apiRequest("POST", "/api/attendance/bulk", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to update bulk attendance');
       }
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
+    onMutate: async (variables) => {
+      // Add date to loading state
+      setBulkLoadingDates((prev) => [...prev, variables.date]);
+    },
+    onSuccess: (updatedRecords) => {
+      // Update the cache with the new records
+      queryClient.setQueryData(
+        [
           "/api/attendance",
           selectedGroup?.id,
           selectedMonth.getMonth() + 1,
           selectedMonth.getFullYear(),
         ],
-      });
+        (oldData: Attendance[] = []) => {
+          // Remove old records for the same date and group
+          const filteredData = oldData.filter(
+            (record) =>
+              !updatedRecords.some(
+                (newRecord) =>
+                  newRecord.date === record.date && newRecord.groupId === record.groupId
+              )
+          );
+          // Add new records
+          return [...filteredData, ...updatedRecords];
+        }
+      );
+
       toast({
         title: "Успешно",
         description: "Посещаемость обновлена",
       });
     },
     onError: (error) => {
-      console.error('Error marking attendance:', error);
+      console.error("Error marking attendance:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось обновить посещаемость",
         variant: "destructive",
       });
     },
-    onSettled: () => {
-      setIsBulkLoading(false); // Reset loading state whether success or error
+    onSettled: (_, __, variables) => {
+      // Remove date from loading state regardless of success/failure
+      setBulkLoadingDates((prev) => prev.filter((date) => date !== variables.date));
     },
   });
+
+  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
+    if (!selectedGroup) return;
+
+    const formattedDate = format(date, "yyyy-MM-dd");
+    await bulkAttendanceMutation.mutate({
+      groupId: selectedGroup.id,
+      date: formattedDate,
+      status,
+    });
+  };
 
   const handleMarkAttendance = (studentId: number, date: Date) => {
     if (!selectedGroup) return;
@@ -349,15 +374,6 @@ export default function AttendancePage() {
     });
   };
 
-  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
-    if (!selectedGroup) return;
-
-    await bulkAttendanceMutation.mutate({
-      groupId: selectedGroup.id,
-      date: format(date, "yyyy-MM-dd"),
-      status,
-    });
-  };
 
   const getAttendanceStatus = (studentId: number, date: Date) => {
     const record = attendance?.find(
@@ -379,9 +395,9 @@ export default function AttendancePage() {
 
   // Calculate attendance statistics for a student
   const getStudentStats = (studentId: number) => {
-    const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
+    const studentAttendance = attendance?.filter((a) => a.studentId === studentId) || [];
     const totalClasses = scheduleDates?.length || 0;
-    const attended = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
+    const attended = studentAttendance.filter((a) => a.status === AttendanceStatus.PRESENT).length;
     const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
     return { attended, totalClasses, percentage };
   };
@@ -394,14 +410,14 @@ export default function AttendancePage() {
     const totalClasses = scheduleDates.length;
     const totalPossibleAttendances = totalStudents * totalClasses;
 
-    const totalPresent = attendance?.filter(a => a.status === AttendanceStatus.PRESENT).length || 0;
+    const totalPresent = attendance?.filter((a) => a.status === AttendanceStatus.PRESENT).length || 0;
     const averageAttendance = Math.round((totalPresent / totalPossibleAttendances) * 100);
 
     return { averageAttendance };
   };
 
   // Filter students
-  const filteredStudents = students?.filter(student => {
+  const filteredStudents = students?.filter((student) => {
     const fullName = `${student.lastName} ${student.firstName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
@@ -413,15 +429,15 @@ export default function AttendancePage() {
     if (format === 'csv') {
       const headers = [
         "Ученик",
-        ...scheduleDates.map(date => `"${format(date, "d MMM", { locale: ru })} (${format(date, "EEE", { locale: ru })})"`),
+        ...scheduleDates.map((date) => `"${format(date, "d MMM", { locale: ru })} (${format(date, "EEE", { locale: ru })})"`),
         "Посещаемость"
       ];
 
-      const rows = students.map(student => {
+      const rows = students.map((student) => {
         const stats = getStudentStats(student.id);
         return [
           `"${student.lastName} ${student.firstName}"`,
-          ...scheduleDates.map(date => {
+          ...scheduleDates.map((date) => {
             const status = getAttendanceStatus(student.id, date);
             return status === AttendanceStatus.PRESENT ? "✓" :
                    status === AttendanceStatus.ABSENT ? "×" : "";
@@ -432,7 +448,7 @@ export default function AttendancePage() {
 
       const csvContent = [
         headers.join(","),
-        ...rows.map(row => row.join(","))
+        ...rows.map((row) => row.join(","))
       ].join("\n");
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
@@ -540,6 +556,8 @@ export default function AttendancePage() {
                       const dateComment = dateComments?.find(
                         (c) => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
                       );
+                      const formattedDate = format(date, "yyyy-MM-dd");
+                      const isDateLoading = bulkLoadingDates.includes(formattedDate);
 
                       return (
                         <TableHead
@@ -559,9 +577,9 @@ export default function AttendancePage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  disabled={bulkAttendanceMutation.isPending}
+                                  disabled={isDateLoading}
                                 >
-                                  {bulkAttendanceMutation.isPending ? (
+                                  {isDateLoading ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <MoreVertical className="h-4 w-4" />
@@ -571,14 +589,14 @@ export default function AttendancePage() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "PRESENT")}
-                                  disabled={bulkAttendanceMutation.isPending}
+                                  disabled={isDateLoading}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Отметить всех
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "ABSENT")}
-                                  disabled={bulkAttendanceMutation.isPending}
+                                  disabled={isDateLoading}
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Отметить отсутствие
@@ -651,7 +669,7 @@ export default function AttendancePage() {
                           })}
                           <TableCell
                             className={`text-center border-l ${
-                              lowAttendance ? 'text-red-600' : ''
+                              lowAttendance ? "text-red-600" : ""
                             }`}
                           >
                             {stats.percentage}% ({stats.attended}/{stats.totalClasses})
