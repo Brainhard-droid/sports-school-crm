@@ -559,9 +559,9 @@ export default function AttendancePage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  disabled={isBulkLoading}
+                                  disabled={bulkAttendanceMutation.isPending}
                                 >
-                                  {isBulkLoading ? (
+                                  {bulkAttendanceMutation.isPending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <MoreVertical className="h-4 w-4" />
@@ -571,14 +571,14 @@ export default function AttendancePage() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "PRESENT")}
-                                  disabled={isBulkLoading}
+                                  disabled={bulkAttendanceMutation.isPending}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Отметить всех
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "ABSENT")}
-                                  disabled={isBulkLoading}
+                                  disabled={bulkAttendanceMutation.isPending}
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Отметить отсутствие

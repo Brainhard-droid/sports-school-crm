@@ -583,7 +583,7 @@ export class PostgresStorage implements IStorage {
   async updateBulkAttendance(
     groupId: number,
     date: string,
-    status: AttendanceStatusType
+    status: keyof typeof AttendanceStatus
   ): Promise<void> {
     try {
       const students = await this.getGroupStudentsWithDetails(groupId);
