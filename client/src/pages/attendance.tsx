@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, X, Check, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ChevronLeft, ChevronRight, X, Check, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -28,6 +29,7 @@ export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [loadingCell, setLoadingCell] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   // Get active groups
@@ -197,6 +199,65 @@ export default function AttendancePage() {
     return { attended, totalClasses, percentage };
   };
 
+  // Calculate group statistics
+  const getGroupStats = () => {
+    if (!students?.length || !scheduleDates?.length) return { averageAttendance: 0 };
+
+    const totalStudents = students.length;
+    const totalClasses = scheduleDates.length;
+    const totalPossibleAttendances = totalStudents * totalClasses;
+
+    const totalPresent = attendance?.filter(a => a.status === AttendanceStatus.PRESENT).length || 0;
+    const averageAttendance = Math.round((totalPresent / totalPossibleAttendances) * 100);
+
+    return { averageAttendance };
+  };
+
+  // Filter students
+  const filteredStudents = students?.filter(student => {
+    const fullName = `${student.lastName} ${student.firstName}`.toLowerCase();
+    return fullName.includes(searchTerm.toLowerCase());
+  });
+
+  // Export to Excel
+  const handleExport = () => {
+    if (!students || !scheduleDates || !selectedGroup) return;
+
+    const headers = [
+      "Ученик",
+      ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
+      "Посещаемость"
+    ];
+
+    const rows = students.map(student => {
+      const stats = getStudentStats(student.id);
+      return [
+        `${student.lastName} ${student.firstName}`,
+        ...scheduleDates.map(date => {
+          const status = getAttendanceStatus(student.id, date);
+          return status === AttendanceStatus.PRESENT ? "✓" : 
+                 status === AttendanceStatus.ABSENT ? "×" : "";
+        }),
+        `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <Layout>
       <div className="p-6">
@@ -229,17 +290,36 @@ export default function AttendancePage() {
               </div>
             </DialogHeader>
 
-            {/* Month Navigation */}
+            {/* Controls */}
             <div className="flex items-center justify-between mb-4">
-              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-lg font-medium">
-                {format(selectedMonth, "LLLL yyyy", { locale: ru })}
-              </span>
-              <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-lg font-medium min-w-[140px] text-center">
+                    {format(selectedMonth, "LLLL yyyy", { locale: ru })}
+                  </span>
+                  <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Input
+                  placeholder="Поиск по имени..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-[200px]"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Средняя посещаемость: <span className="font-medium">{getGroupStats().averageAttendance}%</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Экспорт
+                </Button>
+              </div>
             </div>
 
             {/* Attendance Table */}
@@ -265,7 +345,7 @@ export default function AttendancePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students
+                  {filteredStudents
                     ?.sort((a, b) =>
                       `${a.lastName} ${a.firstName}`.localeCompare(
                         `${b.lastName} ${b.firstName}`
