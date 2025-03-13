@@ -412,6 +412,45 @@ export class PostgresStorage implements IStorage {
       throw error;
     }
   }
+
+  async updateGroup(id: number, data: Partial<InsertGroup>): Promise<Group> {
+    try {
+      const [group] = await db
+        .update(groups)
+        .set(data)
+        .where(eq(groups.id, id))
+        .returning();
+      return group;
+    } catch (error) {
+      console.error('Error updating group:', error);
+      throw error;
+    }
+  }
+
+  async updateSchedule(id: number, data: Partial<InsertSchedule>): Promise<Schedule> {
+    try {
+      const [schedule] = await db
+        .update(schedules)
+        .set(data)
+        .where(eq(schedules.id, id))
+        .returning();
+      return schedule;
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      throw error;
+    }
+  }
+
+  async deleteSchedule(id: number): Promise<void> {
+    try {
+      await db
+        .delete(schedules)
+        .where(eq(schedules.id, id));
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new PostgresStorage();

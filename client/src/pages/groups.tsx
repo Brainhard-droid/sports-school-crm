@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Calendar, Loader2, Trash2, Archive, MoreVertical } from "lucide-react";
+import { Users, Calendar, Loader2, Trash2, Archive, MoreVertical, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
@@ -75,6 +75,8 @@ export default function Groups() {
     searchTerm: "",
     showArchived: false,
   });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
@@ -119,6 +121,10 @@ export default function Groups() {
     },
   });
 
+  const editForm = useForm<InsertGroup>({
+    resolver: zodResolver(insertGroupSchema),
+  });
+
   const scheduleForm = useForm<InsertSchedule>({
     resolver: zodResolver(insertScheduleSchema),
     defaultValues: {
@@ -127,6 +133,10 @@ export default function Groups() {
       startTime: "09:00",
       endTime: "10:00",
     },
+  });
+
+  const editScheduleForm = useForm<InsertSchedule>({
+    resolver: zodResolver(insertScheduleSchema),
   });
 
   const createGroupMutation = useMutation({
@@ -171,6 +181,42 @@ export default function Groups() {
     },
   });
 
+  const updateGroupMutation = useMutation({
+    mutationFn: async (data: { id: number; group: InsertGroup }) => {
+      const res = await apiRequest("PATCH", `/api/groups/${data.id}`, data.group);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Успешно",
+        description: "Группа обновлена",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateScheduleMutation = useMutation({
+    mutationFn: async (data: { id: number; schedule: InsertSchedule }) => {
+      const res = await apiRequest("PATCH", `/api/schedules/${data.id}`, data.schedule);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Успешно",
+        description: "Расписание обновлено",
+      });
+    },
+  });
+
   const deleteGroupMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/groups/${id}`, {
@@ -196,6 +242,20 @@ export default function Groups() {
         title: "Ошибка",
         description: error.message,
         variant: "destructive",
+      });
+    },
+  });
+
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/schedules/${id}`);
+      if (!res.ok) throw new Error('Failed to delete schedule');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Успешно",
+        description: "Расписание удалено",
       });
     },
   });
@@ -279,6 +339,20 @@ export default function Groups() {
       id: group.id,
       active: !group.active
     });
+  };
+
+  const handleEditGroup = (data: InsertGroup) => {
+    if (!selectedGroup) return;
+    updateGroupMutation.mutate({ id: selectedGroup.id, group: data });
+  };
+
+  const handleEditSchedule = (data: InsertSchedule) => {
+    if (!selectedSchedule) return;
+    updateScheduleMutation.mutate({ id: selectedSchedule.id, schedule: data });
+  };
+
+  const handleDeleteSchedule = async (scheduleId: number) => {
+    await deleteScheduleMutation.mutateAsync(scheduleId);
   };
 
   return (
@@ -371,7 +445,7 @@ export default function Groups() {
             <Checkbox
               id="showArchived"
               checked={filters.showArchived}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setFilters(prev => ({ ...prev, showArchived: checked as boolean }))
               }
             />
@@ -419,6 +493,22 @@ export default function Groups() {
                     >
                       <Archive className="mr-2 h-4 w-4" />
                       {group.active ? 'Архивировать' : 'Активировать'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editForm.reset({
+                          name: group.name,
+                          description: group.description,
+                          maxStudents: group.maxStudents,
+                          trainer: group.trainer,
+                        });
+                        setSelectedGroup(group);
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Редактировать группу
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-red-600"
@@ -529,9 +619,37 @@ export default function Groups() {
                   .map((schedule) => (
                     <div
                       key={schedule.id}
-                      className="text-sm text-muted-foreground"
+                      className="flex items-center justify-between text-sm text-muted-foreground mb-2"
                     >
-                      {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
+                      <div>
+                        {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            editScheduleForm.reset({
+                              groupId: schedule.groupId,
+                              dayOfWeek: schedule.dayOfWeek,
+                              startTime: schedule.startTime,
+                              endTime: schedule.endTime,
+                            });
+                            setSelectedSchedule(schedule);
+                            setScheduleDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteSchedule(schedule.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
               </div>
@@ -644,6 +762,76 @@ export default function Groups() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Dialog for editing group */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Редактировать группу</DialogTitle>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleEditGroup)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Название группы</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Описание</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="maxStudents"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Максимум учеников</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={updateGroupMutation.isPending}
+                >
+                  {updateGroupMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    "Сохранить изменения"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

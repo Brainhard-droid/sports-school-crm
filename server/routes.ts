@@ -76,6 +76,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/groups/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const parsed = insertGroupSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      const group = await storage.updateGroup(id, parsed.data);
+      res.json(group);
+    } catch (error) {
+      console.error('Error updating group:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Password Reset
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
@@ -194,6 +210,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!parsed.success) return res.status(400).json(parsed.error);
     const schedule = await storage.createSchedule(parsed.data);
     res.status(201).json(schedule);
+  });
+
+  app.patch("/api/schedules/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const parsed = insertScheduleSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      const schedule = await storage.updateSchedule(id, parsed.data);
+      res.json(schedule);
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/schedules/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      await storage.deleteSchedule(id);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
   });
 
   // Attendance
