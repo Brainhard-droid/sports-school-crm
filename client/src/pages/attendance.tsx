@@ -27,6 +27,7 @@ import { ru } from "date-fns/locale";
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [loadingCell, setLoadingCell] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Get active groups
@@ -124,6 +125,7 @@ export default function AttendancePage() {
       }
     },
     onSuccess: () => {
+      setLoadingCell(null);
       queryClient.invalidateQueries({
         queryKey: [
           "/api/attendance",
@@ -135,6 +137,7 @@ export default function AttendancePage() {
     },
     onError: (error) => {
       console.error('Error marking attendance:', error);
+      setLoadingCell(null);
       toast({
         title: "Ошибка",
         description: "Не удалось отметить посещаемость",
@@ -145,6 +148,9 @@ export default function AttendancePage() {
 
   const handleMarkAttendance = (studentId: number, date: Date) => {
     if (!selectedGroup) return;
+
+    const cellId = `${studentId}-${format(date, "yyyy-MM-dd")}`;
+    setLoadingCell(cellId);
 
     const existingAttendance = attendance?.find(
       (a) =>
@@ -180,6 +186,15 @@ export default function AttendancePage() {
 
   const handleNextMonth = () => {
     setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)));
+  };
+
+  // Calculate attendance statistics for a student
+  const getStudentStats = (studentId: number) => {
+    const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
+    const totalClasses = scheduleDates?.length || 0;
+    const attended = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
+    const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
+    return { attended, totalClasses, percentage };
   };
 
   return (
@@ -238,9 +253,15 @@ export default function AttendancePage() {
                         key={date.toISOString()} 
                         className="text-center min-w-[40px] border-r last:border-r-0"
                       >
-                        {format(date, "d")}
+                        <div>{format(date, "d")}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(date, "EEE", { locale: ru })}
+                        </div>
                       </TableHead>
                     ))}
+                    <TableHead className="min-w-[100px] text-center border-l">
+                      Статистика
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -250,31 +271,39 @@ export default function AttendancePage() {
                         `${b.lastName} ${b.firstName}`
                       )
                     )
-                    .map((student) => (
-                      <TableRow key={student.id} className="border-b">
-                        <TableCell className="font-medium border-r">
-                          {student.lastName} {student.firstName}
-                        </TableCell>
-                        {scheduleDates?.map((date) => {
-                          const status = getAttendanceStatus(student.id, date);
-                          return (
-                            <TableCell
-                              key={date.toISOString()}
-                              className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50 border-r last:border-r-0"
-                              onClick={() => handleMarkAttendance(student.id, date)}
-                            >
-                              {markAttendanceMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 mx-auto animate-spin" />
-                              ) : status === AttendanceStatus.PRESENT ? (
-                                <Check className="h-4 w-4 mx-auto text-green-600" />
-                              ) : status === AttendanceStatus.ABSENT ? (
-                                <X className="h-4 w-4 mx-auto text-red-600" />
-                              ) : null}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
+                    .map((student) => {
+                      const stats = getStudentStats(student.id);
+                      return (
+                        <TableRow key={student.id} className="border-b">
+                          <TableCell className="font-medium border-r">
+                            {student.lastName} {student.firstName}
+                          </TableCell>
+                          {scheduleDates?.map((date) => {
+                            const status = getAttendanceStatus(student.id, date);
+                            const cellId = `${student.id}-${format(date, "yyyy-MM-dd")}`;
+                            const isLoading = loadingCell === cellId;
+                            return (
+                              <TableCell
+                                key={date.toISOString()}
+                                className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50 border-r last:border-r-0"
+                                onClick={() => handleMarkAttendance(student.id, date)}
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="h-4 w-4 mx-auto animate-spin" />
+                                ) : status === AttendanceStatus.PRESENT ? (
+                                  <Check className="h-4 w-4 mx-auto text-green-600" />
+                                ) : status === AttendanceStatus.ABSENT ? (
+                                  <X className="h-4 w-4 mx-auto text-red-600" />
+                                ) : null}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-center border-l">
+                            {stats.percentage}% ({stats.attended}/{stats.totalClasses})
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </div>
