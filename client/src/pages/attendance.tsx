@@ -241,7 +241,12 @@ export default function AttendancePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["/api/date-comments", selectedGroup?.id],
+        queryKey: [
+          "/api/date-comments",
+          selectedGroup?.id,
+          selectedMonth.getMonth() + 1,
+          selectedMonth.getFullYear(),
+        ],
       });
       setCommentDialogData({ isOpen: false, date: null });
       toast({
@@ -371,7 +376,7 @@ export default function AttendancePage() {
     if (format === 'csv') {
       const headers = [
         "Ученик",
-        ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
+        ...scheduleDates.map(date => format(date, "d MMM", { locale: ru }) + " (" + format(date, "EEE", { locale: ru }) + ")"),
         "Посещаемость"
       ];
 
