@@ -333,6 +333,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/groups/:id/status", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { active } = req.body;
+
+      const group = await storage.updateGroupStatus(id, active);
+      res.json(group);
+    } catch (error) {
+      console.error('Error updating group status:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

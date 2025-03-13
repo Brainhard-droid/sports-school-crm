@@ -30,6 +30,7 @@ export const groups = pgTable("groups", {
   description: text("description"),
   trainer: integer("trainer").notNull(),
   maxStudents: integer("max_students").notNull(),
+  active: boolean("active").notNull().default(true),
 });
 
 export const schedules = pgTable("schedules", {

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Calendar, Loader2, Trash2 } from "lucide-react";
+import { Users, Calendar, Loader2, Trash2, Archive, MoreVertical } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
@@ -44,6 +44,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const DAYS_OF_WEEK = [
   { id: 1, name: "Понедельник" },
@@ -65,6 +71,10 @@ export default function Groups() {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    showArchived: false,
+  });
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
@@ -89,6 +99,15 @@ export default function Groups() {
     enabled: !!selectedGroup,
   });
 
+  // Фильтрация групп
+  const filteredGroups = groups?.filter(group => {
+    const matchesSearch = group.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                         (group.description?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ?? false);
+    const matchesArchived = filters.showArchived ? true : group.active;
+
+    return matchesSearch && matchesArchived;
+  });
+
   const form = useForm<InsertGroup>({
     resolver: zodResolver(insertGroupSchema),
     defaultValues: {
@@ -96,6 +115,7 @@ export default function Groups() {
       description: "",
       trainer: 1,
       maxStudents: 10,
+      active: true,
     },
   });
 
@@ -119,8 +139,8 @@ export default function Groups() {
       setOpen(false);
       form.reset();
       toast({
-        title: "Success",
-        description: "Group created successfully",
+        title: "Успешно",
+        description: "Группа создана",
       });
     },
   });
@@ -180,6 +200,39 @@ export default function Groups() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+      const res = await fetch(`/api/groups/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ active }),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update group status');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      toast({
+        title: "Успешно",
+        description: "Статус группы обновлен",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDayChange = (dayId: number) => {
     setSelectedDays(prev => {
       const isSelected = prev.includes(dayId);
@@ -219,6 +272,13 @@ export default function Groups() {
   const handleDeleteGroup = async () => {
     if (!groupToDelete) return;
     await deleteGroupMutation.mutateAsync(groupToDelete.id);
+  };
+
+  const handleToggleStatus = async (group: Group) => {
+    await toggleStatusMutation.mutateAsync({
+      id: group.id,
+      active: !group.active
+    });
   };
 
   return (
@@ -264,7 +324,7 @@ export default function Groups() {
                       <FormItem>
                         <FormLabel>Описание</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -296,6 +356,118 @@ export default function Groups() {
               </Form>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Фильтры */}
+        <div className="mb-6 flex gap-4 items-center">
+          <div className="flex-1">
+            <Input
+              placeholder="Поиск по названию группы..."
+              value={filters.searchTerm}
+              onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="showArchived"
+              checked={filters.showArchived}
+              onCheckedChange={(checked) => 
+                setFilters(prev => ({ ...prev, showArchived: checked as boolean }))
+              }
+            />
+            <label htmlFor="showArchived" className="text-sm">
+              Показать архивные
+            </label>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredGroups?.map((group) => (
+            <Card
+              key={group.id}
+              className={`cursor-pointer transition-shadow hover:shadow-lg ${
+                !group.active ? 'opacity-60' : ''
+              }`}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>{group.name}</CardTitle>
+                  <CardDescription>{group.description}</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedGroup(group);
+                        setScheduleDialogOpen(true);
+                      }}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Добавить расписание
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleStatus(group);
+                      }}
+                    >
+                      <Archive className="mr-2 h-4 w-4" />
+                      {group.active ? 'Архивировать' : 'Активировать'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGroupToDelete(group);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Удалить
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent
+                onClick={() => {
+                  setSelectedGroup(group);
+                  setIsDetailsOpen(true);
+                }}
+              >
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Максимум учеников: {group.maxStudents}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-sm ${
+                      group.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {group.active ? 'Активная' : 'В архиве'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Расписание</h4>
+                    {schedules
+                      ?.filter((s) => s.groupId === group.id)
+                      .map((schedule) => (
+                        <div
+                          key={schedule.id}
+                          className="text-sm text-muted-foreground"
+                        >
+                          {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
@@ -339,7 +511,7 @@ export default function Groups() {
                               <span className={`px-2 py-1 rounded-full text-sm ${
                                 student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {student.active ? 'Активный' : 'Неактивный'}
+                                {student.active ? 'Активный' : 'В архиве'}
                               </span>
                             </td>
                           </tr>
@@ -445,72 +617,6 @@ export default function Groups() {
           </DialogContent>
         </Dialog>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {groups?.map((group) => (
-            <Card
-              key={group.id}
-              className="cursor-pointer transition-shadow hover:shadow-lg"
-              onClick={() => {
-                setSelectedGroup(group);
-                setIsDetailsOpen(true);
-              }}
-            >
-              <CardHeader>
-                <CardTitle>{group.name}</CardTitle>
-                <CardDescription>{group.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Максимум учеников: {group.maxStudents}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedGroup(group);
-                          setScheduleDialogOpen(true);
-                        }}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Добавить расписание
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setGroupToDelete(group);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Удалить
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Расписание</h4>
-                    {schedules
-                      ?.filter((s) => s.groupId === group.id)
-                      .map((schedule) => (
-                        <div
-                          key={schedule.id}
-                          className="text-sm text-muted-foreground"
-                        >
-                          {DAYS_OF_WEEK.find(d => d.id === schedule.dayOfWeek)?.name}: {schedule.startTime} - {schedule.endTime}
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
         {/* Диалог подтверждения удаления */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

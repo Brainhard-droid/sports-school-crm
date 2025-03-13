@@ -175,7 +175,24 @@ export class PostgresStorage implements IStorage {
   // Groups
   async getGroups(): Promise<Group[]> {
     try {
-      return await db.select().from(groups);
+      const groupsList = await db.select().from(groups);
+
+      // Для каждой группы получаем расписание
+      const groupsWithSchedules = await Promise.all(
+        groupsList.map(async (group) => {
+          const schedulesList = await db
+            .select()
+            .from(schedules)
+            .where(eq(schedules.groupId, group.id));
+
+          return {
+            ...group,
+            schedules: schedulesList,
+          };
+        })
+      );
+
+      return groupsWithSchedules;
     } catch (error) {
       console.error('Error getting groups:', error);
       throw error;
@@ -334,7 +351,7 @@ export class PostgresStorage implements IStorage {
       throw error;
     }
   }
-  
+
   // Payments
   async getPayments(studentId?: number): Promise<Payment[]> {
     if (studentId) {
@@ -379,6 +396,21 @@ export class PostgresStorage implements IStorage {
   async createAttendance(data: InsertAttendance): Promise<Attendance> {
     const [result] = await db.insert(attendance).values(data).returning();
     return result;
+  }
+
+  // Метод для обновления статуса группы
+  async updateGroupStatus(id: number, active: boolean): Promise<Group> {
+    try {
+      const [group] = await db
+        .update(groups)
+        .set({ active })
+        .where(eq(groups.id, id))
+        .returning();
+      return group;
+    } catch (error) {
+      console.error('Error updating group status:', error);
+      throw error;
+    }
   }
 }
 
