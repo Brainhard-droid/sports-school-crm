@@ -32,13 +32,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -56,7 +52,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 
 export default function StudentsPage() {
   const [open, setOpen] = useState(false);
@@ -118,27 +113,16 @@ export default function StudentsPage() {
     }
   });
 
-  // Получение групп для каждого студента
-  const getStudentGroups = async (studentId: number) => {
-    const response = await fetch(`/api/student-groups/${studentId}`, {
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch student groups');
-    }
-    return response.json();
-  };
-
   // Фильтрация студентов
   const filteredStudents = students?.filter(student => {
     const matchesSearch = 
       student.firstName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
       student.lastName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      student.phoneNumber.includes(filters.searchTerm) ||
-      student.parentName?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      student.parentPhone?.includes(filters.searchTerm);
+      (student.phoneNumber?.includes(filters.searchTerm) ?? false) ||
+      (student.parentName?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ?? false) ||
+      (student.parentPhone?.includes(filters.searchTerm) ?? false);
 
-    const matchesGroup = !filters.groupId || student.groups?.some(g => g.id.toString() === filters.groupId);
+    const matchesGroup = !filters.groupId || (student.groups?.some(g => g.id.toString() === filters.groupId) ?? false);
     const matchesArchived = filters.showArchived ? true : student.active;
 
     return matchesSearch && matchesGroup && matchesArchived;
@@ -453,7 +437,7 @@ export default function StudentsPage() {
                       <FormItem>
                         <FormLabel>Телефон</FormLabel>
                         <FormControl>
-                          <Input placeholder="Введите телефон" {...field} />
+                          <Input placeholder="Введите телефон" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -466,7 +450,7 @@ export default function StudentsPage() {
                       <FormItem>
                         <FormLabel>Имя родителя</FormLabel>
                         <FormControl>
-                          <Input placeholder="Введите имя родителя" {...field} />
+                          <Input placeholder="Введите имя родителя" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -479,7 +463,7 @@ export default function StudentsPage() {
                       <FormItem>
                         <FormLabel>Телефон родителя</FormLabel>
                         <FormControl>
-                          <Input placeholder="Введите телефон родителя" {...field} />
+                          <Input placeholder="Введите телефон родителя" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -537,140 +521,7 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        {/* Диалог редактирования */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Редактировать ученика</DialogTitle>
-            </DialogHeader>
-            <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-4">
-                <FormField
-                  control={editForm.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Имя</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите имя" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Фамилия</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите фамилию" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="birthDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Дата рождения</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Телефон</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите телефон" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="parentName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Имя родителя</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите имя родителя" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="parentPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Телефон родителя</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Введите телефон родителя" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Диалог добавления в группу */}
-        <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Добавить ученика в группу</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex flex-col space-y-2">
-                <label>Выберите группу</label>
-                <Select
-                  value={selectedGroup}
-                  onValueChange={setSelectedGroup}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите группу" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups?.map((group) => (
-                      <SelectItem key={group.id} value={group.id.toString()}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={handleAddToGroup}
-                disabled={!selectedGroup || addToGroupMutation.isPending}
-                className="w-full"
-              >
-                {addToGroupMutation.isPending ? "Добавление..." : "Добавить в группу"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
+        {/* Основная таблица */}
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -764,6 +615,141 @@ export default function StudentsPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Диалог редактирования */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Редактировать ученика</DialogTitle>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите имя" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Фамилия</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите фамилию" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Дата рождения</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Телефон</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите телефон" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="parentName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя родителя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите имя родителя" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="parentPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Телефон родителя</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Введите телефон родителя" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Диалог добавления в группу */}
+        <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Добавить ученика в группу</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-2">
+                <label>Выберите группу</label>
+                <Select
+                  value={selectedGroup}
+                  onValueChange={setSelectedGroup}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите группу" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups?.map((group) => (
+                      <SelectItem key={group.id} value={group.id.toString()}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleAddToGroup}
+                disabled={!selectedGroup || addToGroupMutation.isPending}
+                className="w-full"
+              >
+                {addToGroupMutation.isPending ? "Добавление..." : "Добавить в группу"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Диалог подтверждения удаления */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

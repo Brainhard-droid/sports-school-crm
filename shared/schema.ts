@@ -2,7 +2,7 @@ import { pgTable, text, serial, integer, boolean, date, timestamp } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Существующие таблицы остаются без изменений
+// Таблицы
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -32,15 +32,6 @@ export const groups = pgTable("groups", {
   maxStudents: integer("max_students").notNull(),
 });
 
-// Добавляем новую таблицу для связи студентов и групп
-export const studentGroups = pgTable("student_groups", {
-  id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull(),
-  groupId: integer("group_id").notNull(),
-  joinDate: timestamp("join_date").notNull().defaultNow(),
-  active: boolean("active").notNull().default(true),
-});
-
 export const schedules = pgTable("schedules", {
   id: serial("id").primaryKey(),
   groupId: integer("group_id").notNull(),
@@ -65,6 +56,33 @@ export const payments = pgTable("payments", {
   description: text("description"),
 });
 
+export const studentGroups = pgTable("student_groups", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  groupId: integer("group_id").notNull(),
+  joinDate: timestamp("join_date").notNull().defaultNow(),
+  active: boolean("active").notNull().default(true),
+});
+
+// Types
+export type User = typeof users.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type Schedule = typeof schedules.$inferSelect;
+export type Attendance = typeof attendance.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type StudentGroup = typeof studentGroups.$inferSelect;
+
+// Base student type without groups
+export type BaseStudent = typeof students.$inferSelect;
+
+// Extended student type with groups
+export type Student = BaseStudent & {
+  groups?: {
+    id: number;
+    name: string;
+  }[];
+};
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -80,24 +98,11 @@ export const insertAttendanceSchema = createInsertSchema(attendance);
 export const insertPaymentSchema = createInsertSchema(payments);
 export const insertStudentGroupSchema = createInsertSchema(studentGroups);
 
-// Types
-export type User = typeof users.$inferSelect;
+// Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Student = typeof students.$inferSelect;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
-
-export type Group = typeof groups.$inferSelect;
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
-
-export type Schedule = typeof schedules.$inferSelect;
 export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
-
-export type Attendance = typeof attendance.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
-
-export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
-
-export type StudentGroup = typeof studentGroups.$inferSelect;
 export type InsertStudentGroup = z.infer<typeof insertStudentGroupSchema>;

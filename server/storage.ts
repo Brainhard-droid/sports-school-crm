@@ -1,6 +1,6 @@
 import { IStorage } from "./interfaces";
 import {
-  User, Student, Group, Schedule, Attendance, Payment, StudentGroup,
+  User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup,
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
   users, students, groups, schedules, attendance, payments, studentGroups
 } from "@shared/schema";
@@ -81,11 +81,11 @@ export class PostgresStorage implements IStorage {
 
   // Students
   async getStudents(): Promise<Student[]> {
-    const students = await db.select().from(students);
+    const baseStudents = await db.select().from(students);
 
     // Для каждого студента получаем его группы
     const studentsWithGroups = await Promise.all(
-      students.map(async (student) => {
+      baseStudents.map(async (student) => {
         const studentGroups = await db
           .select({
             id: groups.id,
@@ -111,8 +111,28 @@ export class PostgresStorage implements IStorage {
   }
 
   async getStudent(id: number): Promise<Student | undefined> {
-    const [student] = await db.select().from(students).where(eq(students.id, id));
-    return student;
+    const [baseStudent] = await db.select().from(students).where(eq(students.id, id));
+
+    if (!baseStudent) return undefined;
+
+    const studentGroups = await db
+      .select({
+        id: groups.id,
+        name: groups.name,
+      })
+      .from(studentGroups)
+      .innerJoin(groups, eq(groups.id, studentGroups.groupId))
+      .where(
+        and(
+          eq(studentGroups.studentId, id),
+          eq(studentGroups.active, true)
+        )
+      );
+
+    return {
+      ...baseStudent,
+      groups: studentGroups,
+    };
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
