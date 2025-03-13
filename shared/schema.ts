@@ -58,6 +58,14 @@ export const attendance = pgTable("attendance", {
   status: text("status").notNull().default(AttendanceStatus.NOT_MARKED),
 });
 
+// Новая таблица для комментариев к датам
+export const dateComments = pgTable("date_comments", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  date: date("date").notNull(),
+  comment: text("comment").notNull(),
+});
+
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
@@ -81,6 +89,7 @@ export type Schedule = typeof schedules.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type StudentGroup = typeof studentGroups.$inferSelect;
+export type DateComment = typeof dateComments.$inferSelect;
 
 // Base student type without groups
 export type BaseStudent = typeof students.$inferSelect;
@@ -112,6 +121,7 @@ export const insertAttendanceSchema = createInsertSchema(attendance).extend({
 
 export const insertPaymentSchema = createInsertSchema(payments);
 export const insertStudentGroupSchema = createInsertSchema(studentGroups);
+export const insertDateCommentSchema = createInsertSchema(dateComments);
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -121,3 +131,4 @@ export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertStudentGroup = z.infer<typeof insertStudentGroupSchema>;
+export type InsertDateComment = z.infer<typeof insertDateCommentSchema>;

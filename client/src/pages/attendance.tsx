@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/navbar";
-import { Student, Group, Attendance, AttendanceStatus } from "@shared/schema";
+import { Student, Group, Attendance, AttendanceStatus, DateComment } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,16 +20,80 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, X, Check, Loader2, Download } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Check, 
+  Loader2, 
+  Download,
+  MoreVertical,
+  MessageCircle,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+
+// Add comment dialog component
+const CommentDialog = ({ 
+  isOpen, 
+  onClose, 
+  date, 
+  groupId, 
+  existingComment,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  date: Date;
+  groupId: number;
+  existingComment?: DateComment;
+  onSave: (comment: string) => void;
+}) => {
+  const [comment, setComment] = useState(existingComment?.comment || "");
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            Комментарий к {format(date, "d MMMM yyyy", { locale: ru })}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Input
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Введите комментарий..."
+          />
+          <Button onClick={() => onSave(comment)}>Сохранить</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [loadingCell, setLoadingCell] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [commentDialogData, setCommentDialogData] = useState<{
+    isOpen: boolean;
+    date: Date | null;
+    comment?: DateComment;
+  }>({ isOpen: false, date: null });
   const { toast } = useToast();
 
   // Get active groups
@@ -84,6 +148,27 @@ export default function AttendancePage() {
       const res = await apiRequest(
         "GET",
         `/api/attendance?groupId=${selectedGroup.id}&month=${
+          selectedMonth.getMonth() + 1
+        }&year=${selectedMonth.getFullYear()}`
+      );
+      return res.json();
+    },
+    enabled: !!selectedGroup,
+  });
+
+  // Add query for date comments
+  const { data: dateComments } = useQuery<DateComment[]>({
+    queryKey: [
+      "/api/date-comments",
+      selectedGroup?.id,
+      selectedMonth.getMonth() + 1,
+      selectedMonth.getFullYear(),
+    ],
+    queryFn: async () => {
+      if (!selectedGroup) return [];
+      const res = await apiRequest(
+        "GET",
+        `/api/date-comments?groupId=${selectedGroup.id}&month=${
           selectedMonth.getMonth() + 1
         }&year=${selectedMonth.getFullYear()}`
       );
@@ -148,6 +233,46 @@ export default function AttendancePage() {
     },
   });
 
+  // Add mutation for date comments
+  const dateCommentMutation = useMutation({
+    mutationFn: async (data: { groupId: number; date: string; comment: string }) => {
+      const res = await apiRequest("POST", "/api/date-comments", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/date-comments", selectedGroup?.id],
+      });
+      setCommentDialogData({ isOpen: false, date: null });
+      toast({
+        title: "Успешно",
+        description: "Комментарий сохранен",
+      });
+    },
+  });
+
+  // Add mutation for bulk attendance
+  const bulkAttendanceMutation = useMutation({
+    mutationFn: async (data: {
+      groupId: number;
+      date: string;
+      status: keyof typeof AttendanceStatus;
+    }) => {
+      const res = await apiRequest("POST", "/api/attendance/bulk", data);
+      if (!res.ok) throw new Error('Failed to update bulk attendance');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/attendance", selectedGroup?.id],
+      });
+      toast({
+        title: "Успешно",
+        description: "Посещаемость обновлена",
+      });
+    },
+  });
+
   const handleMarkAttendance = (studentId: number, date: Date) => {
     if (!selectedGroup) return;
 
@@ -170,6 +295,26 @@ export default function AttendancePage() {
     }
 
     markAttendanceMutation.mutate({ studentId, date, status: nextStatus });
+  };
+
+  const handleSaveComment = async (comment: string) => {
+    if (!selectedGroup || !commentDialogData.date) return;
+
+    await dateCommentMutation.mutate({
+      groupId: selectedGroup.id,
+      date: format(commentDialogData.date, "yyyy-MM-dd"),
+      comment,
+    });
+  };
+
+  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
+    if (!selectedGroup) return;
+
+    await bulkAttendanceMutation.mutate({
+      groupId: selectedGroup.id,
+      date: format(date, "yyyy-MM-dd"),
+      status,
+    });
   };
 
   const getAttendanceStatus = (studentId: number, date: Date) => {
@@ -219,43 +364,51 @@ export default function AttendancePage() {
     return fullName.includes(searchTerm.toLowerCase());
   });
 
-  // Export to Excel
-  const handleExport = () => {
+  // Export with format selection
+  const handleExport = (format: 'csv' | 'pdf') => {
     if (!students || !scheduleDates || !selectedGroup) return;
 
-    const headers = [
-      "Ученик",
-      ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
-      "Посещаемость"
-    ];
-
-    const rows = students.map(student => {
-      const stats = getStudentStats(student.id);
-      return [
-        `${student.lastName} ${student.firstName}`,
-        ...scheduleDates.map(date => {
-          const status = getAttendanceStatus(student.id, date);
-          return status === AttendanceStatus.PRESENT ? "✓" : 
-                 status === AttendanceStatus.ABSENT ? "×" : "";
-        }),
-        `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
+    if (format === 'csv') {
+      const headers = [
+        "Ученик",
+        ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
+        "Посещаемость"
       ];
-    });
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
+      const rows = students.map(student => {
+        const stats = getStudentStats(student.id);
+        return [
+          `${student.lastName} ${student.firstName}`,
+          ...scheduleDates.map(date => {
+            const status = getAttendanceStatus(student.id, date);
+            return status === AttendanceStatus.PRESENT ? "✓" : 
+                   status === AttendanceStatus.ABSENT ? "×" : "";
+          }),
+          `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
+        ];
+      });
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } else {
+      // PDF export logic would go here
+      toast({
+        title: "В разработке",
+        description: "Экспорт в PDF будет доступен в ближайшее время",
+      });
+    }
   };
 
   return (
@@ -315,10 +468,23 @@ export default function AttendancePage() {
                 <div className="text-sm text-muted-foreground">
                   Средняя посещаемость: <span className="font-medium">{getGroupStats().averageAttendance}%</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Экспорт
-                </Button>
+                {/* Export dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Экспорт
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleExport('csv')}>
+                      Excel (CSV)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                      PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -328,17 +494,66 @@ export default function AttendancePage() {
                 <TableHeader>
                   <TableRow className="border-b">
                     <TableHead className="min-w-[200px] border-r">Ученик</TableHead>
-                    {scheduleDates?.map((date) => (
-                      <TableHead 
-                        key={date.toISOString()} 
-                        className="text-center min-w-[40px] border-r last:border-r-0"
-                      >
-                        <div>{format(date, "d")}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(date, "EEE", { locale: ru })}
-                        </div>
-                      </TableHead>
-                    ))}
+                    {scheduleDates?.map((date) => {
+                      const dateComment = dateComments?.find(
+                        (c) => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+                      );
+
+                      return (
+                        <TableHead 
+                          key={date.toISOString()} 
+                          className="text-center min-w-[40px] border-r last:border-r-0"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <div>
+                              <div>{format(date, "d")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(date, "EEE", { locale: ru })}
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem
+                                  onClick={() => handleBulkAttendance(date, "PRESENT")}
+                                >
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Отметить всех
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleBulkAttendance(date, "ABSENT")}
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Отметить отсутствие
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setCommentDialogData({
+                                    isOpen: true,
+                                    date,
+                                    comment: dateComment,
+                                  })}
+                                >
+                                  <MessageCircle className="h-4 w-4 mr-2" />
+                                  {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          {dateComment && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>{dateComment.comment}</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TableHead>
+                      );
+                    })}
                     <TableHead className="min-w-[100px] text-center border-l">
                       Статистика
                     </TableHead>
@@ -353,6 +568,8 @@ export default function AttendancePage() {
                     )
                     .map((student) => {
                       const stats = getStudentStats(student.id);
+                      const lowAttendance = stats.percentage < 50;
+
                       return (
                         <TableRow key={student.id} className="border-b">
                           <TableCell className="font-medium border-r">
@@ -362,6 +579,7 @@ export default function AttendancePage() {
                             const status = getAttendanceStatus(student.id, date);
                             const cellId = `${student.id}-${format(date, "yyyy-MM-dd")}`;
                             const isLoading = loadingCell === cellId;
+
                             return (
                               <TableCell
                                 key={date.toISOString()}
@@ -378,7 +596,11 @@ export default function AttendancePage() {
                               </TableCell>
                             );
                           })}
-                          <TableCell className="text-center border-l">
+                          <TableCell 
+                            className={`text-center border-l ${
+                              lowAttendance ? 'text-red-600' : ''
+                            }`}
+                          >
                             {stats.percentage}% ({stats.attended}/{stats.totalClasses})
                           </TableCell>
                         </TableRow>
@@ -387,6 +609,18 @@ export default function AttendancePage() {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Comment Dialog */}
+            {commentDialogData.isOpen && commentDialogData.date && (
+              <CommentDialog
+                isOpen={commentDialogData.isOpen}
+                onClose={() => setCommentDialogData({ isOpen: false, date: null })}
+                date={commentDialogData.date}
+                groupId={selectedGroup?.id || 0}
+                existingComment={commentDialogData.comment}
+                onSave={handleSaveComment}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

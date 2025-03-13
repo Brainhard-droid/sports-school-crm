@@ -518,6 +518,109 @@ export class PostgresStorage implements IStorage {
       throw error;
     }
   }
+
+  // Добавляем новые методы в класс PostgresStorage
+  async getDateComments(groupId: number, month: number, year: number): Promise<DateComment[]> {
+    try {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+
+      return await db
+        .select()
+        .from(dateComments)
+        .where(
+          and(
+            eq(dateComments.groupId, groupId),
+            gte(dateComments.date, startDate),
+            lte(dateComments.date, endDate)
+          )
+        );
+    } catch (error) {
+      console.error('Error getting date comments:', error);
+      throw error;
+    }
+  }
+
+  async createDateComment(data: InsertDateComment): Promise<DateComment> {
+    try {
+      const [result] = await db
+        .insert(dateComments)
+        .values(data)
+        .returning();
+      return result;
+    } catch (error) {
+      console.error('Error creating date comment:', error);
+      throw error;
+    }
+  }
+
+  async updateDateComment(id: number, comment: string): Promise<DateComment> {
+    try {
+      const [result] = await db
+        .update(dateComments)
+        .set({ comment })
+        .where(eq(dateComments.id, id))
+        .returning();
+      return result;
+    } catch (error) {
+      console.error('Error updating date comment:', error);
+      throw error;
+    }
+  }
+
+  async deleteDateComment(id: number): Promise<void> {
+    try {
+      await db
+        .delete(dateComments)
+        .where(eq(dateComments.id, id));
+    } catch (error) {
+      console.error('Error deleting date comment:', error);
+      throw error;
+    }
+  }
+
+  // Добавляем метод для массового обновления посещаемости
+  async updateBulkAttendance(
+    groupId: number,
+    date: string,
+    status: AttendanceStatusType
+  ): Promise<void> {
+    try {
+      const students = await this.getGroupStudentsWithDetails(groupId);
+
+      for (const student of students) {
+        const existingAttendance = await db
+          .select()
+          .from(attendance)
+          .where(
+            and(
+              eq(attendance.studentId, student.id),
+              eq(attendance.groupId, groupId),
+              eq(attendance.date, date)
+            )
+          );
+
+        if (existingAttendance.length > 0) {
+          await db
+            .update(attendance)
+            .set({ status })
+            .where(eq(attendance.id, existingAttendance[0].id));
+        } else {
+          await db
+            .insert(attendance)
+            .values({
+              studentId: student.id,
+              groupId,
+              date,
+              status,
+            });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating bulk attendance:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new PostgresStorage();

@@ -9,6 +9,7 @@ import {
   insertAttendanceSchema,
   insertPaymentSchema,
   insertStudentGroupSchema,
+  insertDateCommentSchema, // Added import
   AttendanceStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
@@ -454,6 +455,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(group);
     } catch (error) {
       console.error('Error updating group status:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Date Comments endpoints
+  app.get("/api/date-comments", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const { groupId, month, year } = req.query;
+      if (!groupId || !month || !year) {
+        return res.status(400).send("Missing groupId, month or year");
+      }
+
+      const comments = await storage.getDateComments(
+        parseInt(groupId as string),
+        parseInt(month as string),
+        parseInt(year as string)
+      );
+      res.json(comments);
+    } catch (error) {
+      console.error('Error getting date comments:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/date-comments", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const parsed = insertDateCommentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      const comment = await storage.createDateComment(parsed.data);
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error('Error creating date comment:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/date-comments/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { comment } = req.body;
+
+      const updatedComment = await storage.updateDateComment(id, comment);
+      res.json(updatedComment);
+    } catch (error) {
+      console.error('Error updating date comment:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/date-comments/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      await storage.deleteDateComment(id);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting date comment:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Bulk attendance update endpoint
+  app.post("/api/attendance/bulk", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const { groupId, date, status } = req.body;
+
+      if (!groupId || !date || !status) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (!Object.values(AttendanceStatus).includes(status)) {
+        return res.status(400).json({ error: "Invalid attendance status" });
+      }
+
+      await storage.updateBulkAttendance(groupId, date, status);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error updating bulk attendance:', error);
       res.status(500).json({ error: (error as Error).message });
     }
   });
