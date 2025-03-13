@@ -275,10 +275,13 @@ export default function AttendancePage() {
       date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
-      setIsBulkLoading(true); // Set loading state to true
+      setIsBulkLoading(true); // Set loading state to true when starting
       try {
         const res = await apiRequest("POST", "/api/attendance/bulk", data);
-        if (!res.ok) throw new Error('Failed to update bulk attendance');
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to update bulk attendance');
+        }
         return res.json();
       } catch (error) {
         console.error('Error updating bulk attendance:', error);
@@ -308,7 +311,7 @@ export default function AttendancePage() {
       });
     },
     onSettled: () => {
-      setIsBulkLoading(false); // Set loading state to false regardless of success/failure
+      setIsBulkLoading(false); // Reset loading state whether success or error
     },
   });
 

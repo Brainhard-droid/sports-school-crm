@@ -590,7 +590,7 @@ export class PostgresStorage implements IStorage {
 
       // Используем Promise.all для параллельного выполнения обновлений
       await Promise.all(students.map(async (student) => {
-        const existingAttendance = await db
+        const [existingAttendance] = await db
           .select()
           .from(attendance)
           .where(
@@ -601,11 +601,11 @@ export class PostgresStorage implements IStorage {
             )
           );
 
-        if (existingAttendance.length > 0) {
+        if (existingAttendance) {
           await db
             .update(attendance)
             .set({ status })
-            .where(eq(attendance.id, existingAttendance[0].id));
+            .where(eq(attendance.id, existingAttendance.id));
         } else {
           await db
             .insert(attendance)
