@@ -94,8 +94,7 @@ export default function AttendancePage() {
     date: Date | null;
     comment?: DateComment;
   }>({ isOpen: false, date: null });
-  const [isBulkLoading, setIsBulkLoading] = useState(false); // Added loading state for bulk actions
-  const [bulkLoadingDates, setBulkLoadingDates] = useState<string[]>([]); // Add bulk loading state for individual dates
+  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Get active groups
@@ -271,24 +270,33 @@ export default function AttendancePage() {
 
   // Mutation for bulk attendance
   const bulkAttendanceMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      groupId,
+      date,
+      status,
+    }: {
       groupId: number;
       date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
-      const res = await apiRequest("POST", "/api/attendance/bulk", data);
+      const res = await apiRequest("POST", "/api/attendance/bulk", {
+        groupId,
+        date,
+        status,
+      });
+
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to update bulk attendance');
+        throw new Error(error.error || "Failed to update bulk attendance");
       }
+
       return res.json();
     },
     onMutate: async (variables) => {
-      // Add date to loading state
-      setBulkLoadingDates((prev) => [...prev, variables.date]);
+      setLoadingDates((prev) => new Set([...prev, variables.date]));
     },
-    onSuccess: (updatedRecords) => {
-      // Update the cache with the new records
+    onSuccess: (newAttendance) => {
+      // Обновляем кэш с новыми данными
       queryClient.setQueryData(
         [
           "/api/attendance",
@@ -296,17 +304,18 @@ export default function AttendancePage() {
           selectedMonth.getMonth() + 1,
           selectedMonth.getFullYear(),
         ],
-        (oldData: Attendance[] = []) => {
-          // Remove old records for the same date and group
-          const filteredData = oldData.filter(
+        (old: Attendance[] = []) => {
+          // Удаляем старые записи для этой даты и группы
+          const filtered = old.filter(
             (record) =>
-              !updatedRecords.some(
+              !newAttendance.some(
                 (newRecord) =>
-                  newRecord.date === record.date && newRecord.groupId === record.groupId
+                  newRecord.date === record.date &&
+                  newRecord.groupId === record.groupId
               )
           );
-          // Add new records
-          return [...filteredData, ...updatedRecords];
+          // Добавляем новые записи
+          return [...filtered, ...newAttendance];
         }
       );
 
@@ -316,7 +325,7 @@ export default function AttendancePage() {
       });
     },
     onError: (error) => {
-      console.error("Error marking attendance:", error);
+      console.error("Error in bulk attendance update:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось обновить посещаемость",
@@ -324,8 +333,11 @@ export default function AttendancePage() {
       });
     },
     onSettled: (_, __, variables) => {
-      // Remove date from loading state regardless of success/failure
-      setBulkLoadingDates((prev) => prev.filter((date) => date !== variables.date));
+      setLoadingDates((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.date);
+        return next;
+      });
     },
   });
 
@@ -333,11 +345,20 @@ export default function AttendancePage() {
     if (!selectedGroup) return;
 
     const formattedDate = format(date, "yyyy-MM-dd");
-    await bulkAttendanceMutation.mutate({
-      groupId: selectedGroup.id,
-      date: formattedDate,
-      status,
-    });
+    try {
+      await bulkAttendanceMutation.mutateAsync({
+        groupId: selectedGroup.id,
+        date: formattedDate,
+        status,
+      });
+    } catch (error) {
+      console.error("Error in handleBulkAttendance:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при обновлении посещаемости",
+        variant: "destructive"
+      })
+    }
   };
 
   const handleMarkAttendance = (studentId: number, date: Date) => {
@@ -469,6 +490,11 @@ export default function AttendancePage() {
     }
   };
 
+  const isDateLoading = (date: Date) => {
+    const formattedDate = format(date, "yyyy-MM-dd");
+    return loadingDates.has(formattedDate);
+  };
+
   return (
     <Layout>
       <div className="p-6">
@@ -557,7 +583,6 @@ export default function AttendancePage() {
                         (c) => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
                       );
                       const formattedDate = format(date, "yyyy-MM-dd");
-                      const isDateLoading = bulkLoadingDates.includes(formattedDate);
 
                       return (
                         <TableHead
@@ -577,9 +602,9 @@ export default function AttendancePage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0"
-                                  disabled={isDateLoading}
+                                  disabled={isDateLoading(date)}
                                 >
-                                  {isDateLoading ? (
+                                  {isDateLoading(date) ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <MoreVertical className="h-4 w-4" />
@@ -589,14 +614,14 @@ export default function AttendancePage() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "PRESENT")}
-                                  disabled={isDateLoading}
+                                  disabled={isDateLoading(date)}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Отметить всех
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleBulkAttendance(date, "ABSENT")}
-                                  disabled={isDateLoading}
+                                  disabled={isDateLoading(date)}
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Отметить отсутствие
