@@ -94,6 +94,7 @@ export default function AttendancePage() {
     date: Date | null;
     comment?: DateComment;
   }>({ isOpen: false, date: null });
+  const [isBulkLoading, setIsBulkLoading] = useState(false); // Added loading state for bulk actions
   const { toast } = useToast();
 
   // Get active groups
@@ -236,8 +237,19 @@ export default function AttendancePage() {
   // Add mutation for date comments
   const dateCommentMutation = useMutation({
     mutationFn: async (data: { groupId: number; date: string; comment: string }) => {
-      const res = await apiRequest("POST", "/api/date-comments", data);
-      return res.json();
+      const existingComment = dateComments?.find(
+        (c) => format(new Date(c.date), "yyyy-MM-dd") === data.date
+      );
+
+      if (existingComment) {
+        const res = await apiRequest("PATCH", `/api/date-comments/${existingComment.id}`, {
+          comment: data.comment,
+        });
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/date-comments", data);
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -263,18 +275,34 @@ export default function AttendancePage() {
       date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
+      setIsBulkLoading(true); // Set loading state to true
       const res = await apiRequest("POST", "/api/attendance/bulk", data);
       if (!res.ok) throw new Error('Failed to update bulk attendance');
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["/api/attendance", selectedGroup?.id],
+        queryKey: [
+          "/api/attendance",
+          selectedGroup?.id,
+          selectedMonth.getMonth() + 1,
+          selectedMonth.getFullYear(),
+        ],
       });
       toast({
         title: "Успешно",
         description: "Посещаемость обновлена",
       });
+      setIsBulkLoading(false); // Set loading state to false
+    },
+    onError: (error) => {
+      console.error('Error marking attendance:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
+      });
+      setIsBulkLoading(false); // Set loading state to false
     },
   });
 
@@ -376,14 +404,14 @@ export default function AttendancePage() {
     if (format === 'csv') {
       const headers = [
         "Ученик",
-        ...scheduleDates.map(date => format(date, "d MMM", { locale: ru }) + " (" + format(date, "EEE", { locale: ru }) + ")"),
+        ...scheduleDates.map(date => `"${format(date, "d MMM", { locale: ru })} (${format(date, "EEE", { locale: ru })})"`),
         "Посещаемость"
       ];
 
       const rows = students.map(student => {
         const stats = getStudentStats(student.id);
         return [
-          `${student.lastName} ${student.firstName}`,
+          `"${student.lastName} ${student.firstName}"`,
           ...scheduleDates.map(date => {
             const status = getAttendanceStatus(student.id, date);
             return status === AttendanceStatus.PRESENT ? "✓" : 
@@ -398,7 +426,7 @@ export default function AttendancePage() {
         ...rows.map(row => row.join(","))
       ].join("\n");
 
-      const blob = new Blob([csvContent], { type: "text/csv" });
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
