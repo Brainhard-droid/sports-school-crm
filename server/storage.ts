@@ -587,8 +587,11 @@ export class PostgresStorage implements IStorage {
   ): Promise<void> {
     try {
       const students = await this.getGroupStudentsWithDetails(groupId);
+      console.log(`Updating attendance for group ${groupId}, date ${date}, status ${status}`);
+      console.log(`Found ${students.length} students to update`);
 
       for (const student of students) {
+        console.log(`Processing student ${student.id}`);
         const existingAttendance = await db
           .select()
           .from(attendance)
@@ -600,11 +603,14 @@ export class PostgresStorage implements IStorage {
             )
           );
 
+        console.log(`Existing attendance for student ${student.id}:`, existingAttendance);
+
         if (existingAttendance.length > 0) {
           await db
             .update(attendance)
             .set({ status })
             .where(eq(attendance.id, existingAttendance[0].id));
+          console.log(`Updated existing attendance for student ${student.id}`);
         } else {
           await db
             .insert(attendance)
@@ -614,6 +620,7 @@ export class PostgresStorage implements IStorage {
               date,
               status,
             });
+          console.log(`Created new attendance for student ${student.id}`);
         }
       }
     } catch (error) {

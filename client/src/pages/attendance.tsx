@@ -263,13 +263,14 @@ export default function AttendancePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      queryClient.refetchQueries({ // Заменяем invalidateQueries на refetchQueries
         queryKey: [
           "/api/attendance",
           selectedGroup?.id,
           selectedMonth.getMonth() + 1,
           selectedMonth.getFullYear(),
         ],
+        exact: true,
       });
       toast({
         title: "Успешно",

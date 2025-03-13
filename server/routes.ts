@@ -9,7 +9,7 @@ import {
   insertAttendanceSchema,
   insertPaymentSchema,
   insertStudentGroupSchema,
-  insertDateCommentSchema, // Added import
+  insertDateCommentSchema,
   AttendanceStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
@@ -539,8 +539,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid attendance status" });
       }
 
+      console.log(`Updating bulk attendance for groupId: ${groupId}, date: ${date}, status: ${status}`); // Added logging
       await storage.updateBulkAttendance(groupId, date, status);
-      res.sendStatus(200);
+      console.log(`Bulk attendance update complete for groupId: ${groupId}, date: ${date}, status: ${status}`); // Added logging
+      res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error updating bulk attendance:', error);
       res.status(500).json({ error: (error as Error).message });
