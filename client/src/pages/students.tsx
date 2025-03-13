@@ -8,11 +8,37 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient } from "@/lib/queryClient";
-import { Loader2, UserPlus, Pencil, MoreVertical, Archive, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Pencil, MoreVertical, Archive, Trash2, Filter } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -30,13 +56,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 
 export default function StudentsPage() {
   const [open, setOpen] = useState(false);
@@ -48,6 +68,11 @@ export default function StudentsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    groupId: "",
+    showArchived: false,
+  });
 
   // Получение списка студентов
   const { data: students, isLoading, error } = useQuery<Student[]>({
@@ -93,7 +118,32 @@ export default function StudentsPage() {
     }
   });
 
-  // Форма для создания нового студента
+  // Получение групп для каждого студента
+  const getStudentGroups = async (studentId: number) => {
+    const response = await fetch(`/api/student-groups/${studentId}`, {
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch student groups');
+    }
+    return response.json();
+  };
+
+  // Фильтрация студентов
+  const filteredStudents = students?.filter(student => {
+    const matchesSearch = 
+      student.firstName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      student.lastName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      student.phoneNumber.includes(filters.searchTerm) ||
+      student.parentName?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      student.parentPhone?.includes(filters.searchTerm);
+
+    const matchesGroup = !filters.groupId || student.groups?.some(g => g.id.toString() === filters.groupId);
+    const matchesArchived = filters.showArchived ? true : student.active;
+
+    return matchesSearch && matchesGroup && matchesArchived;
+  });
+
   const form = useForm<InsertStudent>({
     resolver: zodResolver(insertStudentSchema),
     defaultValues: {
@@ -107,12 +157,10 @@ export default function StudentsPage() {
     },
   });
 
-  // Форма для редактирования студента
   const editForm = useForm<InsertStudent>({
     resolver: zodResolver(insertStudentSchema),
   });
 
-  // Мутация для создания студента
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
       const res = await fetch('/api/students', {
@@ -153,7 +201,6 @@ export default function StudentsPage() {
     },
   });
 
-  // Мутация для обновления студента
   const updateMutation = useMutation({
     mutationFn: async (data: { id: number; student: Partial<InsertStudent> }) => {
       const res = await fetch(`/api/students/${data.id}`, {
@@ -190,7 +237,6 @@ export default function StudentsPage() {
     },
   });
 
-  // Мутация для добавления студента в группу
   const addToGroupMutation = useMutation({
     mutationFn: async (data: InsertStudentGroup) => {
       const res = await fetch('/api/student-groups', {
@@ -227,7 +273,6 @@ export default function StudentsPage() {
     },
   });
 
-  // Мутация для изменения статуса студента (архивация/активация)
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
       const res = await fetch(`/api/students/${id}/status`, {
@@ -261,7 +306,6 @@ export default function StudentsPage() {
     },
   });
 
-  // Мутация для удаления студента
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/students/${id}`, {
@@ -454,6 +498,45 @@ export default function StudentsPage() {
           </Dialog>
         </div>
 
+        {/* Фильтры */}
+        <div className="mb-6 flex gap-4 items-center">
+          <div className="flex-1">
+            <Input
+              placeholder="Поиск по имени, телефону..."
+              value={filters.searchTerm}
+              onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+            />
+          </div>
+          <Select
+            value={filters.groupId}
+            onValueChange={(value) => setFilters(prev => ({ ...prev, groupId: value }))}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Фильтр по группе" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Все группы</SelectItem>
+              {groups?.map((group) => (
+                <SelectItem key={group.id} value={group.id.toString()}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="showArchived"
+              checked={filters.showArchived}
+              onCheckedChange={(checked) => 
+                setFilters(prev => ({ ...prev, showArchived: checked as boolean }))
+              }
+            />
+            <label htmlFor="showArchived" className="text-sm">
+              Показать архивные
+            </label>
+          </div>
+        </div>
+
         {/* Диалог редактирования */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
@@ -597,19 +680,20 @@ export default function StudentsPage() {
                 <TableHead>Телефон</TableHead>
                 <TableHead>Родитель</TableHead>
                 <TableHead>Телефон родителя</TableHead>
+                <TableHead>Группы</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead>Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!students?.length ? (
+              {!filteredStudents?.length ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4">
+                  <TableCell colSpan={8} className="text-center py-4">
                     Нет учеников
                   </TableCell>
                 </TableRow>
               ) : (
-                students.map((student) => (
+                filteredStudents.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
                       {student.firstName} {student.lastName}
@@ -621,10 +705,17 @@ export default function StudentsPage() {
                     <TableCell>{student.parentName}</TableCell>
                     <TableCell>{student.parentPhone}</TableCell>
                     <TableCell>
+                      {student.groups?.map((group) => (
+                        <Badge key={group.id} variant="secondary" className="mr-1">
+                          {group.name}
+                        </Badge>
+                      ))}
+                    </TableCell>
+                    <TableCell>
                       <span className={`px-2 py-1 rounded-full text-sm ${
                         student.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {student.active ? 'Активный' : 'Неактивный'}
+                        {student.active ? 'Активный' : 'В архиве'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -673,34 +764,34 @@ export default function StudentsPage() {
             </TableBody>
           </Table>
         </div>
+        {/* Диалог подтверждения удаления */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Это действие нельзя отменить. Студент будет полностью удален из системы.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Удаление...
+                  </>
+                ) : (
+                  "Удалить"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      {/* Диалог подтверждения удаления */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Это действие нельзя отменить. Студент будет полностью удален из системы.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Удаление...
-                </>
-              ) : (
-                "Удалить"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Layout>
   );
 }

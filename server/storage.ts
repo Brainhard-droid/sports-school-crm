@@ -81,7 +81,33 @@ export class PostgresStorage implements IStorage {
 
   // Students
   async getStudents(): Promise<Student[]> {
-    return await db.select().from(students);
+    const students = await db.select().from(students);
+
+    // Для каждого студента получаем его группы
+    const studentsWithGroups = await Promise.all(
+      students.map(async (student) => {
+        const studentGroups = await db
+          .select({
+            id: groups.id,
+            name: groups.name,
+          })
+          .from(studentGroups)
+          .innerJoin(groups, eq(groups.id, studentGroups.groupId))
+          .where(
+            and(
+              eq(studentGroups.studentId, student.id),
+              eq(studentGroups.active, true)
+            )
+          );
+
+        return {
+          ...student,
+          groups: studentGroups,
+        };
+      })
+    );
+
+    return studentsWithGroups;
   }
 
   async getStudent(id: number): Promise<Student | undefined> {
