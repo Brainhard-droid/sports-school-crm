@@ -503,11 +503,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { comment } = req.body;
 
+      console.log(`[Routes] Updating comment ${id} with text:`, comment);
+
+      if (!comment) {
+        return res.status(400).json({ error: "Comment text is required" });
+      }
+
       const updatedComment = await storage.updateDateComment(id, comment);
+      console.log('[Routes] Updated comment:', updatedComment);
       res.json(updatedComment);
     } catch (error) {
-      console.error('Error updating date comment:', error);
-      res.status(500).json({ error: (error as Error).message });
+      console.error('[Routes] Error updating date comment:', error);
+      res.status(500).json({ 
+        error: "Failed to update comment",
+        details: error.message 
+      });
     }
   });
 

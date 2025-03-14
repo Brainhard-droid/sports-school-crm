@@ -556,14 +556,28 @@ export class PostgresStorage implements IStorage {
 
   async updateDateComment(id: number, comment: string): Promise<DateComment> {
     try {
+      console.log(`[Storage] Updating date comment ${id} with text:`, comment);
+
+      // First check if comment exists
+      const [existingComment] = await db
+        .select()
+        .from(dateComments)
+        .where(eq(dateComments.id, id));
+
+      if (!existingComment) {
+        throw new Error(`Comment with id ${id} not found`);
+      }
+
       const [result] = await db
         .update(dateComments)
         .set({ comment })
         .where(eq(dateComments.id, id))
         .returning();
+
+      console.log('[Storage] Updated date comment:', result);
       return result;
     } catch (error) {
-      console.error('Error updating date comment:', error);
+      console.error('[Storage] Error updating date comment:', error);
       throw error;
     }
   }
