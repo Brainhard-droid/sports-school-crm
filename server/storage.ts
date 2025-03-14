@@ -556,38 +556,11 @@ export class PostgresStorage implements IStorage {
 
   async updateDateComment(id: number, comment: string): Promise<DateComment> {
     try {
-      console.log(`Updating date comment ${id} with text: ${comment}`);
-      // Delete any other comments for the same date and group
-      const oldComment = await db
-        .select()
-        .from(dateComments)
-        .where(eq(dateComments.id, id))
-        .then(rows => rows[0]);
-
-      if (oldComment) {
-        await db
-          .delete(dateComments)
-          .where(
-            and(
-              eq(dateComments.groupId, oldComment.groupId),
-              eq(dateComments.date, oldComment.date),
-              ne(dateComments.id, id)
-            )
-          );
-      }
-
       const [result] = await db
         .update(dateComments)
         .set({ comment })
         .where(eq(dateComments.id, id))
         .returning();
-
-      return result;
-    } catch (error) {
-      console.error('Error updating date comment:', error);
-      throw error;
-    }
-  }pdated date comment:', result);
       return result;
     } catch (error) {
       console.error('Error updating date comment:', error);

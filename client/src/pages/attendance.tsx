@@ -68,7 +68,7 @@ const CommentDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {existingComment ? "Изменить" : "Добавить"} комментарий к {format(date, "d MMMM yyyy", { locale: ru })}
+            Комментарий к {format(date, "d MMMM yyyy", { locale: ru })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -233,49 +233,20 @@ export default function AttendancePage() {
     },
   });
 
-  // Add date comment mutation
+  // Add mutation for date comments
   const dateCommentMutation = useMutation({
-    mutationFn: async (data: { 
-      groupId: number; 
-      date: string; 
-      comment: string;
-      commentId?: number; 
-    }) => {
-      if (data.commentId) {
-        // Update existing comment
-        const res = await apiRequest(
-          "PATCH", 
-          `/api/date-comments/${data.commentId}`, 
-          { comment: data.comment }
-        );
-        return res.json();
-      } else {
-        // Create new comment
-        const res = await apiRequest("POST", "/api/date-comments", data);
-        return res.json();
-      }
+    mutationFn: async (data: { groupId: number; date: string; comment: string }) => {
+      const res = await apiRequest("POST", "/api/date-comments", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [
-          "/api/date-comments",
-          selectedGroup?.id,
-          selectedMonth.getMonth() + 1,
-          selectedMonth.getFullYear(),
-        ],
+        queryKey: ["/api/date-comments", selectedGroup?.id],
       });
       setCommentDialogData({ isOpen: false, date: null });
       toast({
         title: "Успешно",
         description: "Комментарий сохранен",
-      });
-    },
-    onError: (error) => {
-      console.error('Error saving comment:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось сохранить комментарий",
-        variant: "destructive",
       });
     },
   });
@@ -292,7 +263,7 @@ export default function AttendancePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ 
+      queryClient.refetchQueries({ // Заменяем invalidateQueries на refetchQueries
         queryKey: [
           "/api/attendance",
           selectedGroup?.id,
@@ -339,7 +310,6 @@ export default function AttendancePage() {
       groupId: selectedGroup.id,
       date: format(commentDialogData.date, "yyyy-MM-dd"),
       comment,
-      commentId: commentDialogData.comment?.id, 
     });
   };
 
