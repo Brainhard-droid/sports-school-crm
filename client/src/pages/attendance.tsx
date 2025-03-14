@@ -294,11 +294,9 @@ export default function AttendancePage() {
       setCommentDialogData({ isOpen: false, date: null });
       toast({
         title: "Успешно",
-        description: data.action === 'delete'
-          ? "Комментарий удален"
-          : commentDialogData.comment?.id 
-            ? "Комментарий обновлен" 
-            : "Комментарий сохранен",
+        description: commentDialogData.comment?.id 
+          ? "Комментарий обновлен" 
+          : "Комментарий сохранен",
       });
     },
     onError: (error) => {
