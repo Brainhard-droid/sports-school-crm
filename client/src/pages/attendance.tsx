@@ -280,8 +280,7 @@ export default function AttendancePage() {
         return res.json();
       }
     },
-    onSuccess: () => {
-      // Force refetch instead of just invalidating
+    onSuccess: (result, variables) => {
       queryClient.refetchQueries({
         queryKey: [
           "/api/date-comments",
@@ -292,12 +291,22 @@ export default function AttendancePage() {
         exact: true,
       });
       setCommentDialogData({ isOpen: false, date: null });
-      toast({
-        title: "Успешно",
-        description: commentDialogData.comment?.id 
-          ? "Комментарий обновлен" 
-          : "Комментарий сохранен",
-      });
+      if (variables.action === "delete") {
+        toast({
+          title: "Успешно",
+          description: "Комментарий удален",
+        });
+      } else if (variables.commentId) {
+        toast({
+          title: "Успешно",
+          description: "Комментарий обновлен",
+        });
+      } else {
+        toast({
+          title: "Успешно",
+          description: "Комментарий сохранен",
+        });
+      }
     },
     onError: (error) => {
       console.error('Error saving comment:', error);
