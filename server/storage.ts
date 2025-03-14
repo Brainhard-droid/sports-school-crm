@@ -556,11 +556,13 @@ export class PostgresStorage implements IStorage {
 
   async updateDateComment(id: number, comment: string): Promise<DateComment> {
     try {
+      console.log(`Updating date comment ${id} with text: ${comment}`);
       const [result] = await db
         .update(dateComments)
         .set({ comment })
         .where(eq(dateComments.id, id))
         .returning();
+      console.log('Updated date comment:', result);
       return result;
     } catch (error) {
       console.error('Error updating date comment:', error);

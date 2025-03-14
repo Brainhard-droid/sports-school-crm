@@ -503,7 +503,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { comment } = req.body;
 
+      if (!comment) {
+        return res.status(400).json({ error: "Comment text is required" });
+      }
+
+      console.log(`Updating comment ${id} with text: ${comment}`);
       const updatedComment = await storage.updateDateComment(id, comment);
+      console.log('Updated comment:', updatedComment);
       res.json(updatedComment);
     } catch (error) {
       console.error('Error updating date comment:', error);
