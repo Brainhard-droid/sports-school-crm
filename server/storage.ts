@@ -1,8 +1,8 @@
 import { IStorage } from "./interfaces";
 import {
   User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup,
-  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
-  users, students, groups, schedules, attendance, payments, studentGroups
+  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertPayment, InsertStudentGroup,
+  users, students, groups, schedules, attendance, payments, studentGroups, DateComment, InsertDateComment, AttendanceStatus
 } from "@shared/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
@@ -381,7 +381,31 @@ export class PostgresStorage implements IStorage {
   }
 
   // Attendance
-  async getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]> {
+  async getAttendance(groupId: number, date: Date): Promise<Attendance[]> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      return await db
+        .select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.groupId, groupId),
+            gte(attendance.date, startOfDay),
+            lte(attendance.date, endOfDay)
+          )
+        );
+    } catch (error) {
+      console.error('Error getting attendance:', error);
+      throw error;
+    }
+  }
+
+    async getMonthlyAttendance(groupId: number, month: number, year: number): Promise<Attendance[]> {
     try {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
@@ -397,7 +421,7 @@ export class PostgresStorage implements IStorage {
           )
         );
     } catch (error) {
-      console.error('Error getting attendance:', error);
+      console.error('Error getting monthly attendance:', error);
       throw error;
     }
   }
@@ -583,7 +607,7 @@ export class PostgresStorage implements IStorage {
   async updateBulkAttendance(
     groupId: number,
     date: string,
-    status: AttendanceStatusType
+    status: keyof typeof AttendanceStatus
   ): Promise<void> {
     try {
       const students = await this.getGroupStudentsWithDetails(groupId);

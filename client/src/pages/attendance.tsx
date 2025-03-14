@@ -53,6 +53,7 @@ const CommentDialog = ({
   groupId,
   existingComment,
   onSave,
+  onDelete,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -60,6 +61,7 @@ const CommentDialog = ({
   groupId: number;
   existingComment?: DateComment;
   onSave: (comment: string) => void;
+  onDelete: (id: number) => void;
 }) => {
   const [comment, setComment] = useState(existingComment?.comment || "");
 
@@ -77,7 +79,14 @@ const CommentDialog = ({
             onChange={(e) => setComment(e.target.value)}
             placeholder="Введите комментарий..."
           />
-          <Button onClick={() => onSave(comment)}>Сохранить</Button>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => onSave(comment)}>Сохранить</Button>
+            {existingComment && (
+              <Button variant="destructive" onClick={() => onDelete(existingComment.id)}>
+                Удалить
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -263,7 +272,7 @@ export default function AttendancePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ // Заменяем invalidateQueries на refetchQueries
+      queryClient.refetchQueries({ 
         queryKey: [
           "/api/attendance",
           selectedGroup?.id,
@@ -306,11 +315,82 @@ export default function AttendancePage() {
   const handleSaveComment = async (comment: string) => {
     if (!selectedGroup || !commentDialogData.date) return;
 
-    await dateCommentMutation.mutate({
-      groupId: selectedGroup.id,
-      date: format(commentDialogData.date, "yyyy-MM-dd"),
-      comment,
-    });
+    const date = format(commentDialogData.date, "yyyy-MM-dd");
+    const existingComment = dateComments?.find(
+      c => format(new Date(c.date), "yyyy-MM-dd") === date
+    );
+
+    try {
+      if (existingComment) {
+        // Update existing comment
+        await apiRequest("PATCH", `/api/date-comments/${existingComment.id}`, {
+          comment
+        });
+      } else {
+        // Create new comment
+        await apiRequest("POST", "/api/date-comments", {
+          groupId: selectedGroup.id,
+          date,
+          comment
+        });
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/date-comments",
+          selectedGroup.id,
+          selectedMonth.getMonth() + 1,
+          selectedMonth.getFullYear()
+        ]
+      });
+
+      setCommentDialogData({ isOpen: false, date: null });
+
+      toast({
+        title: "Успешно",
+        description: existingComment 
+          ? "Комментарий обновлен" 
+          : "Комментарий сохранен",
+      });
+    } catch (error) {
+      console.error('Error saving comment:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить комментарий",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteComment = async (id: number) => {
+    if (!selectedGroup) return;
+
+    try {
+      await apiRequest("DELETE", `/api/date-comments/${id}`);
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/date-comments",
+          selectedGroup.id,
+          selectedMonth.getMonth() + 1,
+          selectedMonth.getFullYear()
+        ]
+      });
+
+      setCommentDialogData({ isOpen: false, date: null });
+
+      toast({
+        title: "Успешно",
+        description: "Комментарий удален",
+      });
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить комментарий",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
@@ -370,51 +450,87 @@ export default function AttendancePage() {
     return fullName.includes(searchTerm.toLowerCase());
   });
 
-  // Export with format selection
+  // Update the handleExport function to support both CSV and PDF formats
   const handleExport = (format: 'csv' | 'pdf') => {
     if (!students || !scheduleDates || !selectedGroup) return;
 
-    if (format === 'csv') {
-      const headers = [
-        "Ученик",
-        ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
-        "Посещаемость"
+    const monthYear = format(selectedMonth, "MMMM yyyy", { locale: ru });
+    const headers = [
+      "Ученик",
+      ...scheduleDates.map(date => format(date, "d MMM (EEE)", { locale: ru })),
+      "Статистика"
+    ];
+
+    const rows = students.map(student => {
+      const stats = getStudentStats(student.id);
+      return [
+        `${student.lastName} ${student.firstName}`,
+        ...scheduleDates.map(date => {
+          const status = getAttendanceStatus(student.id, date);
+          return status === AttendanceStatus.PRESENT ? "✓" :
+            status === AttendanceStatus.ABSENT ? "×" : "";
+        }),
+        `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
       ];
+    });
 
-      const rows = students.map(student => {
-        const stats = getStudentStats(student.id);
-        return [
-          `${student.lastName} ${student.firstName}`,
-          ...scheduleDates.map(date => {
-            const status = getAttendanceStatus(student.id, date);
-            return status === AttendanceStatus.PRESENT ? "✓" :
-              status === AttendanceStatus.ABSENT ? "×" : "";
-          }),
-          `${stats.percentage}% (${stats.attended}/${stats.totalClasses})`
-        ];
-      });
-
+    if (format === 'csv') {
       const csvContent = [
         headers.join(","),
         ...rows.map(row => row.join(","))
       ].join("\n");
 
-      const blob = new Blob([csvContent], { type: "text/csv" });
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } else {
-      // PDF export logic would go here
-      toast({
-        title: "В разработке",
-        description: "Экспорт в PDF будет доступен в ближайшее время",
+      import('jspdf').then(module => {
+        const jsPDF = module.default;
+        import('jspdf-autotable').then(() => {
+          const doc = new jsPDF();
+
+          // Add title
+          doc.setFontSize(16);
+          doc.text(`Посещаемость группы "${selectedGroup.name}"`, 14, 15);
+          doc.setFontSize(12);
+          doc.text(`${monthYear}`, 14, 25);
+
+          // Add table
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: 30,
+            styles: {
+              fontSize: 8,
+              cellPadding: 2,
+            },
+            columnStyles: {
+              0: { cellWidth: 40 }, // Name column
+              [headers.length - 1]: { cellWidth: 30 }, // Statistics column
+            },
+            headStyles: {
+              fillColor: [66, 66, 66],
+              textColor: [255, 255, 255],
+              fontStyle: 'bold',
+            },
+          });
+
+          // Save PDF
+          doc.save(`attendance-${selectedGroup.name}-${format(selectedMonth, "yyyy-MM")}.pdf`);
+        });
       });
     }
+
+    toast({
+      title: "Экспорт выполнен",
+      description: `Файл сохранен в формате ${format.toUpperCase()}`,
+    });
   };
 
   return (
@@ -625,6 +741,7 @@ export default function AttendancePage() {
                 groupId={selectedGroup?.id || 0}
                 existingComment={commentDialogData.comment}
                 onSave={handleSaveComment}
+                onDelete={handleDeleteComment}
               />
             )}
           </DialogContent>
