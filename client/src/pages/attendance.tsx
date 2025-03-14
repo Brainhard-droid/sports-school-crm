@@ -41,6 +41,7 @@ import {
   Download,
   MoreVertical,
   MessageCircle,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -239,9 +240,21 @@ export default function AttendancePage() {
       groupId: number; 
       date: string; 
       comment: string;
-      commentId?: number; 
+      commentId?: number;
+      action?: 'delete';
     }) => {
-      if (data.commentId) {
+      if (data.action === 'delete' && data.commentId) {
+        // Delete comment
+        console.log('Deleting comment:', data.commentId);
+        const res = await apiRequest(
+          "DELETE",
+          `/api/date-comments/${data.commentId}`
+        );
+        if (!res.ok) {
+          throw new Error('Failed to delete comment');
+        }
+        return;
+      } else if (data.commentId) {
         // Update existing comment
         console.log('Updating comment:', data.commentId, data.comment);
         const res = await apiRequest(
@@ -596,6 +609,23 @@ export default function AttendancePage() {
                                   <MessageCircle className="h-4 w-4 mr-2" />
                                   {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
                                 </DropdownMenuItem>
+                                {dateComment && (
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => {
+                                      dateCommentMutation.mutate({
+                                        groupId: selectedGroup!.id,
+                                        date: format(date, "yyyy-MM-dd"),
+                                        comment: "",
+                                        commentId: dateComment.id,
+                                        action: "delete"
+                                      });
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Удалить комментарий
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
