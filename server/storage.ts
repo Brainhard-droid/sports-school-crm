@@ -1,8 +1,8 @@
 import { IStorage } from "./interfaces";
 import {
-  User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup,
-  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
-  users, students, groups, schedules, attendance, payments, studentGroups
+  User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup, DateComment,
+  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup, InsertDateComment,
+  users, students, groups, schedules, attendance, payments, studentGroups, dateComments
 } from "@shared/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
