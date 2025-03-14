@@ -1,7 +1,7 @@
 import { Store } from "express-session";
 import {
-  User, Student, Group, Schedule, Attendance, Payment, StudentGroup, DateComment,
-  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup, InsertDateComment
+  User, Student, Group, Schedule, Attendance, Payment, StudentGroup,
+  InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -38,14 +38,7 @@ export interface IStorage {
 
   // Attendance
   getAttendance(groupId: number, date: Date): Promise<Attendance[]>;
-  getMonthlyAttendance(groupId: number, month: number, year: number): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
-
-  // Date Comments
-  getDateComments(groupId: number, month: number, year: number): Promise<DateComment[]>;
-  createDateComment(comment: InsertDateComment): Promise<DateComment>;
-  updateDateComment(id: number, comment: string): Promise<DateComment>;
-  deleteDateComment(id: number): Promise<void>;
 
   // Payments
   getPayments(studentId?: number): Promise<Payment[]>;
