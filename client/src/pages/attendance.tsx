@@ -234,7 +234,7 @@ export default function AttendancePage() {
   });
 
   // Add mutation for date comments
-  const createDateCommentMutation = useMutation({
+  const dateCommentMutation = useMutation({
     mutationFn: async (data: { groupId: number; date: string; comment: string }) => {
       const res = await apiRequest("POST", "/api/date-comments", data);
       return res.json();
@@ -246,44 +246,10 @@ export default function AttendancePage() {
       setCommentDialogData({ isOpen: false, date: null });
       toast({
         title: "Успешно",
-        description: "Комментарий создан",
+        description: "Комментарий сохранен",
       });
     },
   });
-
-  const updateDateCommentMutation = useMutation({
-    mutationFn: async ({ id, comment }: { id: number; comment: string }) => {
-      const res = await apiRequest("PATCH", `/api/date-comments/${id}`, { comment });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/date-comments", selectedGroup?.id],
-      });
-      setCommentDialogData({ isOpen: false, date: null });
-      toast({
-        title: "Успешно",
-        description: "Комментарий обновлен",
-      });
-    },
-  });
-
-  const handleSaveComment = async (comment: string) => {
-    if (!selectedGroup || !commentDialogData.date) return;
-
-    if (commentDialogData.id) {
-      await updateDateCommentMutation.mutate({
-        id: commentDialogData.id,
-        comment,
-      });
-    } else {
-      await createDateCommentMutation.mutate({
-        groupId: selectedGroup.id,
-        date: format(commentDialogData.date, "yyyy-MM-dd"),
-        comment,
-      });
-    }
-  };
 
   // Add mutation for bulk attendance
   const bulkAttendanceMutation = useMutation({
