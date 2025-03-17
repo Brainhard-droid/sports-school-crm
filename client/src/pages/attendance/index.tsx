@@ -5,7 +5,6 @@ import { useAttendance } from "./hooks/useAttendance";
 import { useStudents } from "./hooks/useStudents";
 import { useSchedule } from "./hooks/useSchedule";
 import { useComments } from "./hooks/useComments";
-import { useBulkAttendance } from "./hooks/useBulkAttendance";
 import GroupsList from "./components/GroupsList";
 import { AttendanceTable } from "./components/AttendanceTable";
 import AttendanceControls from "./components/AttendanceControls";
@@ -15,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2 } from "lucide-react";
 import { AttendanceStatus } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
+import { useBulkAttendance } from "./hooks/useBulkAttendance";
 
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -54,7 +55,7 @@ export default function AttendancePage() {
   const handleMarkAttendance = async (studentId: number, date: Date) => {
     if (!selectedGroup) return;
 
-    const cellId = `${studentId}-${date.toISOString()}`;
+    const cellId = `${studentId}-${format(date, "yyyy-MM-dd")}`;
     setLoadingCell(cellId);
 
     try {
@@ -87,6 +88,37 @@ export default function AttendancePage() {
     }
   };
 
+  const handleCommentAction = async (data: { 
+    date: Date, 
+    comment?: any, 
+    action?: 'delete' 
+  }) => {
+    if (!selectedGroup) return;
+
+    try {
+      if (data.action === 'delete' && data.comment?.id) {
+        await commentMutation.mutateAsync({
+          groupId: selectedGroup,
+          date: data.date.toISOString(),
+          commentId: data.comment.id,
+          action: 'delete'
+        });
+      } else {
+        setCommentDialogData({ 
+          isOpen: true, 
+          date: data.date, 
+          comment: data.comment 
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось выполнить операцию с комментарием",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveComment = async (comment: string) => {
     if (!selectedGroup || !commentDialogData.date) return;
 
@@ -95,8 +127,7 @@ export default function AttendancePage() {
         groupId: selectedGroup,
         date: commentDialogData.date.toISOString(),
         comment,
-        commentId: commentDialogData.comment?.id,
-        action: commentDialogData.comment?.action
+        commentId: commentDialogData.comment?.id
       });
       setCommentDialogData({ isOpen: false, date: null });
     } catch (error) {
@@ -168,7 +199,7 @@ export default function AttendancePage() {
                     loadingCell={loadingCell}
                     handleMarkAttendance={handleMarkAttendance}
                     handleBulkAttendance={handleBulkAttendance}
-                    setCommentDialogData={setCommentDialogData}
+                    setCommentDialogData={handleCommentAction}
                     getAttendanceStatus={(studentId, date) => {
                       const record = attendance?.find(
                         (a) =>

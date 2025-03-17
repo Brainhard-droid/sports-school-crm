@@ -41,14 +41,6 @@ export const AttendanceTable = ({
     );
   }
 
-  const handleCommentAction = (date: Date, comment?: DateComment, action?: 'delete') => {
-    setCommentDialogData({ 
-      isOpen: true, 
-      date, 
-      comment: action === 'delete' ? { ...comment, action: 'delete' } : comment 
-    });
-  };
-
   return (
     <Table>
       <TableHeader>
@@ -86,12 +78,16 @@ export const AttendanceTable = ({
                         <X className="h-4 w-4 mr-2" />
                         Отметить отсутствие
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCommentAction(date, dateComment)}>
+                      <DropdownMenuItem onClick={() => setCommentDialogData({ isOpen: true, date, comment: dateComment })}>
                         <MessageCircle className="h-4 w-4 mr-2" />
                         {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
                       </DropdownMenuItem>
                       {dateComment && (
-                        <DropdownMenuItem onClick={() => handleCommentAction(date, dateComment, 'delete')}>
+                        <DropdownMenuItem onClick={() => setCommentDialogData({ 
+                          isOpen: true, 
+                          date, 
+                          comment: { ...dateComment, action: 'delete' } 
+                        })}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Удалить комментарий
                         </DropdownMenuItem>
@@ -116,15 +112,17 @@ export const AttendanceTable = ({
       <TableBody>
         {students.map((student) => {
           const stats = getStudentStats(student.id);
-          const lowAttendance = stats.percentage < 50;
 
           return (
             <TableRow key={student.id} className="border-b">
-              <TableCell className="font-medium border-r">{student.lastName} {student.firstName}</TableCell>
+              <TableCell className="font-medium border-r">
+                {student.lastName} {student.firstName}
+              </TableCell>
               {scheduleDates.map((date) => {
                 const status = getAttendanceStatus(student.id, date);
                 const cellId = `${student.id}-${format(date, "yyyy-MM-dd")}`;
                 const isLoading = loadingCell === cellId;
+
                 return (
                   <TableCell
                     key={date.toISOString()}
@@ -141,7 +139,7 @@ export const AttendanceTable = ({
                   </TableCell>
                 );
               })}
-              <TableCell className={`text-center border-l ${lowAttendance ? 'text-red-600' : ''}`}>
+              <TableCell className={`text-center border-l ${stats.percentage < 50 ? 'text-red-600' : ''}`}>
                 {stats.percentage}% ({stats.attended}/{stats.totalClasses})
               </TableCell>
             </TableRow>
