@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MoreVertical, Check, X, MessageCircle, Trash2, Loader2 } from "lucide-react";
-import CommentDialog from "./CommentDialog";
 import { AttendanceStatus, DateComment, Student } from "@shared/schema";
 
 interface AttendanceTableProps {
@@ -16,7 +15,7 @@ interface AttendanceTableProps {
   loadingCell: string | null;
   handleMarkAttendance: (studentId: number, date: Date) => void;
   handleBulkAttendance: (date: Date, status: keyof typeof AttendanceStatus) => void;
-  setCommentDialogData: (data: { isOpen: boolean; date: Date; comment?: DateComment }) => void;
+  setCommentDialogData: (data: { date: Date; comment?: DateComment; action?: 'delete' }) => void;
   getAttendanceStatus: (studentId: number, date: Date) => keyof typeof AttendanceStatus;
   getStudentStats: (studentId: number) => { attended: number; totalClasses: number; percentage: number };
 }
@@ -70,23 +69,23 @@ export const AttendanceTable = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleBulkAttendance(date, "PRESENT")}>
+                      <DropdownMenuItem onClick={() => handleBulkAttendance(date, AttendanceStatus.PRESENT)}>
                         <Check className="h-4 w-4 mr-2" />
                         Отметить всех
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleBulkAttendance(date, "ABSENT")}>
+                      <DropdownMenuItem onClick={() => handleBulkAttendance(date, AttendanceStatus.ABSENT)}>
                         <X className="h-4 w-4 mr-2" />
                         Отметить отсутствие
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCommentDialogData({ isOpen: true, date, comment: dateComment })}>
+                      <DropdownMenuItem onClick={() => setCommentDialogData({ date, comment: dateComment })}>
                         <MessageCircle className="h-4 w-4 mr-2" />
                         {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
                       </DropdownMenuItem>
                       {dateComment && (
                         <DropdownMenuItem onClick={() => setCommentDialogData({ 
-                          isOpen: true, 
                           date, 
-                          comment: { ...dateComment, action: 'delete' } 
+                          comment: dateComment,
+                          action: 'delete'
                         })}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Удалить комментарий

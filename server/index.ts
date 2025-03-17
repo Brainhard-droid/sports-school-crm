@@ -17,7 +17,34 @@ app.use(express.urlencoded({ extended: false }));
 // Trust first proxy
 app.set("trust proxy", 1);
 
-// CORS middleware BEFORE session
+// Session configuration
+const PostgresStore = connectPgSimple(session);
+
+app.use(session({
+  store: new PostgresStore({
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: false,
+    },
+    createTableIfMissing: true
+  }),
+  secret: process.env.SESSION_SECRET || "your-secret-key",
+  resave: false,
+  saveUninitialized: false,
+  name: 'sid',
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax',
+    path: '/'
+  }
+}));
+
+// Setup authentication
+setupAuth(app);
+
+// CORS middleware AFTER session setup
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
@@ -35,50 +62,12 @@ app.use((req, res, next) => {
   }
 });
 
-const PostgresStore = connectPgSimple(session);
-
-// Session configuration
-app.use(session({
-  store: new PostgresStore({
-    conObject: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: false,
-    },
-    createTableIfMissing: true
-  }),
-  secret: process.env.SESSION_SECRET || "your-secret-key",
-  resave: false,
-  saveUninitialized: false,
-  name: 'sid',
-  cookie: {
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax'
-  }
-}));
-
-// Setup authentication
-setupAuth(app);
-
 // Debug middleware
 app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-
-  console.log(`[${new Date().toISOString()}] ${req.method} ${path}`);
-  console.log('Headers:', req.headers);
-  console.log('Cookies:', req.cookies);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Session ID:', req.sessionID);
   console.log('Session:', req.session);
-  console.log('Authentication status:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-
+  console.log('Auth Status:', req.isAuthenticated());
   next();
 });
 

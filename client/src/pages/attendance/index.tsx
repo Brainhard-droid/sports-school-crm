@@ -15,7 +15,6 @@ import { Loader2 } from "lucide-react";
 import { AttendanceStatus } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
-import { useBulkAttendance } from "./hooks/useBulkAttendance";
 
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -46,11 +45,6 @@ export default function AttendancePage() {
     selectedMonth.getMonth() + 1,
     selectedMonth.getFullYear()
   );
-  const { bulkAttendanceMutation } = useBulkAttendance(
-    selectedGroup,
-    selectedMonth.getMonth() + 1,
-    selectedMonth.getFullYear()
-  );
 
   const handleMarkAttendance = async (studentId: number, date: Date) => {
     if (!selectedGroup) return;
@@ -59,9 +53,7 @@ export default function AttendancePage() {
     setLoadingCell(cellId);
 
     try {
-      const currentStatus = attendance?.find(
-        (a) => a.studentId === studentId && a.date === date.toISOString()
-      )?.status || AttendanceStatus.NOT_MARKED;
+      const currentStatus = getAttendanceStatus(studentId, date);
 
       let nextStatus: keyof typeof AttendanceStatus;
       if (currentStatus === AttendanceStatus.NOT_MARKED) {
@@ -95,26 +87,28 @@ export default function AttendancePage() {
   }) => {
     if (!selectedGroup) return;
 
-    try {
-      if (data.action === 'delete' && data.comment?.id) {
+    // Если это удаление комментария, сразу отправляем запрос
+    if (data.action === 'delete' && data.comment?.id) {
+      try {
         await commentMutation.mutateAsync({
           groupId: selectedGroup,
           date: data.date.toISOString(),
           commentId: data.comment.id,
           action: 'delete'
         });
-      } else {
-        setCommentDialogData({ 
-          isOpen: true, 
-          date: data.date, 
-          comment: data.comment 
+      } catch (error) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить комментарий",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось выполнить операцию с комментарием",
-        variant: "destructive",
+    } else {
+      // Если это не удаление, открываем диалог
+      setCommentDialogData({ 
+        isOpen: true, 
+        date: data.date, 
+        comment: data.comment 
       });
     }
   };
@@ -143,7 +137,7 @@ export default function AttendancePage() {
     if (!selectedGroup) return;
 
     try {
-      await bulkAttendanceMutation.mutateAsync({
+      await markAttendanceMutation.mutateAsync({
         groupId: selectedGroup,
         date: date.toISOString(),
         status
@@ -155,6 +149,15 @@ export default function AttendancePage() {
         variant: "destructive",
       });
     }
+  };
+
+  const getAttendanceStatus = (studentId: number, date: Date): keyof typeof AttendanceStatus => {
+    const record = attendance?.find(
+      (a) => 
+        a.studentId === studentId && 
+        format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+    return record?.status || AttendanceStatus.NOT_MARKED;
   };
 
   const isLoading = isLoadingSchedule || isLoadingAttendance || isLoadingComments;
@@ -200,14 +203,7 @@ export default function AttendancePage() {
                     handleMarkAttendance={handleMarkAttendance}
                     handleBulkAttendance={handleBulkAttendance}
                     setCommentDialogData={handleCommentAction}
-                    getAttendanceStatus={(studentId, date) => {
-                      const record = attendance?.find(
-                        (a) =>
-                          a.studentId === studentId &&
-                          a.date === date.toISOString()
-                      );
-                      return record?.status || AttendanceStatus.NOT_MARKED;
-                    }}
+                    getAttendanceStatus={getAttendanceStatus}
                     getStudentStats={(studentId) => {
                       const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
                       const totalClasses = scheduleDates?.length || 0;
