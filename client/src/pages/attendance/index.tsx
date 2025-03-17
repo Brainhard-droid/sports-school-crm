@@ -5,7 +5,6 @@ import { GroupsList } from "./components/GroupsList";
 import { AttendanceTable } from "./components/AttendanceTable";
 import { useGroups } from "./hooks/useGroups";
 import { Loader2 } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function AttendancePage() {
   const [selectedGroup, setSelectedGroup] = useState<ExtendedGroup | null>(null);
@@ -30,21 +29,12 @@ export default function AttendancePage() {
           onGroupSelect={setSelectedGroup}
         />
 
-        {/* Use Dialog to show attendance table */}
-        <Dialog 
-          open={!!selectedGroup} 
-          onOpenChange={(open) => !open && setSelectedGroup(null)}
-          modal
-        >
-          {selectedGroup && (
-            <DialogContent className="max-w-[95vw] w-fit">
-              <AttendanceTable
-                group={selectedGroup}
-                onClose={() => setSelectedGroup(null)}
-              />
-            </DialogContent>
-          )}
-        </Dialog>
+        {selectedGroup && (
+          <AttendanceTable
+            group={selectedGroup}
+            onClose={() => setSelectedGroup(null)}
+          />
+        )}
       </div>
     </Layout>
   );

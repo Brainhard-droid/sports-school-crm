@@ -421,6 +421,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
             isOpen={true}
             onClose={() => setCommentDialogData({ isOpen: false, date: null })}
             date={commentDialogData.date}
+            groupId={group.id}
             existingComment={commentDialogData.comment}
             onSave={handleSaveComment}
           />

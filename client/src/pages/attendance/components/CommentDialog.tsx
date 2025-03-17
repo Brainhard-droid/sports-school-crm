@@ -15,6 +15,7 @@ interface CommentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   date: Date;
+  groupId: number;
   existingComment?: DateComment;
   onSave: (comment: string) => void;
 }
