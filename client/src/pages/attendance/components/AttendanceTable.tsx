@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MoreVertical, Check, X, MessageCircle, Trash2, Loader2 } from "lucide-react";
-import CommentDialog from "./CommentDialog";
+import { CommentDialog } from "./CommentDialog";
 import { AttendanceStatus, DateComment, Student } from "@shared/schema";
 
 interface AttendanceTableProps {
@@ -21,11 +21,11 @@ interface AttendanceTableProps {
   getStudentStats: (studentId: number) => { attended: number; totalClasses: number; percentage: number };
 }
 
-const AttendanceTable = ({
-  scheduleDates,
-  students,
-  attendance,
-  dateComments,
+export const AttendanceTable = ({
+  scheduleDates = [],
+  students = [],
+  attendance = [],
+  dateComments = [],
   loadingCell,
   handleMarkAttendance,
   handleBulkAttendance,
@@ -33,12 +33,20 @@ const AttendanceTable = ({
   getAttendanceStatus,
   getStudentStats,
 }: AttendanceTableProps) => {
+  if (!scheduleDates?.length) {
+    return (
+      <div className="text-center p-4">
+        Нет данных о расписании для выбранного месяца
+      </div>
+    );
+  }
+
   return (
     <Table>
       <TableHeader>
         <TableRow className="border-b">
           <TableHead className="min-w-[200px] border-r">Ученик</TableHead>
-          {scheduleDates?.map((date) => {
+          {scheduleDates.map((date) => {
             const dateComment = dateComments?.find(
               (c) => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
             );
@@ -75,7 +83,7 @@ const AttendanceTable = ({
                         {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
                       </DropdownMenuItem>
                       {dateComment && (
-                        <DropdownMenuItem className="text-red-600" onClick={() => setCommentDialogData({ isOpen: true, date, comment: undefined })}>
+                        <DropdownMenuItem onClick={() => setCommentDialogData({ isOpen: true, date, comment: undefined })}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Удалить комментарий
                         </DropdownMenuItem>
