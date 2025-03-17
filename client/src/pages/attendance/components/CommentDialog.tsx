@@ -1,20 +1,17 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// CommentDialog.tsx
+import { useState } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DateComment } from "@shared/schema";
-import { useState } from "react";
 
 interface CommentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   date: Date;
+  groupId: number;
   existingComment?: DateComment;
   onSave: (comment: string) => void;
 }
@@ -23,6 +20,7 @@ export function CommentDialog({
   isOpen,
   onClose,
   date,
+  groupId,
   existingComment,
   onSave,
 }: CommentDialogProps) {

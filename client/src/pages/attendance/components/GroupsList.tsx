@@ -1,3 +1,4 @@
+// GroupsList.tsx
 import { Button } from "@/components/ui/button";
 import { Group } from "@shared/schema";
 
