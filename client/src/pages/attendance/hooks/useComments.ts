@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DateComment } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 interface UseCommentsProps {
   groupId: number;
@@ -25,6 +26,7 @@ export function useComments({ groupId, month }: UseCommentsProps) {
           month.getMonth() + 1
         }&year=${month.getFullYear()}`
       );
+      if (!res.ok) throw new Error('Failed to fetch comments');
       return res.json();
     },
     enabled: !!groupId,
@@ -60,9 +62,25 @@ export function useComments({ groupId, month }: UseCommentsProps) {
         return res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey });
+      toast({
+        title: "Успешно",
+        description: variables.action === 'delete' 
+          ? "Комментарий удален" 
+          : variables.commentId 
+            ? "Комментарий обновлен"
+            : "Комментарий сохранен"
+      });
     },
+    onError: (error) => {
+      console.error('Comment mutation error:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить комментарий",
+        variant: "destructive"
+      });
+    }
   });
 
   return {

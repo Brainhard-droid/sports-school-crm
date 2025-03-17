@@ -28,6 +28,11 @@ export function CommentDialog({
 }: CommentDialogProps) {
   const [comment, setComment] = useState(existingComment?.comment || "");
 
+  const handleSave = () => {
+    onSave(comment);
+    onClose();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -43,7 +48,7 @@ export function CommentDialog({
             onChange={(e) => setComment(e.target.value)}
             placeholder="Введите комментарий..."
           />
-          <Button onClick={() => onSave(comment)}>Сохранить</Button>
+          <Button onClick={handleSave}>Сохранить</Button>
         </div>
       </DialogContent>
     </Dialog>

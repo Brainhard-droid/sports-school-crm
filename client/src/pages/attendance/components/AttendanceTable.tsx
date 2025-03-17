@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { AttendanceStatus, DateComment, Group } from "@shared/schema";
-import { useAttendance } from "../hooks/useAttendance";
+import { AttendanceStatus, DateComment, ExtendedGroup } from "@shared/schema";
+import { useAttendanceData } from "../hooks/useAttendanceData";
 import { useComments } from "../hooks/useComments";
 import { CommentDialog } from "./CommentDialog";
 
@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 
 interface AttendanceTableProps {
-  group: Group;
+  group: ExtendedGroup;
   onClose: () => void;
 }
 
@@ -61,7 +61,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
     comment?: DateComment;
   }>({ isOpen: false, date: null });
 
-  const { attendance, markAttendance, bulkAttendance, isLoading: isLoadingAttendance } = useAttendance({
+  const { attendance, markAttendance, bulkAttendance, calculateStatistics, isLoading: isLoadingAttendance } = useAttendanceData({
     groupId: group.id,
     month: selectedMonth,
   });
@@ -70,6 +70,13 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
     groupId: group.id,
     month: selectedMonth,
   });
+
+  // Filter students based on search term
+  const filteredStudents = group.students?.filter(student =>
+    `${student.lastName} ${student.firstName}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  ) || [];
 
   // Get all dates of the selected month that have schedules
   const getDatesInMonth = () => {
@@ -80,7 +87,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      const dayOfWeek = date.getDay() || 7;
+      const dayOfWeek = date.getDay() || 7; // Convert Sunday (0) to 7
       if (group.schedules?.some(schedule => schedule.dayOfWeek === dayOfWeek)) {
         dates.push(date);
       }
@@ -93,7 +100,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
 
   // Get attendance status for a student on a specific date
   const getAttendanceStatus = (studentId: number, date: Date) => {
-    return attendance?.find(
+    return attendance.find(
       a => 
         a.studentId === studentId && 
         format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
@@ -102,7 +109,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
 
   // Get comment for a specific date
   const getDateComment = (date: Date) => {
-    return comments?.find(
+    return comments.find(
       c => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
     );
   };
@@ -159,8 +166,6 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
       comment,
       commentId: commentDialogData.comment?.id,
     });
-
-    setCommentDialogData({ isOpen: false, date: null });
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -299,16 +304,13 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
                     </div>
                   </TableHead>
                 ))}
+                <TableHead className="text-center">Статистика</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {group.students
-                ?.filter(student =>
-                  `${student.lastName} ${student.firstName}`
-                    .toLowerCase()
-                    .includes(searchTerm.toLowerCase())
-                )
-                .map((student) => (
+              {filteredStudents.map((student) => {
+                const stats = calculateStatistics(student.id);
+                return (
                   <TableRow key={student.id}>
                     <TableCell>
                       {student.lastName} {student.firstName}
@@ -339,8 +341,12 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
                         </TableCell>
                       );
                     })}
+                    <TableCell className="text-center">
+                      {stats.formatted}
+                    </TableCell>
                   </TableRow>
-                ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

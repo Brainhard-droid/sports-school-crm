@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/navbar";
-import { Group } from "@shared/schema";
+import { ExtendedGroup } from "@shared/schema";
 import { GroupsList } from "./components/GroupsList";
 import { AttendanceTable } from "./components/AttendanceTable";
 import { useGroups } from "./hooks/useGroups";
 import { Loader2 } from "lucide-react";
 
 export default function AttendancePage() {
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<ExtendedGroup | null>(null);
   const { groups, isLoading } = useGroups();
 
   if (isLoading) {
