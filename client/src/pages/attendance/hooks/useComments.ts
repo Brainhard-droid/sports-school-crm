@@ -20,14 +20,28 @@ export function useComments({ groupId, month }: UseCommentsProps) {
   const { data: comments = [], isLoading } = useQuery<DateComment[]>({
     queryKey,
     queryFn: async () => {
+      console.log('Fetching comments:', { 
+        groupId, 
+        month: month.getMonth() + 1, 
+        year: month.getFullYear() 
+      });
+
       const res = await apiRequest(
         "GET",
         `/api/date-comments?groupId=${groupId}&month=${
           month.getMonth() + 1
         }&year=${month.getFullYear()}`
       );
-      if (!res.ok) throw new Error('Failed to fetch comments');
-      return res.json();
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Failed to fetch comments:', errorText);
+        throw new Error('Failed to fetch comments');
+      }
+
+      const data = await res.json();
+      console.log('Received comments:', data);
+      return data;
     },
     enabled: !!groupId,
   });
@@ -44,26 +58,43 @@ export function useComments({ groupId, month }: UseCommentsProps) {
       commentId?: number;
       action?: 'delete';
     }) => {
+      console.log('Comment mutation started:', { date, comment, commentId, action });
+
+      let res;
       if (action === 'delete' && commentId) {
-        const res = await apiRequest("DELETE", `/api/date-comments/${commentId}`);
-        if (!res.ok) throw new Error('Failed to delete comment');
-        return;
+        console.log('Deleting comment:', commentId);
+        res = await apiRequest("DELETE", `/api/date-comments/${commentId}`);
       } else if (commentId) {
-        const res = await apiRequest("PATCH", `/api/date-comments/${commentId}`, { comment });
-        if (!res.ok) throw new Error('Failed to update comment');
-        return res.json();
+        console.log('Updating comment:', commentId);
+        res = await apiRequest("PATCH", `/api/date-comments/${commentId}`, { comment });
       } else {
-        const res = await apiRequest("POST", "/api/date-comments", {
+        console.log('Creating new comment');
+        res = await apiRequest("POST", "/api/date-comments", {
           groupId,
           date: format(date, "yyyy-MM-dd"),
           comment,
         });
-        if (!res.ok) throw new Error('Failed to create comment');
-        return res.json();
       }
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Comment mutation failed:', errorText);
+        throw new Error('Failed to process comment');
+      }
+
+      if (action === 'delete') {
+        console.log('Comment deleted successfully');
+        return;
+      }
+
+      const data = await res.json();
+      console.log('Comment mutation success:', data);
+      return data;
     },
     onSuccess: (_, variables) => {
+      console.log('Invalidating queries after comment mutation');
       queryClient.invalidateQueries({ queryKey });
+
       toast({
         title: "Успешно",
         description: variables.action === 'delete' 

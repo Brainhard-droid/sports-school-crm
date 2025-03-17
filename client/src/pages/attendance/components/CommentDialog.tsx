@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,6 @@ import {
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DateComment } from "@shared/schema";
-import { useState } from "react";
 
 interface CommentDialogProps {
   isOpen: boolean;
@@ -28,13 +28,17 @@ export function CommentDialog({
 }: CommentDialogProps) {
   const [comment, setComment] = useState(existingComment?.comment || "");
 
+  // Reset comment when dialog opens with new data
+  useEffect(() => {
+    setComment(existingComment?.comment || "");
+  }, [existingComment, isOpen]);
+
   const handleSave = () => {
     onSave(comment);
-    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -47,6 +51,7 @@ export function CommentDialog({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Введите комментарий..."
+            autoFocus
           />
           <Button onClick={handleSave}>Сохранить</Button>
         </div>

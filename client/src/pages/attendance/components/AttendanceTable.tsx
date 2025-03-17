@@ -5,6 +5,7 @@ import { AttendanceStatus, DateComment, ExtendedGroup } from "@shared/schema";
 import { useAttendanceData } from "../hooks/useAttendanceData";
 import { useComments } from "../hooks/useComments";
 import { CommentDialog } from "./CommentDialog";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   Table,
@@ -52,6 +53,7 @@ interface AttendanceTableProps {
 }
 
 export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
+  const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingCell, setLoadingCell] = useState<string | null>(null);
@@ -78,25 +80,22 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
       .includes(searchTerm.toLowerCase())
   ) || [];
 
-  // Get all dates of the selected month that have schedules
-  const getDatesInMonth = () => {
-    const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const dates: Date[] = [];
+  // Get schedule dates from API data in attendance records
+  const getScheduleDates = () => {
+    if (!attendance.length) return [];
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dayOfWeek = date.getDay() || 7; // Convert Sunday (0) to 7
-      if (group.schedules?.some(schedule => schedule.dayOfWeek === dayOfWeek)) {
-        dates.push(date);
-      }
-    }
-
-    return dates;
+    const uniqueDates = [...new Set(attendance.map(a => format(new Date(a.date), "yyyy-MM-dd")))];
+    return uniqueDates
+      .map(dateStr => new Date(dateStr))
+      .sort((a, b) => a.getTime() - b.getTime())
+      .filter(date => {
+        const monthMatch = date.getMonth() === selectedMonth.getMonth() && 
+                         date.getFullYear() === selectedMonth.getFullYear();
+        return monthMatch;
+      });
   };
 
-  const scheduleDates = getDatesInMonth();
+  const scheduleDates = getScheduleDates();
 
   // Navigation handlers
   const handlePreviousMonth = () => {
@@ -121,7 +120,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
       a => 
         a.studentId === studentId && 
         format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
-    )?.status;
+    )?.status || AttendanceStatus.NOT_MARKED;
   };
 
   // Get comment for a specific date
@@ -137,14 +136,31 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
 
     try {
       const currentStatus = getAttendanceStatus(studentId, date);
-      const nextStatus = !currentStatus || currentStatus === AttendanceStatus.ABSENT 
-        ? AttendanceStatus.PRESENT 
-        : AttendanceStatus.ABSENT;
+      let nextStatus: keyof typeof AttendanceStatus;
+
+      if (currentStatus === AttendanceStatus.NOT_MARKED) {
+        nextStatus = AttendanceStatus.PRESENT;
+      } else if (currentStatus === AttendanceStatus.PRESENT) {
+        nextStatus = AttendanceStatus.ABSENT;
+      } else {
+        nextStatus = AttendanceStatus.NOT_MARKED;
+      }
 
       await markAttendance({
         studentId,
         date,
         status: nextStatus,
+      });
+
+      toast({
+        title: "Успешно",
+        description: "Посещаемость обновлена",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
       });
     } finally {
       setLoadingCell(null);
@@ -162,45 +178,86 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
   const handleSaveComment = async (comment: string) => {
     if (!commentDialogData.date) return;
 
-    await manageComment({
-      date: commentDialogData.date,
-      comment,
-      commentId: commentDialogData.comment?.id,
-    });
+    try {
+      await manageComment({
+        date: commentDialogData.date,
+        comment,
+        commentId: commentDialogData.comment?.id,
+      });
+      setCommentDialogData({ isOpen: false, date: null });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить комментарий",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    await manageComment({
-      date: new Date(), // Unused in delete operation
-      comment: "", // Unused in delete operation
-      commentId,
-      action: "delete"
-    });
+    try {
+      await manageComment({
+        date: new Date(),
+        comment: "",
+        commentId,
+        action: "delete"
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить комментарий",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
-    await bulkAttendance({
-      date,
-      status,
-    });
+    try {
+      await bulkAttendance({
+        date,
+        status,
+      });
+      toast({
+        title: "Успешно",
+        description: "Посещаемость обновлена",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoadingAttendance || isLoadingComments) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
+      <Dialog open modal onOpenChange={onClose}>
+        <DialogContent>
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="animate-spin h-8 w-8" />
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    toast({
+      title: "В разработке",
+      description: "Функция экспорта будет доступна в ближайшее время",
+    });
+  };
+
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw]">
+    <Dialog open modal onOpenChange={onClose}>
+      <DialogContent className="max-w-[95vw] w-fit">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Посещаемость группы {group.name}</span>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Посещаемость группы {group.name}</DialogTitle>
             <DialogClose />
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="flex items-center justify-between mb-4">
@@ -208,7 +265,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
             <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-lg font-medium">
+            <span className="text-lg font-medium min-w-[140px] text-center">
               {format(selectedMonth, "LLLL yyyy", { locale: ru })}
             </span>
             <Button variant="outline" size="icon" onClick={handleNextMonth}>
@@ -222,7 +279,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-64"
             />
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               Экспорт
             </Button>
@@ -233,9 +290,9 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px]">Студент</TableHead>
+                <TableHead className="min-w-[200px] sticky left-0 bg-background">Студент</TableHead>
                 {scheduleDates.map((date) => (
-                  <TableHead key={date.toISOString()} className="text-center">
+                  <TableHead key={date.toISOString()} className="text-center min-w-[40px]">
                     <div className="flex flex-col items-center">
                       <div className="flex items-center gap-1">
                         {format(date, "d", { locale: ru })}
@@ -305,49 +362,56 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
                     </div>
                   </TableHead>
                 ))}
-                <TableHead className="text-center">Статистика</TableHead>
+                <TableHead className="text-center min-w-[100px] sticky right-0 bg-background">
+                  Статистика
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStudents.map((student) => {
-                const stats = calculateStatistics(student.id);
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      {student.lastName} {student.firstName}
-                    </TableCell>
-                    {scheduleDates.map((date) => {
-                      const cellId = `${student.id}-${format(date, "yyyy-MM-dd")}`;
-                      const status = getAttendanceStatus(student.id, date);
-                      return (
-                        <TableCell
-                          key={date.toISOString()}
-                          className="text-center"
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+              {filteredStudents
+                .sort((a, b) => 
+                  `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)
+                )
+                .map((student) => {
+                  const stats = calculateStatistics(student.id);
+                  const lowAttendance = stats.percentage < 50;
+
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium sticky left-0 bg-background">
+                        {student.lastName} {student.firstName}
+                      </TableCell>
+                      {scheduleDates.map((date) => {
+                        const cellId = `${student.id}-${format(date, "yyyy-MM-dd")}`;
+                        const status = getAttendanceStatus(student.id, date);
+                        const isLoading = loadingCell === cellId;
+
+                        return (
+                          <TableCell
+                            key={date.toISOString()}
+                            className="text-center p-0 h-12 cursor-pointer hover:bg-muted/50"
                             onClick={() => handleMarkAttendance(student.id, date)}
-                            disabled={!!loadingCell}
                           >
-                            {loadingCell === cellId ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                            {isLoading ? (
+                              <Loader2 className="h-4 w-4 mx-auto animate-spin" />
                             ) : status === AttendanceStatus.PRESENT ? (
-                              <Check className="h-4 w-4 text-green-500" />
+                              <Check className="h-4 w-4 mx-auto text-green-600" />
                             ) : status === AttendanceStatus.ABSENT ? (
-                              <X className="h-4 w-4 text-red-500" />
+                              <X className="h-4 w-4 mx-auto text-red-600" />
                             ) : null}
-                          </Button>
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-center">
-                      {stats.formatted}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell
+                        className={`text-center sticky right-0 bg-background ${
+                          lowAttendance ? "text-red-600" : ""
+                        }`}
+                      >
+                        {stats.formatted}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
             </TableBody>
           </Table>
         </div>
