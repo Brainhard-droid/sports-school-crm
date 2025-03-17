@@ -36,38 +36,29 @@ export const useAttendance = (groupId?: number, month?: number, year?: number) =
   const markAttendanceMutation = useMutation({
     mutationFn: async ({
       studentId,
+      groupId,
       date,
       status,
     }: {
       studentId: number;
-      date: Date;
+      groupId: number;
+      date: string;
       status: keyof typeof AttendanceStatus;
     }) => {
-      console.log('Marking attendance:', { studentId, date, status });
+      console.log('Marking attendance:', { studentId, groupId, date, status });
 
       const existingAttendance = attendance?.find(
         (a) =>
           a.studentId === studentId &&
-          format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+          format(new Date(a.date), "yyyy-MM-dd") === date
       );
-
-      let nextStatus: keyof typeof AttendanceStatus;
-      if (!status || status === AttendanceStatus.NOT_MARKED) {
-        nextStatus = "PRESENT";
-      } else if (status === AttendanceStatus.PRESENT) {
-        nextStatus = "ABSENT";
-      } else {
-        nextStatus = "NOT_MARKED";
-      }
-
-      console.log('Calculated next status:', nextStatus);
 
       if (existingAttendance) {
         console.log('Updating existing attendance:', existingAttendance.id);
         const res = await apiRequest(
           "PATCH", 
           `/api/attendance/${existingAttendance.id}`,
-          { status: nextStatus }
+          { status }
         );
 
         if (!res.ok) {
@@ -85,8 +76,8 @@ export const useAttendance = (groupId?: number, month?: number, year?: number) =
           {
             studentId,
             groupId,
-            date: format(date, "yyyy-MM-dd"),
-            status: nextStatus,
+            date,
+            status,
           }
         );
 
@@ -117,58 +108,9 @@ export const useAttendance = (groupId?: number, month?: number, year?: number) =
     },
   });
 
-  const bulkAttendanceMutation = useMutation({
-    mutationFn: async ({
-      groupId,
-      date,
-      status,
-    }: {
-      groupId: number;
-      date: string;
-      status: keyof typeof AttendanceStatus;
-    }) => {
-      console.log('Bulk updating attendance:', { groupId, date, status });
-      const res = await apiRequest(
-        "POST",
-        `/api/attendance/bulk`,
-        {
-          groupId,
-          date: format(new Date(date), "yyyy-MM-dd"),
-          status,
-        }
-      );
-
-      if (!res.ok) {
-        const error = await res.text();
-        console.error('Failed to bulk update attendance:', error);
-        throw new Error('Failed to bulk update attendance');
-      }
-
-      const data = await res.json();
-      console.log('Bulk attendance update successful:', data);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      toast({
-        title: "Успешно",
-        description: "Посещаемость обновлена",
-      });
-    },
-    onError: (error) => {
-      console.error('Bulk attendance mutation error:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить посещаемость",
-        variant: "destructive",
-      });
-    },
-  });
-
   return { 
     attendance, 
     isLoading, 
-    markAttendanceMutation,
-    bulkAttendanceMutation
+    markAttendanceMutation
   };
 };

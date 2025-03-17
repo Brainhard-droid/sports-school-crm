@@ -64,6 +64,9 @@ export default function AttendancePage() {
         case AttendanceStatus.PRESENT:
           nextStatus = AttendanceStatus.ABSENT;
           break;
+        case AttendanceStatus.ABSENT:
+          nextStatus = AttendanceStatus.NOT_MARKED;
+          break;
         default:
           nextStatus = AttendanceStatus.NOT_MARKED;
       }
