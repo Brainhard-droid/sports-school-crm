@@ -167,8 +167,6 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
       comment,
       commentId: commentDialogData.comment?.id,
     });
-
-    setCommentDialogData({ isOpen: false, date: null });
   };
 
   const handleDeleteComment = async (commentId: number) => {

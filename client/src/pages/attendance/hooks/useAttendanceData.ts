@@ -41,7 +41,7 @@ export function useAttendanceData({ groupId, month }: UseAttendanceDataProps) {
       date: Date;
       status: keyof typeof AttendanceStatus;
     }) => {
-      const existingAttendance = attendance?.find(
+      const existingAttendance = attendance.find(
         (a) =>
           a.studentId === studentId &&
           format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
