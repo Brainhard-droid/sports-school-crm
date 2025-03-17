@@ -54,19 +54,27 @@ export default function AttendancePage() {
 
     try {
       const currentStatus = getAttendanceStatus(studentId, date);
-
       let nextStatus: keyof typeof AttendanceStatus;
-      if (currentStatus === AttendanceStatus.NOT_MARKED) {
-        nextStatus = AttendanceStatus.PRESENT;
-      } else if (currentStatus === AttendanceStatus.PRESENT) {
-        nextStatus = AttendanceStatus.ABSENT;
-      } else {
-        nextStatus = AttendanceStatus.NOT_MARKED;
+
+      // Меняем последовательность на: пусто -> галочка -> крестик -> пусто
+      switch (currentStatus) {
+        case AttendanceStatus.NOT_MARKED:
+          nextStatus = AttendanceStatus.PRESENT;
+          break;
+        case AttendanceStatus.PRESENT:
+          nextStatus = AttendanceStatus.ABSENT;
+          break;
+        case AttendanceStatus.ABSENT:
+          nextStatus = AttendanceStatus.NOT_MARKED;
+          break;
+        default:
+          nextStatus = AttendanceStatus.NOT_MARKED;
       }
 
       await markAttendanceMutation.mutateAsync({
         studentId,
-        date,
+        groupId: selectedGroup,
+        date: format(date, "yyyy-MM-dd"),
         status: nextStatus
       });
     } catch (error) {
@@ -92,7 +100,7 @@ export default function AttendancePage() {
       try {
         await commentMutation.mutateAsync({
           groupId: selectedGroup,
-          date: data.date.toISOString(),
+          date: format(data.date, "yyyy-MM-dd"),
           commentId: data.comment.id,
           action: 'delete'
         });
@@ -119,7 +127,7 @@ export default function AttendancePage() {
     try {
       await commentMutation.mutateAsync({
         groupId: selectedGroup,
-        date: commentDialogData.date.toISOString(),
+        date: format(commentDialogData.date, "yyyy-MM-dd"),
         comment,
         commentId: commentDialogData.comment?.id
       });
@@ -139,7 +147,7 @@ export default function AttendancePage() {
     try {
       await markAttendanceMutation.mutateAsync({
         groupId: selectedGroup,
-        date: date.toISOString(),
+        date: format(date, "yyyy-MM-dd"),
         status
       });
     } catch (error) {
@@ -215,7 +223,7 @@ export default function AttendancePage() {
                 </>
               )}
 
-              {commentDialogData.isOpen && commentDialogData.date && (
+              {commentDialogData.isOpen && commentDialogData.date && !commentDialogData.comment?.action && (
                 <CommentDialog
                   isOpen={commentDialogData.isOpen}
                   onClose={() => setCommentDialogData({ isOpen: false, date: null })}
