@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExtendedGroup } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { Group } from "@shared/schema";
 
-export function useGroups() {
-  const { data: groups, isLoading } = useQuery<ExtendedGroup[]>({
+export const useGroups = () => {
+  const { data: groups } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/groups");
+      return res.json();
+    },
   });
 
-  const activeGroups = groups?.filter(g => g.active) || [];
-
-  return {
-    groups: activeGroups,
-    isLoading,
-  };
-}
+  return { groups };
+};

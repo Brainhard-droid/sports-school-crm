@@ -1,23 +1,35 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Attendance, AttendanceStatus } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Attendance, AttendanceStatus } from "@shared/schema";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
-interface UseAttendanceProps {
-  groupId: number;
-  month: Date;
-}
+export const useAttendance = (groupId?: number, month?: number, year?: number) => {
+  const { toast } = useToast();
 
-export function useAttendance({ groupId, month }: UseAttendanceProps) {
-  const queryKey = [
-    "/api/attendance",
-    groupId,
-    month.getMonth() + 1,
-    month.getFullYear(),
-  ];
+  const queryKey = ["/api/attendance", groupId, month, year];
 
   const { data: attendance = [], isLoading } = useQuery<Attendance[]>({
     queryKey,
+    queryFn: async () => {
+      if (!groupId) return [];
+
+      console.log('Fetching attendance:', { groupId, month, year });
+      const res = await apiRequest(
+        "GET",
+        `/api/attendance?groupId=${groupId}&month=${month}&year=${year}`
+      );
+
+      if (!res.ok) {
+        const error = await res.text();
+        console.error('Failed to fetch attendance:', error);
+        throw new Error('Failed to fetch attendance data');
+      }
+
+      const data = await res.json();
+      console.log('Received attendance data:', data);
+      return data;
+    },
     enabled: !!groupId,
   });
 
@@ -31,59 +43,83 @@ export function useAttendance({ groupId, month }: UseAttendanceProps) {
       date: Date;
       status: keyof typeof AttendanceStatus;
     }) => {
+      console.log('Marking attendance:', { studentId, date, status });
+
       const existingAttendance = attendance?.find(
         (a) =>
           a.studentId === studentId &&
           format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
       );
 
+      let nextStatus: keyof typeof AttendanceStatus;
+      if (!status || status === AttendanceStatus.NOT_MARKED) {
+        nextStatus = "PRESENT";
+      } else if (status === AttendanceStatus.PRESENT) {
+        nextStatus = "ABSENT";
+      } else {
+        nextStatus = "NOT_MARKED";
+      }
+
+      console.log('Calculated next status:', nextStatus);
+
       if (existingAttendance) {
-        const res = await apiRequest("PATCH", `/api/attendance/${existingAttendance.id}`, {
-          status,
-        });
-        if (!res.ok) throw new Error('Failed to update attendance');
+        console.log('Updating existing attendance:', existingAttendance.id);
+        const res = await apiRequest(
+          "PATCH", 
+          `/api/attendance/${existingAttendance.id}`,
+          { status: nextStatus }
+        );
+
+        if (!res.ok) {
+          const error = await res.text();
+          console.error('Failed to update attendance:', error);
+          throw new Error('Failed to update attendance');
+        }
+
         return res.json();
       } else {
-        const res = await apiRequest("POST", "/api/attendance", {
-          studentId,
-          groupId,
-          date: format(date, "yyyy-MM-dd"),
-          status,
-        });
-        if (!res.ok) throw new Error('Failed to create attendance');
+        console.log('Creating new attendance record');
+        const res = await apiRequest(
+          "POST", 
+          "/api/attendance",
+          {
+            studentId,
+            groupId,
+            date: format(date, "yyyy-MM-dd"),
+            status: nextStatus,
+          }
+        );
+
+        if (!res.ok) {
+          const error = await res.text();
+          console.error('Failed to create attendance:', error);
+          throw new Error('Failed to create attendance');
+        }
+
         return res.json();
       }
     },
     onSuccess: () => {
+      console.log('Attendance updated successfully');
       queryClient.invalidateQueries({ queryKey });
-    },
-  });
-
-  const bulkAttendanceMutation = useMutation({
-    mutationFn: async ({
-      date,
-      status,
-    }: {
-      date: Date;
-      status: keyof typeof AttendanceStatus;
-    }) => {
-      const res = await apiRequest("POST", "/api/attendance/bulk", {
-        groupId,
-        date: format(date, "yyyy-MM-dd"),
-        status,
+      toast({
+        title: "Успешно",
+        description: "Посещаемость обновлена",
       });
-      if (!res.ok) throw new Error('Failed to update bulk attendance');
-      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+    onError: (error) => {
+      console.error('Attendance mutation error:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
+      });
     },
   });
 
-  return {
-    attendance,
-    isLoading,
-    markAttendance: markAttendanceMutation.mutateAsync,
-    bulkAttendance: bulkAttendanceMutation.mutateAsync,
+  return { 
+    attendance, 
+    isLoading, 
+    markAttendanceMutation 
   };
-}
+};

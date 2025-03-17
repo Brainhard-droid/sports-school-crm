@@ -1,26 +1,27 @@
-import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Group } from "@shared/schema";
 
 interface GroupsListProps {
   groups: Group[];
-  onGroupSelect: (group: Group) => void;
+  selectedGroupId?: number;
+  onSelectGroup: (groupId: number) => void;
 }
 
-export function GroupsList({ groups, onGroupSelect }: GroupsListProps) {
+const GroupsList = ({ groups, selectedGroupId, onSelectGroup }: GroupsListProps) => {
   return (
-    <div className="space-y-2 mb-6">
-      {groups
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((group) => (
-          <Button
-            key={group.id}
-            variant="outline"
-            className="w-full justify-start text-left"
-            onClick={() => onGroupSelect(group)}
-          >
+    <Select onValueChange={(value) => onSelectGroup(Number(value))} value={selectedGroupId?.toString()}>
+      <SelectTrigger className="w-[250px]">
+        <SelectValue placeholder="Выберите группу" />
+      </SelectTrigger>
+      <SelectContent>
+        {groups.map((group) => (
+          <SelectItem key={group.id} value={group.id.toString()}>
             {group.name}
-          </Button>
+          </SelectItem>
         ))}
-    </div>
+      </SelectContent>
+    </Select>
   );
-}
+};
+
+export default GroupsList;
