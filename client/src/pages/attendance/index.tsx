@@ -14,6 +14,7 @@ import CommentDialog from "./components/CommentDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { AttendanceStatus } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -26,6 +27,7 @@ export default function AttendancePage() {
     comment?: any;
   }>({ isOpen: false, date: null });
 
+  const { toast } = useToast();
   const { groups } = useGroups();
   const { students } = useStudents(selectedGroup);
   const { scheduleDates, isLoading: isLoadingSchedule } = useSchedule(
@@ -49,34 +51,79 @@ export default function AttendancePage() {
     selectedMonth.getFullYear()
   );
 
-  const handleMarkAttendance = (studentId: number, date: Date) => {
+  const handleMarkAttendance = async (studentId: number, date: Date) => {
     if (!selectedGroup) return;
+
     const cellId = `${studentId}-${date.toISOString()}`;
     setLoadingCell(cellId);
-    const status = attendance?.find(
-      (a) => a.studentId === studentId && a.date === date.toISOString()
-    )?.status || AttendanceStatus.NOT_MARKED;
-    markAttendanceMutation.mutate({ studentId, date, status });
+
+    try {
+      const currentStatus = attendance?.find(
+        (a) => a.studentId === studentId && a.date === date.toISOString()
+      )?.status || AttendanceStatus.NOT_MARKED;
+
+      let nextStatus: keyof typeof AttendanceStatus;
+      if (currentStatus === AttendanceStatus.NOT_MARKED) {
+        nextStatus = AttendanceStatus.PRESENT;
+      } else if (currentStatus === AttendanceStatus.PRESENT) {
+        nextStatus = AttendanceStatus.ABSENT;
+      } else {
+        nextStatus = AttendanceStatus.NOT_MARKED;
+      }
+
+      await markAttendanceMutation.mutateAsync({
+        studentId,
+        date,
+        status: nextStatus
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCell(null);
+    }
   };
 
-  const handleSaveComment = (comment: string) => {
+  const handleSaveComment = async (comment: string) => {
     if (!selectedGroup || !commentDialogData.date) return;
-    commentMutation.mutate({
-      groupId: selectedGroup,
-      date: commentDialogData.date.toISOString(),
-      comment,
-      commentId: commentDialogData.comment?.id,
-    });
-    setCommentDialogData({ isOpen: false, date: null });
+
+    try {
+      await commentMutation.mutateAsync({
+        groupId: selectedGroup,
+        date: commentDialogData.date.toISOString(),
+        comment,
+        commentId: commentDialogData.comment?.id,
+        action: commentDialogData.comment?.action
+      });
+      setCommentDialogData({ isOpen: false, date: null });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить комментарий",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleBulkAttendance = (date: Date, status: keyof typeof AttendanceStatus) => {
+  const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
     if (!selectedGroup) return;
-    bulkAttendanceMutation.mutate({
-      groupId: selectedGroup,
-      date: date.toISOString(),
-      status,
-    });
+
+    try {
+      await bulkAttendanceMutation.mutateAsync({
+        groupId: selectedGroup,
+        date: date.toISOString(),
+        status
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить посещаемость",
+        variant: "destructive",
+      });
+    }
   };
 
   const isLoading = isLoadingSchedule || isLoadingAttendance || isLoadingComments;

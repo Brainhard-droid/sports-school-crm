@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MoreVertical, Check, X, MessageCircle, Trash2, Loader2 } from "lucide-react";
-import { CommentDialog } from "./CommentDialog";
+import CommentDialog from "./CommentDialog";
 import { AttendanceStatus, DateComment, Student } from "@shared/schema";
 
 interface AttendanceTableProps {
@@ -40,6 +40,14 @@ export const AttendanceTable = ({
       </div>
     );
   }
+
+  const handleCommentAction = (date: Date, comment?: DateComment, action?: 'delete') => {
+    setCommentDialogData({ 
+      isOpen: true, 
+      date, 
+      comment: action === 'delete' ? { ...comment, action: 'delete' } : comment 
+    });
+  };
 
   return (
     <Table>
@@ -78,12 +86,12 @@ export const AttendanceTable = ({
                         <X className="h-4 w-4 mr-2" />
                         Отметить отсутствие
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCommentDialogData({ isOpen: true, date, comment: dateComment })}>
+                      <DropdownMenuItem onClick={() => handleCommentAction(date, dateComment)}>
                         <MessageCircle className="h-4 w-4 mr-2" />
                         {dateComment ? "Изменить комментарий" : "Добавить комментарий"}
                       </DropdownMenuItem>
                       {dateComment && (
-                        <DropdownMenuItem onClick={() => setCommentDialogData({ isOpen: true, date, comment: undefined })}>
+                        <DropdownMenuItem onClick={() => handleCommentAction(date, dateComment, 'delete')}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Удалить комментарий
                         </DropdownMenuItem>
