@@ -98,22 +98,7 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
 
   const scheduleDates = getDatesInMonth();
 
-  // Get attendance status for a student on a specific date
-  const getAttendanceStatus = (studentId: number, date: Date) => {
-    return attendance.find(
-      a => 
-        a.studentId === studentId && 
-        format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
-    )?.status;
-  };
-
-  // Get comment for a specific date
-  const getDateComment = (date: Date) => {
-    return comments.find(
-      c => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
-    );
-  };
-
+  // Navigation handlers
   const handlePreviousMonth = () => {
     setSelectedMonth(prevMonth => {
       const newDate = new Date(prevMonth);
@@ -130,15 +115,31 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
     });
   };
 
+  // Get attendance status for a student on a specific date
+  const getAttendanceStatus = (studentId: number, date: Date) => {
+    return attendance.find(
+      a => 
+        a.studentId === studentId && 
+        format(new Date(a.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    )?.status;
+  };
+
+  // Get comment for a specific date
+  const getDateComment = (date: Date) => {
+    return comments.find(
+      c => format(new Date(c.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+  };
+
   const handleMarkAttendance = async (studentId: number, date: Date) => {
     const cellId = `${studentId}-${format(date, "yyyy-MM-dd")}`;
     setLoadingCell(cellId);
 
     try {
       const currentStatus = getAttendanceStatus(studentId, date);
-      const nextStatus = !currentStatus || currentStatus === "ABSENT" 
-        ? "PRESENT" 
-        : "ABSENT";
+      const nextStatus = !currentStatus || currentStatus === AttendanceStatus.ABSENT 
+        ? AttendanceStatus.PRESENT 
+        : AttendanceStatus.ABSENT;
 
       await markAttendance({
         studentId,
@@ -166,12 +167,14 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
       comment,
       commentId: commentDialogData.comment?.id,
     });
+
+    setCommentDialogData({ isOpen: false, date: null });
   };
 
   const handleDeleteComment = async (commentId: number) => {
     await manageComment({
-      date: new Date(),
-      comment: "",
+      date: new Date(), // Unused in delete operation
+      comment: "", // Unused in delete operation
       commentId,
       action: "delete"
     });
@@ -246,13 +249,13 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
                             <DropdownMenuItem 
-                              onClick={() => handleBulkAttendance(date, "PRESENT")}
+                              onClick={() => handleBulkAttendance(date, AttendanceStatus.PRESENT)}
                             >
                               <Check className="h-4 w-4 mr-2" />
                               Отметить всех
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleBulkAttendance(date, "ABSENT")}
+                              onClick={() => handleBulkAttendance(date, AttendanceStatus.ABSENT)}
                             >
                               <X className="h-4 w-4 mr-2" />
                               Снять отметки
@@ -332,9 +335,9 @@ export function AttendanceTable({ group, onClose }: AttendanceTableProps) {
                           >
                             {loadingCell === cellId ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : status === "PRESENT" ? (
+                            ) : status === AttendanceStatus.PRESENT ? (
                               <Check className="h-4 w-4 text-green-500" />
-                            ) : status === "ABSENT" ? (
+                            ) : status === AttendanceStatus.ABSENT ? (
                               <X className="h-4 w-4 text-red-500" />
                             ) : null}
                           </Button>

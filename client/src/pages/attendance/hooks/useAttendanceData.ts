@@ -94,7 +94,7 @@ export function useAttendanceData({ groupId, month }: UseAttendanceDataProps) {
   const calculateStatistics = (studentId: number) => {
     const studentAttendance = attendance.filter(a => a.studentId === studentId);
     const totalClasses = studentAttendance.length;
-    const presentClasses = studentAttendance.filter(a => a.status === "PRESENT").length;
+    const presentClasses = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
     const percentage = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
     return {
       percentage,
