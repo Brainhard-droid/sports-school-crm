@@ -1,16 +1,15 @@
-// useGroups.ts
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Group } from "@shared/schema";
 
 export function useGroups() {
-  const { data, isLoading } = useQuery<Group[]>({
+  const { data: groups, isLoading } = useQuery<Group[]>({
     queryKey: ["/api/groups"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/groups");
-      return res.json();
-    },
   });
 
-  return { groups: data || [], isLoading };
+  const activeGroups = groups?.filter(g => g.active) || [];
+
+  return {
+    groups: activeGroups,
+    isLoading,
+  };
 }
