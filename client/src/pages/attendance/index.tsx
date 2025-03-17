@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/navbar";
 import { useGroups } from "./hooks/useGroups";
-import { useAttendance } from "./hooks/useAttendance";
 import { useStudents } from "./hooks/useStudents";
 import { useSchedule } from "./hooks/useSchedule";
 import { useComments } from "./hooks/useComments";
@@ -15,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { AttendanceStatus } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { useAttendance } from "./hooks/useAttendance";
 
 export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -53,8 +53,8 @@ export default function AttendancePage() {
     setLoadingCell(cellId);
 
     try {
-      const currentStatus = getAttendanceStatus(studentId, date);
       let nextStatus: keyof typeof AttendanceStatus;
+      const currentStatus = getAttendanceStatus(studentId, date);
 
       // Меняем последовательность на: пусто -> галочка -> крестик -> пусто
       switch (currentStatus) {
@@ -63,9 +63,6 @@ export default function AttendancePage() {
           break;
         case AttendanceStatus.PRESENT:
           nextStatus = AttendanceStatus.ABSENT;
-          break;
-        case AttendanceStatus.ABSENT:
-          nextStatus = AttendanceStatus.NOT_MARKED;
           break;
         default:
           nextStatus = AttendanceStatus.NOT_MARKED;
@@ -95,7 +92,6 @@ export default function AttendancePage() {
   }) => {
     if (!selectedGroup) return;
 
-    // Если это удаление комментария, сразу отправляем запрос
     if (data.action === 'delete' && data.comment?.id) {
       try {
         await commentMutation.mutateAsync({
@@ -112,7 +108,6 @@ export default function AttendancePage() {
         });
       }
     } else {
-      // Если это не удаление, открываем диалог
       setCommentDialogData({ 
         isOpen: true, 
         date: data.date, 
@@ -142,13 +137,24 @@ export default function AttendancePage() {
   };
 
   const handleBulkAttendance = async (date: Date, status: keyof typeof AttendanceStatus) => {
-    if (!selectedGroup) return;
+    if (!selectedGroup || !students) return;
 
     try {
-      await markAttendanceMutation.mutateAsync({
-        groupId: selectedGroup,
-        date: format(date, "yyyy-MM-dd"),
-        status
+      // Обновляем статус для каждого студента
+      await Promise.all(
+        students.map(student => 
+          markAttendanceMutation.mutateAsync({
+            studentId: student.id,
+            groupId: selectedGroup,
+            date: format(date, "yyyy-MM-dd"),
+            status
+          })
+        )
+      );
+
+      toast({
+        title: "Успешно",
+        description: "Посещаемость обновлена для всех студентов",
       });
     } catch (error) {
       toast({
