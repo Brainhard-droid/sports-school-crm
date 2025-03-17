@@ -18,15 +18,6 @@ export function useAttendance({ groupId, month }: UseAttendanceProps) {
 
   const { data: attendance = [], isLoading } = useQuery<Attendance[]>({
     queryKey,
-    queryFn: async () => {
-      const res = await apiRequest(
-        "GET",
-        `/api/attendance?groupId=${groupId}&month=${
-          month.getMonth() + 1
-        }&year=${month.getFullYear()}`
-      );
-      return res.json();
-    },
     enabled: !!groupId,
   });
 
@@ -50,6 +41,7 @@ export function useAttendance({ groupId, month }: UseAttendanceProps) {
         const res = await apiRequest("PATCH", `/api/attendance/${existingAttendance.id}`, {
           status,
         });
+        if (!res.ok) throw new Error('Failed to update attendance');
         return res.json();
       } else {
         const res = await apiRequest("POST", "/api/attendance", {
@@ -58,6 +50,7 @@ export function useAttendance({ groupId, month }: UseAttendanceProps) {
           date: format(date, "yyyy-MM-dd"),
           status,
         });
+        if (!res.ok) throw new Error('Failed to create attendance');
         return res.json();
       }
     },

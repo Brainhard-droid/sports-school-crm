@@ -102,6 +102,12 @@ export type Student = BaseStudent & {
   }[];
 };
 
+// Extended group type with students and schedules
+export type ExtendedGroup = Group & {
+  students?: Student[];
+  schedules?: Schedule[];
+};
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
