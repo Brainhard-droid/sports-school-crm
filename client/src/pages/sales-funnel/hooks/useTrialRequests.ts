@@ -6,17 +6,24 @@ import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 export function useTrialRequests() {
   const queryClient = useQueryClient();
 
-  const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
+  const { data: requests, isLoading, error } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
     queryFn: async () => {
       console.log('Fetching trial requests...');
-      const res = await apiRequest("GET", "/api/trial-requests");
-      const data = await res.json();
-      console.log('Received trial requests:', data);
-      return data;
+      try {
+        const res = await apiRequest("GET", "/api/trial-requests");
+        const data = await res.json();
+        console.log('Received trial requests:', data);
+        return data;
+      } catch (err) {
+        console.error('Error fetching trial requests:', err);
+        throw err;
+      }
     },
     suspense: false,
-    retry: false
+    retry: false,
+    staleTime: 0,
+    cacheTime: 0
   });
 
   const updateStatusMutation = useMutation({
