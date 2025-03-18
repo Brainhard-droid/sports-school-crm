@@ -633,6 +633,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Добавляем endpoint для создания заявки на пробное занятие
+  app.post("/api/trial-requests", async (req, res) => {
+    try {
+      const parsed = insertTrialRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        console.error('Trial request validation error:', parsed.error);
+        return res.status(400).json({ 
+          error: "Validation error", 
+          details: parsed.error.errors 
+        });
+      }
+
+      const request = await storage.createTrialRequest(parsed.data);
+      res.status(201).json(request);
+    } catch (error) {
+      console.error('Error creating trial request:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

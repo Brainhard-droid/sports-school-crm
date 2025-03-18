@@ -160,7 +160,22 @@ export default function TrialRequestPage() {
                   <FormItem>
                     <FormLabel>Телефон родителя</FormLabel>
                     <FormControl>
-                      <Input placeholder="+7XXXXXXXXXX" {...field} />
+                      <Input
+                        placeholder="+7XXXXXXXXXX"
+                        {...field}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          // Ensure the value starts with +7
+                          if (!value.startsWith('+7')) {
+                            value = '+7' + value.replace(/[^\d]/g, '');
+                          } else {
+                            value = value.replace(/[^\d+]/g, '');
+                          }
+                          // Limit to 12 characters (+7 plus 10 digits)
+                          value = value.slice(0, 12);
+                          field.onChange(value);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -255,7 +270,11 @@ export default function TrialRequestPage() {
                         type="date"
                         {...field}
                         value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          date.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+                          field.onChange(date);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

@@ -200,10 +200,11 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
   .extend({
     childAge: z.number().min(3).max(18),
     parentPhone: z.string()
-      .min(10, "Телефон должен содержать не менее 10 цифр")
-      .regex(/^\+?\d+$/, "Телефон может содержать только цифры и знак +"),
+      .min(12, "Телефон должен быть в формате +7XXXXXXXXXX")
+      .max(12, "Телефон должен быть в формате +7XXXXXXXXXX")
+      .regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
     parentName: z.string().min(2, "Введите ФИО родителя"),
-    desiredDate: z.date().min(new Date(), "Дата не может быть в прошлом")
+    desiredDate: z.coerce.date().min(new Date(), "Дата не может быть в прошлом")
   });
 
 // Insert types
