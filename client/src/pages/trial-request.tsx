@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,7 @@ type BranchWithSchedule = {
   id: number;
   name: string;
   address: string;
-  schedule: string; // JSON строка
+  schedule: string;
 };
 
 export default function TrialRequestPage() {
@@ -37,7 +36,7 @@ export default function TrialRequestPage() {
       parentPhone: "+7",
       sectionId: undefined,
       branchId: undefined,
-      desiredDate: undefined,
+      desiredDate: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -62,12 +61,18 @@ export default function TrialRequestPage() {
     (branch) => branch.id === Number(form.watch("branchId"))
   );
 
-  // Parse schedule JSON if branch is selected
   const schedule = selectedBranch ? JSON.parse(selectedBranch.schedule) : null;
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
-      const res = await apiRequest("POST", "/api/trial-requests", data);
+      console.log('Submitting data:', data);
+      const res = await apiRequest("POST", "/api/trial-requests", {
+        ...data,
+        desiredDate: data.desiredDate,
+        childAge: Number(data.childAge),
+        sectionId: Number(data.sectionId),
+        branchId: Number(data.branchId),
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -78,6 +83,7 @@ export default function TrialRequestPage() {
       form.reset();
     },
     onError: (error: Error) => {
+      console.error('Form submission error:', error);
       toast({
         title: "Ошибка",
         description: error.message,
@@ -105,7 +111,13 @@ export default function TrialRequestPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => createTrialRequestMutation.mutate(data))} className="space-y-4">
+            <form 
+              onSubmit={form.handleSubmit((data) => {
+                console.log('Form data before submission:', data);
+                createTrialRequestMutation.mutate(data);
+              })} 
+              className="space-y-4"
+            >
               <FormField
                 control={form.control}
                 name="childName"
@@ -127,13 +139,15 @@ export default function TrialRequestPage() {
                     <FormLabel>Возраст</FormLabel>
                     <FormControl>
                       <Input
-                        type="text"
+                        type="number"
                         placeholder="Введите возраст"
                         {...field}
                         onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
+                          const value = e.target.value;
                           field.onChange(value ? parseInt(value) : undefined);
                         }}
+                        min="3"
+                        max="18"
                       />
                     </FormControl>
                     <FormMessage />
@@ -269,12 +283,7 @@ export default function TrialRequestPage() {
                       <Input
                         type="date"
                         {...field}
-                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                        onChange={(e) => {
-                          const date = new Date(e.target.value);
-                          date.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
-                          field.onChange(date);
-                        }}
+                        min={new Date().toISOString().split('T')[0]}
                       />
                     </FormControl>
                     <FormMessage />

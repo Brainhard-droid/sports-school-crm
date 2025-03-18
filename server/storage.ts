@@ -1,9 +1,9 @@
-import { IStorage } from "./interfaces";
 import {
   User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup, DateComment,
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup, InsertDateComment,
   users, students, groups, schedules, attendance, payments, studentGroups, dateComments,
-  sportsSections, branches, branchSections, trialRequests
+  sportsSections, branches, branchSections, trialRequests, TrialRequestStatus,
+  type ExtendedTrialRequest, type InsertTrialRequest
 } from "@shared/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
@@ -815,4 +815,51 @@ enum TrialRequestStatus {
   SCHEDULED = 'scheduled',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+}
+
+interface IStorage {
+  sessionStore: session.Store;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  createUser(insertUser: InsertUser): Promise<User>;
+  updateUser(id: number, data: Partial<User>): Promise<User>;
+  getStudents(): Promise<Student[]>;
+  getStudent(id: number): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, student: Partial<Student>): Promise<Student>;
+  getGroups(): Promise<Group[]>;
+  getGroup(id: number): Promise<Group | undefined>;
+  createGroup(group: InsertGroup): Promise<Group>;
+  getGroupStudentsWithDetails(groupId: number): Promise<Student[]>;
+  addStudentToGroup(data: InsertStudentGroup): Promise<StudentGroup>;
+  removeStudentFromGroup(studentId: number, groupId: number): Promise<void>;
+  updateStudentStatus(id: number, active: boolean): Promise<Student>;
+  deleteStudent(id: number): Promise<void>;
+  deleteGroup(id: number): Promise<void>;
+  getSchedules(groupId?: number): Promise<Schedule[]>;
+  createSchedule(schedule: InsertSchedule): Promise<Schedule>;
+  getPayments(studentId?: number): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getStudentGroups(studentId: number): Promise<StudentGroup[]>;
+  getGroupStudents(groupId: number): Promise<StudentGroup[]>;
+  getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]>;
+  createAttendance(data: InsertAttendance): Promise<Attendance>;
+  updateAttendance(id: number, data: Partial<Attendance>): Promise<Attendance>;
+  getGroupScheduleDates(groupId: number, month: number, year: number): Promise<Date[]>;
+  updateGroupStatus(id: number, active: boolean): Promise<Group>;
+  updateGroup(id: number, data: Partial<InsertGroup>): Promise<Group>;
+  updateSchedule(id: number, data: Partial<InsertSchedule>): Promise<Schedule>;
+  deleteSchedule(id: number): Promise<void>;
+  getDateComments(groupId: number, month: number, year: number): Promise<DateComment[]>;
+  createDateComment(data: InsertDateComment): Promise<DateComment>;
+  updateDateComment(id: number, comment: string): Promise<DateComment>;
+  deleteDateComment(id: number): Promise<void>;
+  updateBulkAttendance(groupId: number, date: string, status: AttendanceStatusType): Promise<void>;
+  getSportsSections(): Promise<any[]>;
+  getBranchesBySection(sectionId: number): Promise<any[]>;
+  getTrialRequests(): Promise<ExtendedTrialRequest[]>;
+  createTrialRequest(data: InsertTrialRequest): Promise<ExtendedTrialRequest>;
+  updateTrialRequest(id: number, data: Partial<ExtendedTrialRequest>): Promise<ExtendedTrialRequest>;
 }

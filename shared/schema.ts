@@ -109,7 +109,6 @@ export const trialRequests = pgTable("trial_requests", {
   notes: text("notes"),
 });
 
-// Branches table
 export const branches = pgTable("branches", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -189,22 +188,25 @@ export const insertDateCommentSchema = createInsertSchema(dateComments);
 export const insertBranchSchema = createInsertSchema(branches).omit({ id: true });
 export const insertSportsSectionSchema = createInsertSchema(sportsSections).omit({ id: true });
 export const insertTrialRequestSchema = createInsertSchema(trialRequests)
-  .omit({ 
-    id: true, 
-    status: true, 
-    scheduledDate: true, 
-    createdAt: true, 
+  .omit({
+    id: true,
+    status: true,
+    scheduledDate: true,
+    createdAt: true,
     updatedAt: true,
     notes: true
   })
   .extend({
     childAge: z.number().min(3).max(18),
     parentPhone: z.string()
-      .min(12, "Телефон должен быть в формате +7XXXXXXXXXX")
-      .max(12, "Телефон должен быть в формате +7XXXXXXXXXX")
       .regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
     parentName: z.string().min(2, "Введите ФИО родителя"),
-    desiredDate: z.coerce.date().min(new Date(), "Дата не может быть в прошлом")
+    desiredDate: z.string().refine(
+      (date) => !isNaN(Date.parse(date)) && new Date(date) > new Date(),
+      "Дата не может быть в прошлом"
+    ),
+    sectionId: z.number().positive("Выберите секцию"),
+    branchId: z.number().positive("Выберите отделение")
   });
 
 // Insert types

@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import {
+import { 
   insertStudentSchema,
   insertGroupSchema,
   insertScheduleSchema,
@@ -10,7 +10,9 @@ import {
   insertPaymentSchema,
   insertStudentGroupSchema,
   insertDateCommentSchema,
+  insertTrialRequestSchema,
   AttendanceStatus,
+  TrialRequestStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
@@ -636,16 +638,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Добавляем endpoint для создания заявки на пробное занятие
   app.post("/api/trial-requests", async (req, res) => {
     try {
+      console.log('Received trial request data:', req.body);
       const parsed = insertTrialRequestSchema.safeParse(req.body);
+
       if (!parsed.success) {
-        console.error('Trial request validation error:', parsed.error);
+        console.error('Trial request validation error:', parsed.error.errors);
         return res.status(400).json({ 
           error: "Validation error", 
           details: parsed.error.errors 
         });
       }
 
-      const request = await storage.createTrialRequest(parsed.data);
+      console.log('Parsed trial request data:', parsed.data);
+      const request = await storage.createTrialRequest({
+        ...parsed.data,
+        desiredDate: new Date(parsed.data.desiredDate),
+      });
+
+      console.log('Created trial request:', request);
       res.status(201).json(request);
     } catch (error) {
       console.error('Error creating trial request:', error);
