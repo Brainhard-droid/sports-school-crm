@@ -674,23 +674,7 @@ export class PostgresStorage implements IStorage {
 
   async getTrialRequests(): Promise<ExtendedTrialRequest[]> {
     try {
-      const requests = await db
-        .select({
-          id: trialRequests.id,
-          childName: trialRequests.childName,
-          childAge: trialRequests.childAge,
-          parentName: trialRequests.parentName,
-          parentPhone: trialRequests.parentPhone,
-          sectionId: trialRequests.sectionId,
-          branchId: trialRequests.branchId,
-          desiredDate: trialRequests.desiredDate,
-          status: trialRequests.status,
-          scheduledDate: trialRequests.scheduledDate,
-          createdAt: trialRequests.createdAt,
-          updatedAt: trialRequests.updatedAt,
-          notes: trialRequests.notes,
-        })
-        .from(trialRequests);
+      const requests = await db.select().from(trialRequests);
 
       // Дополняем информацией о секциях и филиалах
       const extendedRequests = await Promise.all(
@@ -722,13 +706,26 @@ export class PostgresStorage implements IStorage {
 
   async createTrialRequest(data: InsertTrialRequest): Promise<ExtendedTrialRequest> {
     try {
+      console.log('Creating trial request with data:', data);
+
       const [request] = await db
         .insert(trialRequests)
         .values({
-          ...data,
+          childName: data.childName,
+          childAge: data.childAge,
+          parentName: data.parentName,
+          parentPhone: data.parentPhone,
+          sectionId: data.sectionId,
+          branchId: data.branchId,
+          desiredDate: new Date(data.desiredDate),
           status: TrialRequestStatus.NEW,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          notes: data.notes
         })
         .returning();
+
+      console.log('Created trial request:', request);
 
       const [section] = await db
         .select()
@@ -756,6 +753,8 @@ export class PostgresStorage implements IStorage {
     data: Partial<ExtendedTrialRequest>
   ): Promise<ExtendedTrialRequest> {
     try {
+      console.log('Updating trial request:', id, data);
+
       const [request] = await db
         .update(trialRequests)
         .set({

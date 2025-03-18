@@ -15,7 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { Loader2, CheckCircle } from "lucide-react";
 
 type BranchWithSchedule = {
   id: number;
@@ -26,6 +34,7 @@ type BranchWithSchedule = {
 
 export default function TrialRequestPage() {
   const { toast } = useToast();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -68,19 +77,29 @@ export default function TrialRequestPage() {
       console.log('Submitting data:', data);
       const res = await apiRequest("POST", "/api/trial-requests", {
         ...data,
-        desiredDate: data.desiredDate,
         childAge: Number(data.childAge),
         sectionId: Number(data.sectionId),
         branchId: Number(data.branchId),
       });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Ошибка при отправке заявки');
+      }
+
       return res.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Заявка отправлена",
-        description: "Мы свяжемся с вами для подтверждения пробного занятия",
+      setShowSuccessModal(true);
+      form.reset({
+        childName: "",
+        childAge: undefined,
+        parentName: "",
+        parentPhone: "+7",
+        sectionId: undefined,
+        branchId: undefined,
+        desiredDate: new Date().toISOString().split('T')[0],
       });
-      form.reset();
     },
     onError: (error: Error) => {
       console.error('Form submission error:', error);
@@ -111,11 +130,11 @@ export default function TrialRequestPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form 
+            <form
               onSubmit={form.handleSubmit((data) => {
                 console.log('Form data before submission:', data);
                 createTrialRequestMutation.mutate(data);
-              })} 
+              })}
               className="space-y-4"
             >
               <FormField
@@ -308,6 +327,20 @@ export default function TrialRequestPage() {
           </Form>
         </CardContent>
       </Card>
+
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              Заявка успешно отправлена
+            </DialogTitle>
+            <DialogDescription>
+              Мы свяжемся с вами в ближайшее время для подтверждения пробного занятия
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

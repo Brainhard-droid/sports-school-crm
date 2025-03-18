@@ -197,12 +197,15 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
     notes: true
   })
   .extend({
-    childAge: z.number().min(3).max(18),
+    childAge: z.number().min(3, "Минимальный возраст 3 года").max(18, "Максимальный возраст 18 лет"),
     parentPhone: z.string()
       .regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
     parentName: z.string().min(2, "Введите ФИО родителя"),
     desiredDate: z.string().refine(
-      (date) => !isNaN(Date.parse(date)) && new Date(date) > new Date(),
+      (date) => {
+        const parsedDate = new Date(date);
+        return !isNaN(parsedDate.getTime()) && parsedDate > new Date();
+      },
       "Дата не может быть в прошлом"
     ),
     sectionId: z.number().positive("Выберите секцию"),
