@@ -11,7 +11,8 @@ export function useTrialRequests() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/trial-requests");
       return res.json();
-    }
+    },
+    suspense: false
   });
 
   const updateStatusMutation = useMutation({
