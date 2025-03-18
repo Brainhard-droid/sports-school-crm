@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, time } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -101,20 +101,29 @@ export const branches = pgTable("branches", {
   active: boolean("active").notNull().default(true),
 });
 
-// Sports sections table
+// Sports sections table with predefined sections
 export const sportsSections = pgTable("sports_sections", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  branchId: integer("branch_id").notNull(),
   active: boolean("active").notNull().default(true),
 });
 
-// Trial requests table
+// Branch sections table - связь филиалов с секциями и их расписанием
+export const branchSections = pgTable("branch_sections", {
+  id: serial("id").primaryKey(),
+  branchId: integer("branch_id").notNull(),
+  sectionId: integer("section_id").notNull(),
+  schedule: text("schedule").notNull(), // JSON строка с расписанием
+  active: boolean("active").notNull().default(true),
+});
+
+// Trial requests table with parent name
 export const trialRequests = pgTable("trial_requests", {
   id: serial("id").primaryKey(),
   childName: text("child_name").notNull(),
   childAge: integer("child_age").notNull(),
+  parentName: text("parent_name").notNull(), // Добавлено поле ФИО родителя
   parentPhone: text("parent_phone").notNull(),
   sectionId: integer("section_id").notNull(),
   branchId: integer("branch_id").notNull(),
@@ -152,6 +161,7 @@ export type ExtendedTrialRequest = TrialRequest & {
   branch?: Branch;
   section?: SportsSection;
 };
+export type BranchSection = typeof branchSections.$inferSelect;
 
 
 // Schemas
@@ -188,6 +198,7 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
   .extend({
     childAge: z.number().min(3).max(18),
     parentPhone: z.string().regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
+    parentName: z.string().min(2, "Введите ФИО родителя"),
     desiredDate: z.date().min(new Date(), "Дата не может быть в прошлом")
   });
 

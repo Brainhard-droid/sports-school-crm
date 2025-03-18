@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { InsertTrialRequest, insertTrialRequestSchema, Branch, SportsSection } from "@shared/schema";
+import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,17 +23,27 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+type BranchWithSchedule = {
+  id: number;
+  name: string;
+  address: string;
+  schedule: {
+    [key: string]: string[];
+  };
+};
+
 export default function TrialRequestPage() {
   const { toast } = useToast();
 
-  // Fetch branches
-  const { data: branches, isLoading: branchesLoading } = useQuery<Branch[]>({
-    queryKey: ["/api/branches"],
+  // Fetch sections
+  const { data: sections, isLoading: sectionsLoading } = useQuery({
+    queryKey: ["/api/sports-sections"],
   });
 
-  // Fetch sports sections
-  const { data: sections, isLoading: sectionsLoading } = useQuery<SportsSection[]>({
-    queryKey: ["/api/sports-sections"],
+  // Fetch branches with schedule based on selected section
+  const { data: branchesForSection, isLoading: branchesLoading } = useQuery<BranchWithSchedule[]>({
+    queryKey: ["/api/branches-by-section", form.watch("sectionId")],
+    enabled: !!form.watch("sectionId"),
   });
 
   const form = useForm<InsertTrialRequest>({
@@ -41,6 +51,7 @@ export default function TrialRequestPage() {
     defaultValues: {
       childName: "",
       childAge: undefined,
+      parentName: "",
       parentPhone: "+7",
       sectionId: undefined,
       branchId: undefined,
@@ -80,17 +91,9 @@ export default function TrialRequestPage() {
     },
   });
 
-  const onSubmit = async (data: InsertTrialRequest) => {
-    await createTrialRequestMutation.mutateAsync(data);
-  };
-
-  if (branchesLoading || sectionsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  const selectedBranch = branchesForSection?.find(
+    (branch) => branch.id === Number(form.watch("branchId"))
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -103,7 +106,7 @@ export default function TrialRequestPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit((data) => createTrialRequestMutation.mutateAsync(data))} className="space-y-4">
               <FormField
                 control={form.control}
                 name="childName"
@@ -125,11 +128,27 @@ export default function TrialRequestPage() {
                     <FormLabel>Возраст</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
                         placeholder="Введите возраст"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value ? parseInt(value) : undefined);
+                        }}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="parentName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ФИО родителя</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Введите ФИО родителя" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -150,42 +169,16 @@ export default function TrialRequestPage() {
               />
               <FormField
                 control={form.control}
-                name="branchId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Филиал</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите филиал" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {branches?.map((branch) => (
-                          <SelectItem
-                            key={branch.id}
-                            value={branch.id.toString()}
-                          >
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="sectionId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Секция</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      onValueChange={(value) => {
+                        field.onChange(parseInt(value));
+                        // Reset branch selection when section changes
+                        form.setValue("branchId", undefined);
+                      }}
                       value={field.value?.toString()}
                     >
                       <FormControl>
@@ -208,6 +201,50 @@ export default function TrialRequestPage() {
                   </FormItem>
                 )}
               />
+              {form.watch("sectionId") && (
+                <FormField
+                  control={form.control}
+                  name="branchId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Филиал</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите филиал" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {branchesForSection?.map((branch) => (
+                            <SelectItem
+                              key={branch.id}
+                              value={branch.id.toString()}
+                            >
+                              {branch.name} - {branch.address}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              {selectedBranch && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Расписание занятий:</h4>
+                  <div className="text-sm text-muted-foreground">
+                    {Object.entries(selectedBranch.schedule).map(([day, times]) => (
+                      <div key={day}>
+                        {day}: {times.join(" - ")}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="desiredDate"
