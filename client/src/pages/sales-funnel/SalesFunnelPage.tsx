@@ -4,6 +4,7 @@ import { useTrialRequests } from "./hooks/useTrialRequests";
 import { Loader2 } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { Layout } from "@/components/layout/navbar";
 import {
   Dialog,
   DialogContent,
@@ -27,14 +28,6 @@ export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -49,7 +42,11 @@ export default function SalesFunnelPage() {
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
-  return (
+  const content = isLoading ? (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  ) : (
     <div className="container mx-auto py-6">
       <Card>
         <CardHeader>
@@ -141,4 +138,6 @@ export default function SalesFunnelPage() {
       </Dialog>
     </div>
   );
+
+  return <Layout>{content}</Layout>;
 }
