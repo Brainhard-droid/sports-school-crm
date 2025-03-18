@@ -9,10 +9,14 @@ export function useTrialRequests() {
   const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
     queryFn: async () => {
+      console.log('Fetching trial requests...');
       const res = await apiRequest("GET", "/api/trial-requests");
-      return res.json();
+      const data = await res.json();
+      console.log('Received trial requests:', data);
+      return data;
     },
-    suspense: false
+    suspense: false,
+    retry: false
   });
 
   const updateStatusMutation = useMutation({
