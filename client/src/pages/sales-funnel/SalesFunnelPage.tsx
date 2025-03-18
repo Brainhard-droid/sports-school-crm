@@ -3,15 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTrialRequests } from "./hooks/useTrialRequests";
 import { Loader2 } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RequestsTable } from "./components/RequestsTable";
-
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -26,7 +24,7 @@ const statusColumns: StatusColumn[] = [
 ];
 
 export default function SalesFunnelPage() {
-  const { requests, isLoading, updateStatus } = useTrialRequests();
+  const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
 
   if (isLoading) {
@@ -37,7 +35,7 @@ export default function SalesFunnelPage() {
     );
   }
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const requestId = parseInt(result.draggableId);
@@ -47,7 +45,7 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    acc[column.id] = requests?.filter(r => r.status === column.id) || [];
+    acc[column.id] = requests.filter(r => r.status === column.id);
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
@@ -68,7 +66,7 @@ export default function SalesFunnelPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="space-y-2"
+                        className="space-y-2 min-h-[200px]"
                       >
                         {requestsByStatus[column.id].map((request, index) => (
                           <Draggable
@@ -81,7 +79,8 @@ export default function SalesFunnelPage() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className="bg-background rounded-md p-3 shadow-sm"
+                                className="bg-background rounded-md p-3 shadow-sm cursor-move hover:shadow-md transition-shadow"
+                                onClick={() => setSelectedRequest(request)}
                               >
                                 <div className="font-medium">{request.childName}</div>
                                 <div className="text-sm text-muted-foreground">
@@ -133,7 +132,7 @@ export default function SalesFunnelPage() {
                 <span className="col-span-3">{selectedRequest.section?.name}</span>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <span className="font-medium">Филиал:</span>
+                <span className="font-medium">Отделение:</span>
                 <span className="col-span-3">{selectedRequest.branch?.name}</span>
               </div>
             </div>
