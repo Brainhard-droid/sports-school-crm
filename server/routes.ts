@@ -32,31 +32,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/branches-by-section", async (req, res) => {
-    try {
-      const sectionId = parseInt(req.query.sectionId as string);
-      if (!sectionId) {
-        return res.status(400).json({ error: "Missing sectionId parameter" });
-      }
-
-      // Получаем филиалы с расписанием для выбранной секции
-      const branchesWithSchedule = await db
-        .select({
-          id: branches.id,
-          name: branches.name,
-          address: branches.address,
-          schedule: branchSections.schedule
-        })
-        .from(branchSections)
-        .innerJoin(branches, eq(branches.id, branchSections.branchId))
-        .where(eq(branchSections.sectionId, sectionId));
-
-      res.json(branchesWithSchedule);
-    } catch (error) {
-      console.error('Error getting branches by section:', error);
-      res.status(500).json({ error: (error as Error).message });
+  // Маршрут для получения филиалов по секции
+app.get("/api/branches-by-section", async (req, res) => {
+  try {
+    const sectionId = parseInt(req.query.sectionId as string);
+    if (!sectionId) {
+      return res.status(400).json({ error: "Missing sectionId parameter" });
     }
-  });
+
+    // Получаем филиалы с расписанием для выбранной секции
+    const branchesWithSchedule = await db
+      .select({
+        id: branches.id,
+        name: branches.name,
+        address: branches.address,
+        schedule: branchSections.schedule
+      })
+      .from(branchSections)
+      .innerJoin(branches, eq(branches.id, branchSections.branchId))
+      .where(eq(branchSections.sectionId, sectionId));
+
+    res.json(branchesWithSchedule);
+  } catch (error) {
+    console.error('Error getting branches by section:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
   // Students
   app.get("/api/students", async (req, res) => {

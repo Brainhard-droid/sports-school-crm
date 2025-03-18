@@ -82,15 +82,32 @@ export const studentGroups = pgTable("student_groups", {
   active: boolean("active").notNull().default(true),
 });
 
-// Trial Request Status enum
+// Updating TrialRequestStatus enum
 export const TrialRequestStatus = {
-  NEW: "NEW",
-  SCHEDULED: "SCHEDULED",
-  COMPLETED: "COMPLETED",
-  CANCELLED: "CANCELLED",
+  NEW: "NEW", // Новая
+  TRIAL_ASSIGNED: "TRIAL_ASSIGNED", // Пробное назначено
+  REFUSED: "REFUSED", // Отказ
+  SIGNED: "SIGNED", // Записан
 } as const;
 
 export type TrialRequestStatusType = typeof TrialRequestStatus[keyof typeof TrialRequestStatus];
+
+// Trial requests table
+export const trialRequests = pgTable("trial_requests", {
+  id: serial("id").primaryKey(),
+  childName: text("child_name").notNull(),
+  childAge: integer("child_age").notNull(),
+  parentName: text("parent_name").notNull(),
+  parentPhone: text("parent_phone").notNull(),
+  sectionId: integer("section_id").notNull(),
+  branchId: integer("branch_id").notNull(),
+  desiredDate: date("desired_date").notNull(),
+  status: text("status").notNull().default(TrialRequestStatus.NEW),
+  scheduledDate: timestamp("scheduled_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  notes: text("notes"),
+});
 
 // Branches table
 export const branches = pgTable("branches", {
@@ -118,22 +135,6 @@ export const branchSections = pgTable("branch_sections", {
   active: boolean("active").notNull().default(true),
 });
 
-// Trial requests table with parent name
-export const trialRequests = pgTable("trial_requests", {
-  id: serial("id").primaryKey(),
-  childName: text("child_name").notNull(),
-  childAge: integer("child_age").notNull(),
-  parentName: text("parent_name").notNull(), // Добавлено поле ФИО родителя
-  parentPhone: text("parent_phone").notNull(),
-  sectionId: integer("section_id").notNull(),
-  branchId: integer("branch_id").notNull(),
-  desiredDate: date("desired_date").notNull(),
-  status: text("status").notNull().default(TrialRequestStatus.NEW),
-  scheduledDate: timestamp("scheduled_date"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  notes: text("notes"),
-});
 
 // Types
 export type User = typeof users.$inferSelect;

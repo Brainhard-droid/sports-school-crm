@@ -16,6 +16,7 @@ import Attendance from "@/pages/attendance";
 import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
+import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <ProtectedRoute path="/groups/:id" component={GroupDetails} />
       <ProtectedRoute path="/attendance" component={Attendance} />
       <ProtectedRoute path="/payments" component={Payments} />
+      <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
       <Route component={NotFound} />
     </Switch>
   );
