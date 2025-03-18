@@ -194,7 +194,8 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
     status: true, 
     scheduledDate: true, 
     createdAt: true, 
-    updatedAt: true 
+    updatedAt: true,
+    notes: true
   })
   .extend({
     childAge: z.number().min(3).max(18),
