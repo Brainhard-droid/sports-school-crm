@@ -1,5 +1,6 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/utils/api";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 
 export function useTrialRequests() {
@@ -7,8 +8,10 @@ export function useTrialRequests() {
 
   const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
-    refetchInterval: 5000, // Refetch every 5 seconds
-    credentials: 'include'
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/trial-requests");
+      return res.json();
+    }
   });
 
   const updateStatusMutation = useMutation({
