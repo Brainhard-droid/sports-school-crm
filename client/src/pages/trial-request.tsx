@@ -1,18 +1,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 type BranchWithSchedule = {
@@ -35,17 +30,6 @@ type BranchWithSchedule = {
 export default function TrialRequestPage() {
   const { toast } = useToast();
 
-  // Fetch sections
-  const { data: sections, isLoading: sectionsLoading } = useQuery({
-    queryKey: ["/api/sports-sections"],
-  });
-
-  // Fetch branches with schedule based on selected section
-  const { data: branchesForSection, isLoading: branchesLoading } = useQuery<BranchWithSchedule[]>({
-    queryKey: ["/api/branches-by-section", form.watch("sectionId")],
-    enabled: !!form.watch("sectionId"),
-  });
-
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
     defaultValues: {
@@ -55,24 +39,29 @@ export default function TrialRequestPage() {
       parentPhone: "+7",
       sectionId: undefined,
       branchId: undefined,
-      desiredDate: new Date().toISOString().split('T')[0],
+      desiredDate: undefined,
     },
   });
 
+  // Fetch sections
+  const { data: sections } = useQuery({
+    queryKey: ["/api/sports-sections"],
+  });
+
+  // Fetch branches with schedule based on selected section
+  const sectionId = form.watch("sectionId");
+  const { data: branchesForSection } = useQuery<BranchWithSchedule[]>({
+    queryKey: ["/api/branches-by-section", sectionId],
+    enabled: !!sectionId,
+  });
+
+  const selectedBranch = branchesForSection?.find(
+    (branch) => branch.id === Number(form.watch("branchId"))
+  );
+
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
-      const res = await fetch('/api/trial-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to create trial request');
-      }
-
+      const res = await apiRequest("POST", "/api/trial-requests", data);
       return res.json();
     },
     onSuccess: () => {
@@ -82,7 +71,7 @@ export default function TrialRequestPage() {
       });
       form.reset();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Ошибка",
         description: error.message,
@@ -90,10 +79,6 @@ export default function TrialRequestPage() {
       });
     },
   });
-
-  const selectedBranch = branchesForSection?.find(
-    (branch) => branch.id === Number(form.watch("branchId"))
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -106,7 +91,7 @@ export default function TrialRequestPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => createTrialRequestMutation.mutateAsync(data))} className="space-y-4">
+            <form onSubmit={form.handleSubmit((data) => createTrialRequestMutation.mutate(data))} className="space-y-4">
               <FormField
                 control={form.control}
                 name="childName"
@@ -176,7 +161,6 @@ export default function TrialRequestPage() {
                     <Select
                       onValueChange={(value) => {
                         field.onChange(parseInt(value));
-                        // Reset branch selection when section changes
                         form.setValue("branchId", undefined);
                       }}
                       value={field.value?.toString()}
@@ -201,7 +185,7 @@ export default function TrialRequestPage() {
                   </FormItem>
                 )}
               />
-              {form.watch("sectionId") && (
+              {sectionId && (
                 <FormField
                   control={form.control}
                   name="branchId"
@@ -252,7 +236,12 @@ export default function TrialRequestPage() {
                   <FormItem>
                     <FormLabel>Желаемая дата занятия</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
