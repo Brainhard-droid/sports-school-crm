@@ -200,14 +200,14 @@ export default function TrialRequestPage() {
                   name="branchId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Филиал</FormLabel>
+                      <FormLabel>Отделение</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         value={field.value?.toString()}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Выберите филиал" />
+                            <SelectValue placeholder="Выберите отделение" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
