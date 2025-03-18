@@ -33,31 +33,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Маршрут для получения филиалов по секции
-app.get("/api/branches-by-section", async (req, res) => {
-  try {
-    const sectionId = parseInt(req.query.sectionId as string);
-    if (!sectionId) {
-      return res.status(400).json({ error: "Missing sectionId parameter" });
+  app.get("/api/branches-by-section", async (req, res) => {
+    try {
+      const sectionId = parseInt(req.query.sectionId as string);
+      if (!sectionId) {
+        return res.status(400).json({ error: "Missing sectionId parameter" });
+      }
+
+      // Получаем филиалы с расписанием для выбранной секции
+      const branchesWithSchedule = await db
+        .select({
+          id: branches.id,
+          name: branches.name,
+          address: branches.address,
+          schedule: branchSections.schedule
+        })
+        .from(branchSections)
+        .innerJoin(branches, eq(branches.id, branchSections.branchId))
+        .where(eq(branchSections.sectionId, sectionId));
+
+      res.json(branchesWithSchedule);
+    } catch (error) {
+      console.error('Error getting branches by section:', error);
+      res.status(500).json({ error: (error as Error).message });
     }
-
-    // Получаем филиалы с расписанием для выбранной секции
-    const branchesWithSchedule = await db
-      .select({
-        id: branches.id,
-        name: branches.name,
-        address: branches.address,
-        schedule: branchSections.schedule
-      })
-      .from(branchSections)
-      .innerJoin(branches, eq(branches.id, branchSections.branchId))
-      .where(eq(branchSections.sectionId, sectionId));
-
-    res.json(branchesWithSchedule);
-  } catch (error) {
-    console.error('Error getting branches by section:', error);
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
+  });
 
   // Students
   app.get("/api/students", async (req, res) => {
@@ -596,6 +596,39 @@ app.get("/api/branches-by-section", async (req, res) => {
       res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error updating bulk attendance:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Добавляем endpoint для обновления статуса заявки на пробное занятие
+  app.put("/api/trial-requests/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (!Object.values(TrialRequestStatus).includes(status)) {
+        return res.status(400).json({ error: "Invalid trial request status" });
+      }
+
+      const updatedRequest = await storage.updateTrialRequest(id, { status });
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating trial request:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Endpoint для получения всех заявок на пробное занятие
+  app.get("/api/trial-requests", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const requests = await storage.getTrialRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error('Error getting trial requests:', error);
       res.status(500).json({ error: (error as Error).message });
     }
   });

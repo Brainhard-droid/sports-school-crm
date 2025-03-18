@@ -11,7 +11,7 @@ export function useTrialRequests() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: keyof typeof TrialRequestStatus }) => {
-      const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, { status });
+      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status });
       return res.json();
     },
     onSuccess: () => {
@@ -21,7 +21,7 @@ export function useTrialRequests() {
 
   const updateRequestMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ExtendedTrialRequest> }) => {
-      const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, data);
+      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, data);
       return res.json();
     },
     onSuccess: () => {
