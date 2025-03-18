@@ -93,10 +93,6 @@ export const useAttendance = (groupId?: number, month?: number, year?: number) =
     onSuccess: () => {
       console.log('Attendance updated successfully');
       queryClient.invalidateQueries({ queryKey });
-      toast({
-        title: "Успешно",
-        description: "Посещаемость обновлена",
-      });
     },
     onError: (error) => {
       console.error('Attendance mutation error:', error);
