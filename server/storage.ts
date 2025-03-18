@@ -3,7 +3,7 @@ import {
   User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup, DateComment,
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup, InsertDateComment,
   users, students, groups, schedules, attendance, payments, studentGroups, dateComments,
-  sportsSections, branches, branchSections
+  sportsSections, branches, branchSections, trialRequests
 } from "@shared/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
@@ -671,6 +671,148 @@ export class PostgresStorage implements IStorage {
       throw error;
     }
   }
+
+  async getTrialRequests(): Promise<ExtendedTrialRequest[]> {
+    try {
+      const requests = await db
+        .select({
+          id: trialRequests.id,
+          childName: trialRequests.childName,
+          childAge: trialRequests.childAge,
+          parentName: trialRequests.parentName,
+          parentPhone: trialRequests.parentPhone,
+          sectionId: trialRequests.sectionId,
+          branchId: trialRequests.branchId,
+          desiredDate: trialRequests.desiredDate,
+          status: trialRequests.status,
+          scheduledDate: trialRequests.scheduledDate,
+          createdAt: trialRequests.createdAt,
+          updatedAt: trialRequests.updatedAt,
+          notes: trialRequests.notes,
+        })
+        .from(trialRequests);
+
+      // Дополняем информацией о секциях и филиалах
+      const extendedRequests = await Promise.all(
+        requests.map(async (request) => {
+          const [section] = await db
+            .select()
+            .from(sportsSections)
+            .where(eq(sportsSections.id, request.sectionId));
+
+          const [branch] = await db
+            .select()
+            .from(branches)
+            .where(eq(branches.id, request.branchId));
+
+          return {
+            ...request,
+            section,
+            branch,
+          };
+        })
+      );
+
+      return extendedRequests;
+    } catch (error) {
+      console.error('Error getting trial requests:', error);
+      throw error;
+    }
+  }
+
+  async createTrialRequest(data: InsertTrialRequest): Promise<ExtendedTrialRequest> {
+    try {
+      const [request] = await db
+        .insert(trialRequests)
+        .values({
+          ...data,
+          status: TrialRequestStatus.NEW,
+        })
+        .returning();
+
+      const [section] = await db
+        .select()
+        .from(sportsSections)
+        .where(eq(sportsSections.id, request.sectionId));
+
+      const [branch] = await db
+        .select()
+        .from(branches)
+        .where(eq(branches.id, request.branchId));
+
+      return {
+        ...request,
+        section,
+        branch,
+      };
+    } catch (error) {
+      console.error('Error creating trial request:', error);
+      throw error;
+    }
+  }
+
+  async updateTrialRequest(
+    id: number,
+    data: Partial<ExtendedTrialRequest>
+  ): Promise<ExtendedTrialRequest> {
+    try {
+      const [request] = await db
+        .update(trialRequests)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(trialRequests.id, id))
+        .returning();
+
+      const [section] = await db
+        .select()
+        .from(sportsSections)
+        .where(eq(sportsSections.id, request.sectionId));
+
+      const [branch] = await db
+        .select()
+        .from(branches)
+        .where(eq(branches.id, request.branchId));
+
+      return {
+        ...request,
+        section,
+        branch,
+      };
+    } catch (error) {
+      console.error('Error updating trial request:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new PostgresStorage();
+
+//Necessary type declarations (replace with your actual types)
+type AttendanceStatusType = 'present' | 'absent' | 'late';
+type ExtendedTrialRequest = {
+  id: number;
+  childName: string;
+  childAge: number;
+  parentName: string;
+  parentPhone: string;
+  sectionId: number;
+  branchId: number;
+  desiredDate: Date;
+  status: TrialRequestStatus;
+  scheduledDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  notes: string | null;
+  section: any; //Replace with actual section type
+  branch: any;  //Replace with actual branch type
+};
+
+type InsertTrialRequest = Omit<ExtendedTrialRequest, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'section' | 'branch'>;
+enum TrialRequestStatus {
+  NEW = 'new',
+  SCHEDULED = 'scheduled',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
