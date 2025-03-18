@@ -8,16 +8,18 @@ import {
   Calendar,
   CreditCard,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 import { LanguageSwitcher } from "../language-switcher";
 import { useTranslation } from "react-i18next";
 
 const navigation = [
-  { name: "navigation.dashboard", href: "/", icon: LayoutDashboard },
-  { name: "navigation.students", href: "/students", icon: Users },
-  { name: "navigation.groups", href: "/groups", icon: Group },
-  { name: "navigation.attendance", href: "/attendance", icon: Calendar },
-  { name: "navigation.payments", href: "/payments", icon: CreditCard },
+  { name: "navigation.dashboard", href: "/", icon: LayoutDashboard, protected: true },
+  { name: "navigation.students", href: "/students", icon: Users, protected: true },
+  { name: "navigation.groups", href: "/groups", icon: Group, protected: true },
+  { name: "navigation.attendance", href: "/attendance", icon: Calendar, protected: true },
+  { name: "navigation.payments", href: "/payments", icon: CreditCard, protected: true },
+  { name: "navigation.trialRequest", href: "/trial-request", icon: ClipboardList, protected: false },
 ];
 
 type LayoutProps = {
@@ -42,29 +44,33 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-col flex-grow border-r bg-sidebar py-5">
             <nav className="flex-1 space-y-1 px-2">
               {navigation.map((item) => (
-                <Link key={item.name} href={item.href}>
-                  <a className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent">
-                    <item.icon className="mr-3 h-5 w-5" />
-                    {t(item.name)}
-                  </a>
-                </Link>
+                (!item.protected || user) && (
+                  <Link key={item.name} href={item.href}>
+                    <a className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent">
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {t(item.name)}
+                    </a>
+                  </Link>
+                )
               ))}
             </nav>
-            <div className="flex-shrink-0 flex border-t border-sidebar-border p-4">
-              <div className="flex items-center">
-                <div>
-                  <p className="text-sm font-medium text-sidebar-foreground">{user?.username}</p>
-                  <Button
-                    variant="ghost"
-                    className="mt-1 flex items-center text-sm text-sidebar-foreground"
-                    onClick={() => logoutMutation.mutate()}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {t('navigation.signOut')}
-                  </Button>
+            {user && (
+              <div className="flex-shrink-0 flex border-t border-sidebar-border p-4">
+                <div className="flex items-center">
+                  <div>
+                    <p className="text-sm font-medium text-sidebar-foreground">{user.username}</p>
+                    <Button
+                      variant="ghost"
+                      className="mt-1 flex items-center text-sm text-sidebar-foreground"
+                      onClick={() => logoutMutation.mutate()}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t('navigation.signOut')}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

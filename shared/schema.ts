@@ -82,6 +82,50 @@ export const studentGroups = pgTable("student_groups", {
   active: boolean("active").notNull().default(true),
 });
 
+// Trial Request Status enum
+export const TrialRequestStatus = {
+  NEW: "NEW",
+  SCHEDULED: "SCHEDULED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export type TrialRequestStatusType = typeof TrialRequestStatus[keyof typeof TrialRequestStatus];
+
+// Branches table
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  phone: text("phone").notNull(),
+  active: boolean("active").notNull().default(true),
+});
+
+// Sports sections table
+export const sportsSections = pgTable("sports_sections", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  branchId: integer("branch_id").notNull(),
+  active: boolean("active").notNull().default(true),
+});
+
+// Trial requests table
+export const trialRequests = pgTable("trial_requests", {
+  id: serial("id").primaryKey(),
+  childName: text("child_name").notNull(),
+  childAge: integer("child_age").notNull(),
+  parentPhone: text("parent_phone").notNull(),
+  sectionId: integer("section_id").notNull(),
+  branchId: integer("branch_id").notNull(),
+  desiredDate: date("desired_date").notNull(),
+  status: text("status").notNull().default(TrialRequestStatus.NEW),
+  scheduledDate: timestamp("scheduled_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  notes: text("notes"),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type Group = typeof groups.$inferSelect;
@@ -90,23 +134,25 @@ export type Attendance = typeof attendance.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type StudentGroup = typeof studentGroups.$inferSelect;
 export type DateComment = typeof dateComments.$inferSelect;
-
-// Base student type without groups
 export type BaseStudent = typeof students.$inferSelect;
-
-// Extended student type with groups
 export type Student = BaseStudent & {
   groups?: {
     id: number;
     name: string;
   }[];
 };
-
-// Extended group type with students and schedules
 export type ExtendedGroup = Group & {
   students?: Student[];
   schedules?: Schedule[];
 };
+export type Branch = typeof branches.$inferSelect;
+export type SportsSection = typeof sportsSections.$inferSelect;
+export type TrialRequest = typeof trialRequests.$inferSelect;
+export type ExtendedTrialRequest = TrialRequest & {
+  branch?: Branch;
+  section?: SportsSection;
+};
+
 
 // Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -129,6 +175,22 @@ export const insertPaymentSchema = createInsertSchema(payments);
 export const insertStudentGroupSchema = createInsertSchema(studentGroups);
 export const insertDateCommentSchema = createInsertSchema(dateComments);
 
+export const insertBranchSchema = createInsertSchema(branches).omit({ id: true });
+export const insertSportsSectionSchema = createInsertSchema(sportsSections).omit({ id: true });
+export const insertTrialRequestSchema = createInsertSchema(trialRequests)
+  .omit({ 
+    id: true, 
+    status: true, 
+    scheduledDate: true, 
+    createdAt: true, 
+    updatedAt: true 
+  })
+  .extend({
+    childAge: z.number().min(3).max(18),
+    parentPhone: z.string().regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
+    desiredDate: z.date().min(new Date(), "Дата не может быть в прошлом")
+  });
+
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
@@ -138,3 +200,6 @@ export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertStudentGroup = z.infer<typeof insertStudentGroupSchema>;
 export type InsertDateComment = z.infer<typeof insertDateCommentSchema>;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+export type InsertSportsSection = z.infer<typeof insertSportsSectionSchema>;
+export type InsertTrialRequest = z.infer<typeof insertTrialRequestSchema>;

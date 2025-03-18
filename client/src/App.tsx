@@ -11,14 +11,16 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import StudentsPage from "@/pages/students";
 import Groups from "@/pages/groups";
-import GroupDetails from "@/pages/group-details"; // Добавляем новую страницу
+import GroupDetails from "@/pages/group-details";
 import Attendance from "@/pages/attendance";
 import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
+import TrialRequest from "@/pages/trial-request";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/trial-request" component={TrialRequest} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/reset-password/:token" component={ResetPassword} />
       <ProtectedRoute path="/" component={Dashboard} />
