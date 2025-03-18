@@ -32,9 +32,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/branches-by-section/:sectionId", async (req, res) => {
+  app.get("/api/branches-by-section", async (req, res) => {
     try {
-      const sectionId = parseInt(req.params.sectionId);
+      const sectionId = parseInt(req.query.sectionId as string);
+      if (!sectionId) {
+        return res.status(400).json({ error: "Missing sectionId parameter" });
+      }
 
       // Получаем филиалы с расписанием для выбранной секции
       const branchesWithSchedule = await db
@@ -551,9 +554,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedComment);
     } catch (error) {
       console.error('[Routes] Error updating date comment:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to update comment",
-        details: error.message 
+        details: error.message
       });
     }
   });

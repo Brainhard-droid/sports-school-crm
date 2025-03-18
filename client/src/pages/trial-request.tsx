@@ -49,8 +49,13 @@ export default function TrialRequestPage() {
   // Fetch branches with schedule based on selected section
   const sectionId = form.watch("sectionId");
   const { data: branchesForSection, isLoading: branchesLoading } = useQuery<BranchWithSchedule[]>({
-    queryKey: ["/api/branches-by-section", sectionId],
+    queryKey: ["branches-by-section", sectionId],
     enabled: !!sectionId,
+    queryFn: async ({ queryKey }) => {
+      const [, sectionId] = queryKey;
+      const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
+      return res.json();
+    },
   });
 
   const selectedBranch = branchesForSection?.find(
