@@ -14,6 +14,10 @@ export function useTrialRequests() {
         const res = await apiRequest("GET", "/api/trial-requests");
         const data = await res.json();
         console.log('Received trial requests:', data);
+        console.log('Requests by status:', data.reduce((acc: any, req: any) => {
+          acc[req.status] = (acc[req.status] || 0) + 1;
+          return acc;
+        }, {}));
         return data;
       } catch (err) {
         console.error('Error fetching trial requests:', err);
