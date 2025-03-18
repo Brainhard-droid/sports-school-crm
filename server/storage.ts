@@ -674,7 +674,7 @@ export class PostgresStorage implements IStorage {
 
   async getTrialRequests(): Promise<ExtendedTrialRequest[]> {
     try {
-      console.log('Getting trial requests from database');
+      console.log('Storage: Getting trial requests...');
       const requests = await db.select().from(trialRequests);
       console.log('Retrieved trial requests:', requests);
 

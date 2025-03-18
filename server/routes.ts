@@ -625,9 +625,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint для получения всех заявок на пробное занятие
   app.get("/api/trial-requests", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log('GET /api/trial-requests - Auth status:', req.isAuthenticated());
+      
+      if (!req.isAuthenticated()) {
+        console.log('User not authenticated');
+        return res.sendStatus(401);
+      }
 
+      console.log('Fetching trial requests from storage...');
       const requests = await storage.getTrialRequests();
+      console.log('Retrieved trial requests:', requests);
       res.json(requests);
     } catch (error) {
       console.error('Error getting trial requests:', error);
