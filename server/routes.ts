@@ -639,6 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trial-requests", async (req, res) => {
     try {
       console.log('Received trial request data:', req.body);
+      // No auth check needed for creating trial requests
       const parsed = insertTrialRequestSchema.safeParse(req.body);
 
       if (!parsed.success) {

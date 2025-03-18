@@ -8,6 +8,7 @@ export function useTrialRequests() {
   const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
     refetchInterval: 5000, // Refetch every 5 seconds
+    credentials: 'include'
   });
 
   const updateStatusMutation = useMutation({
