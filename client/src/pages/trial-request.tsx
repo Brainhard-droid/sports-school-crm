@@ -22,9 +22,7 @@ type BranchWithSchedule = {
   id: number;
   name: string;
   address: string;
-  schedule: {
-    [key: string]: string[];
-  };
+  schedule: string; // JSON строка
 };
 
 export default function TrialRequestPage() {
@@ -44,13 +42,13 @@ export default function TrialRequestPage() {
   });
 
   // Fetch sections
-  const { data: sections } = useQuery({
+  const { data: sections, isLoading: sectionsLoading } = useQuery({
     queryKey: ["/api/sports-sections"],
   });
 
   // Fetch branches with schedule based on selected section
   const sectionId = form.watch("sectionId");
-  const { data: branchesForSection } = useQuery<BranchWithSchedule[]>({
+  const { data: branchesForSection, isLoading: branchesLoading } = useQuery<BranchWithSchedule[]>({
     queryKey: ["/api/branches-by-section", sectionId],
     enabled: !!sectionId,
   });
@@ -58,6 +56,9 @@ export default function TrialRequestPage() {
   const selectedBranch = branchesForSection?.find(
     (branch) => branch.id === Number(form.watch("branchId"))
   );
+
+  // Parse schedule JSON if branch is selected
+  const schedule = selectedBranch ? JSON.parse(selectedBranch.schedule) : null;
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
@@ -79,6 +80,14 @@ export default function TrialRequestPage() {
       });
     },
   });
+
+  if (sectionsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -185,7 +194,7 @@ export default function TrialRequestPage() {
                   </FormItem>
                 )}
               />
-              {sectionId && (
+              {sectionId && !branchesLoading && (
                 <FormField
                   control={form.control}
                   name="branchId"
@@ -217,13 +226,14 @@ export default function TrialRequestPage() {
                   )}
                 />
               )}
-              {selectedBranch && (
-                <div className="space-y-2">
+              {schedule && (
+                <div className="space-y-2 border rounded-md p-4 bg-muted/50">
                   <h4 className="text-sm font-medium">Расписание занятий:</h4>
-                  <div className="text-sm text-muted-foreground">
-                    {Object.entries(selectedBranch.schedule).map(([day, times]) => (
-                      <div key={day}>
-                        {day}: {times.join(" - ")}
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    {Object.entries(schedule).map(([day, times]) => (
+                      <div key={day} className="flex justify-between">
+                        <span>{day}:</span>
+                        <span>{Array.isArray(times) ? times.join(" - ") : times}</span>
                       </div>
                     ))}
                   </div>

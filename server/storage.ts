@@ -2,7 +2,8 @@ import { IStorage } from "./interfaces";
 import {
   User, BaseStudent, Student, Group, Schedule, Attendance, Payment, StudentGroup, DateComment,
   InsertUser, InsertStudent, InsertGroup, InsertSchedule, InsertAttendance, InsertPayment, InsertStudentGroup, InsertDateComment,
-  users, students, groups, schedules, attendance, payments, studentGroups, dateComments
+  users, students, groups, schedules, attendance, payments, studentGroups, dateComments,
+  sportsSections, branches, branchSections
 } from "@shared/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
 import session from "express-session";
@@ -639,6 +640,34 @@ export class PostgresStorage implements IStorage {
       }
     } catch (error) {
       console.error('Error updating bulk attendance:', error);
+      throw error;
+    }
+  }
+
+  // Добавляем методы для работы с секциями и филиалами
+  async getSportsSections() {
+    try {
+      return await db.select().from(sportsSections);
+    } catch (error) {
+      console.error('Error getting sports sections:', error);
+      throw error;
+    }
+  }
+
+  async getBranchesBySection(sectionId: number) {
+    try {
+      return await db
+        .select({
+          id: branches.id,
+          name: branches.name,
+          address: branches.address,
+          schedule: branchSections.schedule
+        })
+        .from(branchSections)
+        .innerJoin(branches, eq(branches.id, branchSections.branchId))
+        .where(eq(branchSections.sectionId, sectionId));
+    } catch (error) {
+      console.error('Error getting branches by section:', error);
       throw error;
     }
   }
