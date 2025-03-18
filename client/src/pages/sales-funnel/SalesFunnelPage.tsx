@@ -1,15 +1,29 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTrialRequests } from "./hooks/useTrialRequests";
-import { RequestsTable } from "./components/RequestsTable";
 import { Loader2 } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RequestsTable } from "./components/RequestsTable";
+
+
+type StatusColumn = {
+  id: keyof typeof TrialRequestStatus;
+  title: string;
+};
+
+const statusColumns: StatusColumn[] = [
+  { id: "NEW", title: "Новые заявки" },
+  { id: "TRIAL_ASSIGNED", title: "Пробное назначено" },
+  { id: "REFUSED", title: "Отказ" },
+  { id: "SIGNED", title: "Записан" },
+];
 
 export default function SalesFunnelPage() {
   const { requests, isLoading, updateStatus } = useTrialRequests();
@@ -23,6 +37,20 @@ export default function SalesFunnelPage() {
     );
   }
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const requestId = parseInt(result.draggableId);
+    const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
+
+    updateStatus({ id: requestId, status: newStatus });
+  };
+
+  const requestsByStatus = statusColumns.reduce((acc, column) => {
+    acc[column.id] = requests?.filter(r => r.status === column.id) || [];
+    return acc;
+  }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
+
   return (
     <div className="container mx-auto py-6">
       <Card>
@@ -30,11 +58,50 @@ export default function SalesFunnelPage() {
           <CardTitle>Воронка продаж</CardTitle>
         </CardHeader>
         <CardContent>
-          <RequestsTable
-            requests={requests || []}
-            onStatusChange={(id, status) => updateStatus({ id, status })}
-            onRequestClick={setSelectedRequest}
-          />
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-4 gap-4">
+              {statusColumns.map(column => (
+                <div key={column.id} className="bg-muted/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4">{column.title}</h3>
+                  <Droppable droppableId={column.id}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="space-y-2"
+                      >
+                        {requestsByStatus[column.id].map((request, index) => (
+                          <Draggable
+                            key={request.id}
+                            draggableId={request.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="bg-background rounded-md p-3 shadow-sm"
+                              >
+                                <div className="font-medium">{request.childName}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {request.parentPhone}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {request.section?.name}
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              ))}
+            </div>
+          </DragDropContext>
         </CardContent>
       </Card>
 

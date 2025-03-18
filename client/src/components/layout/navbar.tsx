@@ -19,7 +19,7 @@ const navigation = [
   { name: "navigation.groups", href: "/groups", icon: Group, protected: true },
   { name: "navigation.attendance", href: "/attendance", icon: Calendar, protected: true },
   { name: "navigation.payments", href: "/payments", icon: CreditCard, protected: true },
-  { name: "navigation.salesFunnel", href: "/sales-funnel", icon: ClipboardList, protected: true },
+  { name: "Воронка продаж", href: "/sales-funnel", icon: ClipboardList, protected: true },
   { name: "navigation.trialRequest", href: "/trial-request", icon: ClipboardList, protected: false },
 ];
 
