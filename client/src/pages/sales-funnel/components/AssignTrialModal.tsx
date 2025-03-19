@@ -26,7 +26,7 @@ export function AssignTrialModal({ request, open, onClose, onSuccess }: AssignTr
     setIsLoading(true);
     try {
       await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
-        status: TrialRequestStatus.TRIAL_ASSIGNED,
+        status: "trial_assigned",
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
 

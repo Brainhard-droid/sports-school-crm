@@ -17,9 +17,9 @@ export function useTrialRequests() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: keyof typeof TrialRequestStatus }) => {
-      console.log('Updating trial request status:', { id, status });
-      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status });
+    mutationFn: async ({ id, status, scheduledDate }: { id: number; status: keyof typeof TrialRequestStatus; scheduledDate?: Date }) => {
+      console.log('Updating trial request status:', { id, status, scheduledDate });
+      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status, scheduledDate });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Ошибка при обновлении статуса');
@@ -35,7 +35,7 @@ export function useTrialRequests() {
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         return old.map(request =>
           request.id === params.id
-            ? { ...request, status: params.status }
+            ? { ...request, status: params.status, scheduledDate: params.scheduledDate }
             : request
         );
       });

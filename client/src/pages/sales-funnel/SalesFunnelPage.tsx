@@ -115,9 +115,9 @@ export default function SalesFunnelPage() {
                                   <div className="text-sm text-muted-foreground">
                                     {request.section?.name}
                                   </div>
-                                  {request.status === "TRIAL_ASSIGNED" && request.scheduledDate && (
-                                    <div className="text-sm text-muted-foreground">
-                                      Пробное: {format(new Date(request.scheduledDate), "dd.MM.yyyy, HH:mm")}
+                                  {request.scheduledDate && (
+                                    <div className="text-sm font-medium text-blue-600 mt-2">
+                                      Пробное: {new Date(request.scheduledDate).toLocaleString()}
                                     </div>
                                   )}
                                 </div>
