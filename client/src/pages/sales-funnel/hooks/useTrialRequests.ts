@@ -23,10 +23,7 @@ export function useTrialRequests() {
       scheduledDate?: Date;
     }) => {
       console.log('Updating trial request status:', { id, status, scheduledDate });
-      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { 
-        status,
-        scheduledDate: scheduledDate?.toISOString()
-      });
+      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status: status.toLowerCase(), scheduledDate });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Ошибка при обновлении статуса');
