@@ -28,13 +28,26 @@ export function useTrialRequests() {
       console.log('Update response:', data);
       return data;
     },
-    onSuccess: (data) => {
-      console.log('Update successful:', data);
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
+      const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
+
+      queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
+        return old.map(request =>
+          request.id === params.id
+            ? { ...request, status: params.status }
+            : request
+        );
+      });
+
+      return { previousRequests };
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
-    onError: (error) => {
-      console.error('Update failed:', error);
-    }
   });
 
   const updateRequestMutation = useMutation({
@@ -47,7 +60,18 @@ export function useTrialRequests() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
+      const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
+      queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
+        return old.map(request => request.id === params.id ? {...request, ...params.data} : request);
+      });
+      return { previousRequests };
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
   });
