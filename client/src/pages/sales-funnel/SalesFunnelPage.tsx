@@ -22,7 +22,7 @@ const statusColumns: StatusColumn[] = [
 ];
 
 export default function SalesFunnelPage() {
-  const { requests = [], isLoading } = useTrialRequests();
+  const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
 
@@ -38,7 +38,10 @@ export default function SalesFunnelPage() {
         setSelectedRequest(request);
         setShowAssignTrialModal(true);
       }
+      return;
     }
+
+    updateStatus({ id: requestId, status: newStatus });
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
@@ -140,7 +143,7 @@ export default function SalesFunnelPage() {
         {selectedRequest && showAssignTrialModal && (
           <AssignTrialModal
             request={selectedRequest}
-            open={showAssignTrialModal}
+            isOpen={showAssignTrialModal}
             onClose={handleModalClose}
             onSuccess={handleSuccess}
           />

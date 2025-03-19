@@ -10,12 +10,12 @@ import { useTrialRequests } from "../hooks/useTrialRequests";
 
 interface AssignTrialModalProps {
   request: ExtendedTrialRequest | null;
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function AssignTrialModal({ request, open, onClose, onSuccess }: AssignTrialModalProps) {
+export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: AssignTrialModalProps) {
   const [scheduledDate, setScheduledDate] = useState("");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +52,7 @@ export function AssignTrialModal({ request, open, onClose, onSuccess }: AssignTr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Назначить пробное занятие</DialogTitle>
