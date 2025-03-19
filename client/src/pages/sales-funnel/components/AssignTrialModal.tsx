@@ -53,10 +53,10 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="w-[90vw] max-w-lg">
         <DialogHeader>
           <DialogTitle>Назначить пробное занятие</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Выберите дату и время пробного занятия для {request?.childName}
           </DialogDescription>
         </DialogHeader>
