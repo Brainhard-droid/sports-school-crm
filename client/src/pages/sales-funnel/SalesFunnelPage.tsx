@@ -21,10 +21,10 @@ type StatusColumn = {
 };
 
 const statusColumns: StatusColumn[] = [
-  { id: "new", title: "Новые заявки" },
-  { id: "trial_assigned", title: "Пробное назначено" },
-  { id: "refused", title: "Отказ" },
-  { id: "signed", title: "Записан" },
+  { id: "NEW", title: "Новые заявки" },
+  { id: "TRIAL_ASSIGNED", title: "Пробное назначено" },
+  { id: "REFUSED", title: "Отказ" },
+  { id: "SIGNED", title: "Записан" },
 ];
 
 export default function SalesFunnelPage() {
