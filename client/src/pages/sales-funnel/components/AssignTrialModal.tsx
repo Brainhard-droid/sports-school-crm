@@ -28,26 +28,38 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
   const assignTrialMutation = useMutation({
     mutationFn: async () => {
       if (!request) return;
+      
+      console.log('Assigning trial request:', {
+        requestId: request.id,
+        scheduledDate,
+        status: TrialRequestStatus.TRIAL_ASSIGNED
+      });
 
       const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
         status: TrialRequestStatus.TRIAL_ASSIGNED,
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
 
+      const data = await res.json();
+      console.log('Assignment response:', data);
+
       if (!res.ok) {
-        const error = await res.json();
+        const error = data;
         throw new Error(error.message || "Ошибка при назначении пробного занятия");
       }
 
       return res.json();
     },
     onSuccess: () => {
+      console.log('Assignment mutation succeeded, invalidating queries...');
       toast({
         title: "Пробное занятие назначено",
         description: "Информация успешно обновлена",
       });
-      queryClient.invalidateQueries({ queryKey: ["trialRequests"] });
-      onClose();
+      queryClient.invalidateQueries({ queryKey: ["trialRequests"] }).then(() => {
+        console.log('Queries invalidated');
+        onClose();
+      });
     },
     onError: (error: Error) => {
       toast({
