@@ -605,6 +605,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Добавляем endpoint для обновления статуса заявки на пробное занятие
   app.put("/api/trial-requests/:id", async (req, res) => {
     try {
+      console.log('Received trial request update:', {
+        id: req.params.id,
+        body: req.body,
+        auth: req.isAuthenticated()
+      });
+
       if (!req.isAuthenticated()) return res.sendStatus(401);
 
       const id = parseInt(req.params.id);

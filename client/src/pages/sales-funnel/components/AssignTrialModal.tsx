@@ -30,11 +30,19 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const assignTrialMutation = useMutation({
     mutationFn: async () => {
       if (!request) return;
+      
+      console.log('Assigning trial:', {
+        requestId: request.id,
+        scheduledDate,
+        status: "trial_assigned"
+      });
 
       const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
-        status: "trial_assigned",
+        status: "trial_assigned", 
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
+
+      console.log('Assignment response:', await res.json());
 
       if (!res.ok) {
         const error = await res.json();
