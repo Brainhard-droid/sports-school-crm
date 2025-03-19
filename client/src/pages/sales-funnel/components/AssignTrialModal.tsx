@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import React from 'react';
 
 interface AssignTrialModalProps {
   request: ExtendedTrialRequest | null;
@@ -60,9 +61,11 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
         title: "Пробное занятие назначено",
         description: "Информация успешно обновлена",
       });
-      queryClient.invalidateQueries({ queryKey: ["trialRequests"] }).then(() => {
-        console.log('Queries invalidated');
-        onClose();
+      React.startTransition(() => { //Added startTransition here
+        queryClient.invalidateQueries({ queryKey: ["trialRequests"] }).then(() => {
+          console.log('Queries invalidated');
+          onClose();
+        });
       });
     },
     onError: (error: Error) => {
