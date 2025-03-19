@@ -1,12 +1,14 @@
+
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -30,7 +32,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       if (!request) return;
 
       const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
-        status: TrialRequestStatus.TRIAL_ASSIGNED,
+        status: "trial_assigned",
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
 
@@ -78,7 +80,6 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
               onChange={(e) => setScheduledDate(e.target.value)}
             />
           </div>
-
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
               Отмена
