@@ -24,11 +24,17 @@ export function useTrialRequests() {
         const error = await res.json();
         throw new Error(error.message || 'Ошибка при обновлении статуса');
       }
-      return res.json();
+      const data = await res.json();
+      console.log('Update response:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Update successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
+    onError: (error) => {
+      console.error('Update failed:', error);
+    }
   });
 
   const updateRequestMutation = useMutation({

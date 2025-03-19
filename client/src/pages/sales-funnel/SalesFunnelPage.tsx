@@ -38,13 +38,17 @@ export default function SalesFunnelPage() {
     const requestId = parseInt(result.draggableId);
     const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
 
+    console.log('Drag end:', { requestId, newStatus, result });
+
     if (newStatus === "trial_assigned") {
       const request = requests.find(r => r.id === requestId);
+      console.log('Found request:', request);
       if (request) {
         setSelectedRequest(request);
         setIsAssignTrialOpen(true);
       }
     } else {
+      console.log('Updating status directly:', { requestId, newStatus });
       updateStatus({ id: requestId, status: newStatus });
     }
   };
