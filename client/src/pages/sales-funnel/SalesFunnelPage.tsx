@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AssignTrialModal } from "./components/AssignTrialModal";
+import { format } from 'date-fns'; // Assuming date-fns is used for formatting
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -114,9 +115,9 @@ export default function SalesFunnelPage() {
                                   <div className="text-sm text-muted-foreground">
                                     {request.section?.name}
                                   </div>
-                                  {request.scheduledDate && (
+                                  {request.status === "TRIAL_ASSIGNED" && request.scheduledDate && (
                                     <div className="text-sm text-muted-foreground">
-                                      Пробное: {new Date(request.scheduledDate).toLocaleString()}
+                                      Пробное: {format(new Date(request.scheduledDate), "dd.MM.yyyy, HH:mm")}
                                     </div>
                                   )}
                                 </div>
