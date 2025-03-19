@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { 
+import {
   insertStudentSchema,
   insertGroupSchema,
   insertScheduleSchema,
@@ -626,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/trial-requests", async (req, res) => {
     try {
       console.log('GET /api/trial-requests - Auth status:', req.isAuthenticated());
-      
+
       if (!req.isAuthenticated()) {
         console.log('User not authenticated');
         return res.sendStatus(401);
@@ -651,9 +651,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!parsed.success) {
         console.error('Trial request validation error:', parsed.error.errors);
-        return res.status(400).json({ 
-          error: "Validation error", 
-          details: parsed.error.errors 
+        return res.status(400).json({
+          error: "Validation error",
+          details: parsed.error.errors
         });
       }
 
@@ -671,6 +671,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  //Adding the edited PATCH endpoint
+  app.patch("/api/trial-requests/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+
+      const id = parseInt(req.params.id);
+      const { status, scheduledDate } = req.body;
+
+      if (!Object.values(TrialRequestStatus).includes(status)) {
+        return res.status(400).json({ error: "Invalid trial request status" });
+      }
+
+      const updatedRequest = await storage.updateTrialRequest(id, {
+        status,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
+        updatedAt: new Date(),
+      });
+
+      // Send notification if trial is assigned
+      if (status === TrialRequestStatus.TRIAL_ASSIGNED && scheduledDate) {
+        try {
+          await sendTrialAssignmentNotification(updatedRequest);
+        } catch (error) {
+          console.error('Error sending notification:', error);
+          // Don't fail the request if notification fails
+        }
+      }
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating trial request:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+
   const httpServer = createServer(app);
   return httpServer;
 }
@@ -679,4 +715,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 async function hashPassword(password: string): Promise<string> {
   //Implementation for hashing password
   throw new Error("hashPassword function not implemented");
+}
+
+// Placeholder for the notification function - needs actual implementation
+async function sendTrialAssignmentNotification(request: any): Promise<void> {
+  console.log(`Sending notification for trial request ${request.id}...`);
+  // Add your notification logic here (e.g., using email, SMS, etc.)
+  throw new Error("sendTrialAssignmentNotification function not implemented");
 }
