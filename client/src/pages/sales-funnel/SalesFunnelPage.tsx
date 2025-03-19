@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTrialRequests } from "./hooks/useTrialRequests";
@@ -38,17 +37,13 @@ export default function SalesFunnelPage() {
     const requestId = parseInt(result.draggableId);
     const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
 
-    console.log('Drag end:', { requestId, newStatus, result });
-
-    if (newStatus === "trial_assigned") {
+    if (newStatus === "TRIAL_ASSIGNED") {
       const request = requests.find(r => r.id === requestId);
-      console.log('Found request:', request);
       if (request) {
         setSelectedRequest(request);
         setIsAssignTrialOpen(true);
       }
     } else {
-      console.log('Updating status directly:', { requestId, newStatus });
       updateStatus({ id: requestId, status: newStatus });
     }
   };
@@ -57,7 +52,7 @@ export default function SalesFunnelPage() {
     if (selectedRequest) {
       updateStatus({ 
         id: selectedRequest.id, 
-        status: "trial_assigned",
+        status: "TRIAL_ASSIGNED",
         scheduledDate: date 
       });
       setIsAssignTrialOpen(false);
@@ -119,6 +114,11 @@ export default function SalesFunnelPage() {
                                   <div className="text-sm text-muted-foreground">
                                     {request.section?.name}
                                   </div>
+                                  {request.scheduledDate && (
+                                    <div className="text-sm text-muted-foreground">
+                                      Пробное: {new Date(request.scheduledDate).toLocaleString()}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </Draggable>

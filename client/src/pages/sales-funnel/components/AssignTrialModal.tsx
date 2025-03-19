@@ -1,81 +1,52 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { Loader2 } from "lucide-react";
-import React from 'react';
+import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 
 interface AssignTrialModalProps {
   request: ExtendedTrialRequest | null;
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function AssignTrialModal({ request, open, onClose }: AssignTrialModalProps) {
+export function AssignTrialModal({ request, open, onClose, onSuccess }: AssignTrialModalProps) {
   const [scheduledDate, setScheduledDate] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const assignTrialMutation = useMutation({
-    mutationFn: async () => {
-      if (!request) return;
+  const handleSubmit = async () => {
+    if (!request) return;
 
-      // Обновляем статус заявки на TRIAL_ASSIGNED
-      await apiRequest('PUT', `/api/trial-requests/${request.id}`, {
-        status: 'TRIAL_ASSIGNED',
-        scheduledDate,
-      });
-
-      console.log('Assigning trial request:', {
-        requestId: request.id,
-        scheduledDate,
-        status: TrialRequestStatus.TRIAL_ASSIGNED
-      });
-
-      const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
+    setIsLoading(true);
+    try {
+      await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
         status: TrialRequestStatus.TRIAL_ASSIGNED,
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Ошибка при назначении пробного занятия");
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      console.log('Assignment mutation succeeded, invalidating queries...');
       toast({
         title: "Пробное занятие назначено",
         description: "Информация успешно обновлена",
       });
-      React.startTransition(() => { //Added startTransition here
-        queryClient.invalidateQueries({ queryKey: ["trialRequests"] }).then(() => {
-          console.log('Queries invalidated');
-          onClose();
-        });
-      });
-    },
-    onError: (error: Error) => {
+
+      onSuccess?.();
+      onClose();
+    } catch (error) {
       toast({
         title: "Ошибка",
-        description: error.message,
+        description: "Не удалось назначить пробное занятие",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -85,7 +56,7 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Дата занятия</Label>
+            <Label>Дата и время занятия</Label>
             <Input
               type="datetime-local"
               value={scheduledDate}
@@ -97,10 +68,10 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
               Отмена
             </Button>
             <Button
-              onClick={() => assignTrialMutation.mutate()}
-              disabled={assignTrialMutation.isPending || !scheduledDate}
+              onClick={handleSubmit}
+              disabled={isLoading || !scheduledDate}
             >
-              {assignTrialMutation.isPending ? (
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Сохранение...
