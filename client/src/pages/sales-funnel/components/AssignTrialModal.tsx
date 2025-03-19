@@ -1,48 +1,38 @@
-
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 interface AssignTrialModalProps {
   request: ExtendedTrialRequest | null;
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
 }
 
-export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: AssignTrialModalProps) {
+export function AssignTrialModal({ request, open, onClose }: AssignTrialModalProps) {
+  const [scheduledDate, setScheduledDate] = useState("");
   const { toast } = useToast();
-  const [scheduledDate, setScheduledDate] = useState<string>("");
+  const queryClient = useQueryClient();
 
   const assignTrialMutation = useMutation({
     mutationFn: async () => {
       if (!request) return;
-      
-      console.log('Assigning trial:', {
-        requestId: request.id,
-        scheduledDate,
-        status: "trial_assigned"
-      });
 
       const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
-        status: "trial_assigned", 
+        status: TrialRequestStatus.TRIAL_ASSIGNED,
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
-
-      console.log('Assignment response:', await res.json());
 
       if (!res.ok) {
         const error = await res.json();
@@ -54,9 +44,9 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
     onSuccess: () => {
       toast({
         title: "Пробное занятие назначено",
-        description: "Уведомление отправлено родителю",
+        description: "Информация успешно обновлена",
       });
-      onSuccess();
+      queryClient.invalidateQueries({ queryKey: ["trialRequests"] });
       onClose();
     },
     onError: (error: Error) => {
@@ -69,21 +59,16 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Назначить пробное занятие</DialogTitle>
-          <DialogDescription>
-            Выберите дату пробного занятия для {request?.childName}
-          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="scheduledDate">Дата занятия</Label>
+        <div className="space-y-4">
+          <div>
+            <Label>Дата занятия</Label>
             <Input
-              id="scheduledDate"
               type="datetime-local"
-              min={new Date().toISOString().split('T')[0]}
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
             />
@@ -94,7 +79,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
             </Button>
             <Button
               onClick={() => assignTrialMutation.mutate()}
-              disabled={!scheduledDate || assignTrialMutation.isPending}
+              disabled={assignTrialMutation.isPending || !scheduledDate}
             >
               {assignTrialMutation.isPending ? (
                 <>
@@ -102,7 +87,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
                   Сохранение...
                 </>
               ) : (
-                "Подтвердить"
+                "Назначить"
               )}
             </Button>
           </div>
