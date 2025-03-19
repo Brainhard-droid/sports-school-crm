@@ -29,8 +29,8 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const assignTrialMutation = useMutation({
     mutationFn: async () => {
       if (!request) return;
-      
-      const res = await apiRequest("PATCH", `/api/trial-requests/${request.id}`, {
+
+      const res = await apiRequest("PUT", `/api/trial-requests/${request.id}`, {
         status: TrialRequestStatus.TRIAL_ASSIGNED,
         scheduledDate: new Date(scheduledDate).toISOString(),
       });
@@ -70,7 +70,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
             Выберите дату пробного занятия для {request.childName}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="scheduledDate">Дата занятия</Label>
@@ -82,7 +82,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
               onChange={(e) => setScheduledDate(e.target.value)}
             />
           </div>
-          
+
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
               Отмена

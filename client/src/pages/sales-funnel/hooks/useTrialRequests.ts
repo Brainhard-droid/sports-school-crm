@@ -1,38 +1,29 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/utils/api";
+import { apiRequest } from "@/lib/api";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 
 export function useTrialRequests() {
   const queryClient = useQueryClient();
 
-  const { data: requests, isLoading, error } = useQuery<ExtendedTrialRequest[]>({
+  const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
     queryFn: async () => {
       console.log('Fetching trial requests...');
-      try {
-        const res = await apiRequest("GET", "/api/trial-requests");
-        const data = await res.json();
-        console.log('Received trial requests:', data);
-        console.log('Requests by status:', data.reduce((acc: any, req: any) => {
-          acc[req.status] = (acc[req.status] || 0) + 1;
-          return acc;
-        }, {}));
-        return data;
-      } catch (err) {
-        console.error('Error fetching trial requests:', err);
-        throw err;
-      }
+      const res = await apiRequest("GET", "/api/trial-requests");
+      const data = await res.json();
+      console.log('Received trial requests:', data);
+      return data;
     },
-    suspense: false,
-    retry: false,
-    staleTime: 0,
-    cacheTime: 0
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: keyof typeof TrialRequestStatus }) => {
+      console.log('Updating trial request status:', { id, status });
       const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Ошибка при обновлении статуса');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -42,7 +33,12 @@ export function useTrialRequests() {
 
   const updateRequestMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ExtendedTrialRequest> }) => {
+      console.log('Updating trial request:', { id, data });
       const res = await apiRequest("PUT", `/api/trial-requests/${id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Ошибка при обновлении заявки');
+      }
       return res.json();
     },
     onSuccess: () => {

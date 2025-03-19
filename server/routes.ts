@@ -608,13 +608,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.isAuthenticated()) return res.sendStatus(401);
 
       const id = parseInt(req.params.id);
-      const { status } = req.body;
+      const { status, scheduledDate } = req.body;
+
+      console.log('Updating trial request:', { id, status, scheduledDate });
 
       if (!Object.values(TrialRequestStatus).includes(status)) {
         return res.status(400).json({ error: "Invalid trial request status" });
       }
 
-      const updatedRequest = await storage.updateTrialRequest(id, { status });
+      const updatedRequest = await storage.updateTrialRequest(id, {
+        status,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
+        updatedAt: new Date(),
+      });
+
+      // Send notification if trial is assigned
+      if (status === TrialRequestStatus.TRIAL_ASSIGNED && scheduledDate) {
+        try {
+          await sendTrialAssignmentNotification(updatedRequest);
+        } catch (error) {
+          console.error('Error sending notification:', error);
+          // Don't fail the request if notification fails
+        }
+      }
+
+      console.log('Updated trial request:', updatedRequest);
       res.json(updatedRequest);
     } catch (error) {
       console.error('Error updating trial request:', error);
