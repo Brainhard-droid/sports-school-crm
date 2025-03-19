@@ -38,7 +38,7 @@ export function TrialRequestCard({ request, onAssignTrial, onEdit }: TrialReques
             )}
           </div>
         </div>
-        
+
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -48,12 +48,12 @@ export function TrialRequestCard({ request, onAssignTrial, onEdit }: TrialReques
                 : `Желаемая дата: ${formatDate(request.desiredDate)}`}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span>{request.branch?.name} - {request.section?.name}</span>
           </div>
-          
+
           <div className="mt-2">
             <p className="text-sm font-medium">Контакты родителя:</p>
             <p className="text-sm">{request.parentName}</p>

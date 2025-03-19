@@ -17,25 +17,34 @@ export function useTrialRequests() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, scheduledDate }: { id: number; status: keyof typeof TrialRequestStatus; scheduledDate?: Date }) => {
+    mutationFn: async ({ id, status, scheduledDate }: { 
+      id: number; 
+      status: keyof typeof TrialRequestStatus;
+      scheduledDate?: Date;
+    }) => {
       console.log('Updating trial request status:', { id, status, scheduledDate });
-      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { status, scheduledDate });
+      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { 
+        status,
+        scheduledDate: scheduledDate?.toISOString()
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Ошибка при обновлении статуса');
       }
-      const data = await res.json();
-      console.log('Update response:', data);
-      return data;
+      return res.json();
     },
-    onMutate: async (params) => {
+    onMutate: async (variables) => {
+      // Отменяем текущие запросы
       await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
+
+      // Сохраняем предыдущее состояние
       const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
 
+      // Оптимистично обновляем UI
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         return old.map(request =>
-          request.id === params.id
-            ? { ...request, status: params.status, scheduledDate: params.scheduledDate }
+          request.id === variables.id
+            ? { ...request, status: variables.status, scheduledDate: variables.scheduledDate }
             : request
         );
       });
@@ -43,9 +52,11 @@ export function useTrialRequests() {
       return { previousRequests };
     },
     onError: (_, __, context) => {
+      // При ошибке возвращаем предыдущее состояние
       queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
     },
     onSettled: () => {
+      // В любом случае инвалидируем кеш
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
   });
@@ -60,18 +71,7 @@ export function useTrialRequests() {
       }
       return res.json();
     },
-    onMutate: async (params) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
-      const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
-      queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
-        return old.map(request => request.id === params.id ? {...request, ...params.data} : request);
-      });
-      return { previousRequests };
-    },
-    onError: (_, __, context) => {
-      queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
   });
