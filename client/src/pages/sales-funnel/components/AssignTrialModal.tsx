@@ -106,3 +106,70 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
     </Dialog>
   );
 }
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ExtendedTrialRequest } from "@shared/schema";
+import { useState } from "react";
+
+interface AssignTrialModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (date: Date) => void;
+  request: ExtendedTrialRequest | null;
+}
+
+export function AssignTrialModal({ open, onClose, onConfirm, request }: AssignTrialModalProps) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+
+  const handleConfirm = () => {
+    if (date && time) {
+      const dateTime = new Date(`${date}T${time}`);
+      onConfirm(dateTime);
+    }
+  };
+
+  if (!request) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Назначить пробное занятие</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <label>Дата занятия</label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <label>Время занятия</label>
+            <Input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Отмена
+            </Button>
+            <Button onClick={handleConfirm}>
+              Подтвердить
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
