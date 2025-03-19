@@ -29,6 +29,12 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
     mutationFn: async () => {
       if (!request) return;
 
+      // Обновляем статус заявки на TRIAL_ASSIGNED
+      await apiRequest('PUT', `/api/trial-requests/${request.id}`, {
+        status: 'TRIAL_ASSIGNED',
+        scheduledDate,
+      });
+
       console.log('Assigning trial request:', {
         requestId: request.id,
         scheduledDate,
