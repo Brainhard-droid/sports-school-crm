@@ -53,7 +53,7 @@ export default function SalesFunnelPage() {
     if (selectedRequest) {
       updateStatus({ 
         id: selectedRequest.id, 
-        status: "TRIAL_ASSIGNED",
+        status: "trial_assigned",
         scheduledDate: date 
       });
       setIsAssignTrialOpen(false);
