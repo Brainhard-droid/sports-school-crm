@@ -42,7 +42,7 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    acc[column.id] = requests.filter(r => r.status === column.id);
+    acc[column.id] = requests.filter(r => r.status.toUpperCase() === column.id);
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
