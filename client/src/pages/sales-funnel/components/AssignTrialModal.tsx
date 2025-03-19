@@ -28,7 +28,7 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
   const assignTrialMutation = useMutation({
     mutationFn: async () => {
       if (!request) return;
-      
+
       console.log('Assigning trial request:', {
         requestId: request.id,
         scheduledDate,
@@ -41,14 +41,12 @@ export function AssignTrialModal({ request, open, onClose }: AssignTrialModalPro
       });
 
       const data = await res.json();
-      console.log('Assignment response:', data);
 
       if (!res.ok) {
-        const error = data;
-        throw new Error(error.message || "Ошибка при назначении пробного занятия");
+        throw new Error(data.error || "Ошибка при назначении пробного занятия");
       }
 
-      return res.json();
+      return data;
     },
     onSuccess: () => {
       console.log('Assignment mutation succeeded, invalidating queries...');
