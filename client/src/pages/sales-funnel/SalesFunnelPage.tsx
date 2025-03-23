@@ -8,6 +8,17 @@ import { Layout } from "@/components/layout/navbar";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -25,6 +36,8 @@ export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const { toast } = useToast();
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -45,20 +58,54 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    acc[column.id] = requests.filter(r => r.status.toUpperCase() === column.id);
+    acc[column.id] = requests.filter(r => r.status === column.id);
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
   const handleEdit = (request: ExtendedTrialRequest) => {
-    console.log('Editing request:', request);
     setSelectedRequest(request);
     setShowAssignTrialModal(false);
   };
 
   const handleAssignTrial = (request: ExtendedTrialRequest) => {
-    console.log('Assigning trial for request:', request);
     setSelectedRequest(request);
     setShowAssignTrialModal(true);
+  };
+
+  const handleRescheduleTrial = (request: ExtendedTrialRequest) => {
+    setSelectedRequest(request);
+    setShowAssignTrialModal(true);
+  };
+
+  const handleCancelTrial = (request: ExtendedTrialRequest) => {
+    setSelectedRequest(request);
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelTrial = async () => {
+    if (!selectedRequest) return;
+
+    try {
+      await updateStatus({ 
+        id: selectedRequest.id, 
+        status: "NEW",
+        scheduledDate: undefined
+      });
+
+      toast({
+        title: "Пробное занятие отменено",
+        description: "Заявка возвращена в статус 'Новая'",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отменить пробное занятие",
+        variant: "destructive",
+      });
+    }
+
+    setShowCancelDialog(false);
+    setSelectedRequest(null);
   };
 
   const handleModalClose = () => {
@@ -115,6 +162,8 @@ export default function SalesFunnelPage() {
                                     request={request}
                                     onEdit={handleEdit}
                                     onAssignTrial={handleAssignTrial}
+                                    onRescheduleTrial={handleRescheduleTrial}
+                                    onCancelTrial={handleCancelTrial}
                                   />
                                 </div>
                               )}
@@ -148,6 +197,23 @@ export default function SalesFunnelPage() {
             onSuccess={handleSuccess}
           />
         )}
+
+        <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Отменить пробное занятие?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Заявка будет возвращена в статус "Новая". Это действие нельзя отменить.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmCancelTrial}>
+                Подтвердить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
