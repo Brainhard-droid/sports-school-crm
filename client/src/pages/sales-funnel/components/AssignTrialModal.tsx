@@ -22,11 +22,14 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const { updateStatus } = useTrialRequests();
 
   useEffect(() => {
-    if (request?.desiredDate) {
-      // Преобразуем дату в формат datetime-local
-      const date = new Date(request.desiredDate);
-      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-      setScheduledDate(localDate.toISOString().slice(0, 16));
+    if (request) {
+      // Используем текущую назначенную дату или желаемую дату из заявки
+      const initialDate = request.scheduledDate || request.desiredDate;
+      if (initialDate) {
+        const date = new Date(initialDate);
+        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        setScheduledDate(localDate.toISOString().slice(0, 16));
+      }
     }
   }, [request]);
 
@@ -42,7 +45,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       });
 
       toast({
-        title: "Пробное занятие назначено",
+        title: request.status === TrialRequestStatus.TRIAL_ASSIGNED ? "Пробное занятие перенесено" : "Пробное занятие назначено",
         description: "Информация успешно обновлена",
       });
 
@@ -64,7 +67,11 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] max-w-lg">
         <DialogHeader>
-          <DialogTitle>Назначить пробное занятие</DialogTitle>
+          <DialogTitle>
+            {request?.status === TrialRequestStatus.TRIAL_ASSIGNED
+              ? "Перенести пробное занятие"
+              : "Назначить пробное занятие"}
+          </DialogTitle>
           <DialogDescription>
             Выберите дату и время пробного занятия для {request?.childName}
           </DialogDescription>
@@ -89,10 +96,12 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Сохранение...
+                  Назначение...
                 </>
               ) : (
-                "Назначить"
+                request?.status === TrialRequestStatus.TRIAL_ASSIGNED
+                  ? "Перенести"
+                  : "Назначить"
               )}
             </Button>
           </div>

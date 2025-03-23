@@ -32,7 +32,10 @@ export default function SalesFunnelPage() {
     const requestId = parseInt(result.draggableId);
     const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
 
-    if (newStatus === "TRIAL_ASSIGNED") {
+    console.log('Dragging request:', { requestId, newStatus });
+
+    // Если перетаскиваем в "Пробное назначено", открываем модальное окно
+    if (newStatus === TrialRequestStatus.TRIAL_ASSIGNED) {
       const request = requests.find(r => r.id === requestId);
       if (request) {
         setSelectedRequest(request);
@@ -41,11 +44,12 @@ export default function SalesFunnelPage() {
       return;
     }
 
+    // Для остальных статусов просто обновляем статус
     updateStatus({ id: requestId, status: newStatus });
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    acc[column.id] = requests.filter(r => r.status.toUpperCase() === column.id);
+    acc[column.id] = requests.filter(r => r.status === column.id);
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
