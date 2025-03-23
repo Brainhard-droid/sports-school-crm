@@ -659,6 +659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Fetching trial requests from storage...');
       const requests = await storage.getTrialRequests();
       console.log('Retrieved trial requests:', requests);
+      console.log('Requests by status:', requests.reduce((acc: any, req: any) => {
+        acc[req.status] = (acc[req.status] || 0) + 1;
+        return acc;
+      }, {}));
       res.json(requests);
     } catch (error) {
       console.error('Error getting trial requests:', error);
@@ -684,7 +688,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Parsed trial request data:', parsed.data);
       const request = await storage.createTrialRequest({
         ...parsed.data,
+        status: TrialRequestStatus.NEW,
+        scheduledDate: null,
         desiredDate: new Date(parsed.data.desiredDate),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        notes: null
       });
 
       console.log('Created trial request:', request);
@@ -729,6 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: (error as Error).message });
     }
   });
+
 
 
   const httpServer = createServer(app);
