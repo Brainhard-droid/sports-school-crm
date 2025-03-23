@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTrialRequests } from "../hooks/useTrialRequests";
 
 interface AssignTrialModalProps {
@@ -20,6 +20,15 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { updateStatus } = useTrialRequests();
+
+  useEffect(() => {
+    if (request?.desiredDate) {
+      // Преобразуем дату в формат datetime-local
+      const date = new Date(request.desiredDate);
+      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      setScheduledDate(localDate.toISOString().slice(0, 16));
+    }
+  }, [request]);
 
   const handleSubmit = async () => {
     if (!request) return;
@@ -56,12 +65,12 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       <DialogContent className="w-[90vw] max-w-lg">
         <DialogHeader>
           <DialogTitle>Назначить пробное занятие</DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription>
             Выберите дату и время пробного занятия для {request?.childName}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
             <Label>Дата и время занятия</Label>
             <Input
               type="datetime-local"

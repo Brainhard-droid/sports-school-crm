@@ -73,7 +73,7 @@ export function EditTrialRequestModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[90vw] max-w-lg">
           <DialogHeader>
             <DialogTitle>Просмотр заявки</DialogTitle>
             <DialogDescription>
@@ -81,8 +81,8 @@ export function EditTrialRequestModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
               <Label>ФИО ребенка</Label>
               <Input
                 value={formData.childName}
@@ -90,7 +90,7 @@ export function EditTrialRequestModal({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>Возраст</Label>
               <Input
                 type="number"
@@ -99,7 +99,7 @@ export function EditTrialRequestModal({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>ФИО родителя</Label>
               <Input
                 value={formData.parentName}
@@ -107,7 +107,7 @@ export function EditTrialRequestModal({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>Телефон родителя</Label>
               <Input
                 value={formData.parentPhone}
@@ -115,12 +115,12 @@ export function EditTrialRequestModal({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>Секция</Label>
               <div className="text-sm text-muted-foreground">{request.section?.name}</div>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>Филиал</Label>
               <div className="text-sm text-muted-foreground">{request.branch?.name}</div>
             </div>
