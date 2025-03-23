@@ -1,30 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Edit, MapPin, MoreVertical } from "lucide-react";
+import { Calendar, Edit, MapPin } from "lucide-react";
 import { ExtendedTrialRequest } from "@shared/schema";
 import { formatDate } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface TrialRequestCardProps {
   request: ExtendedTrialRequest;
   onAssignTrial: (request: ExtendedTrialRequest) => void;
   onEdit: (request: ExtendedTrialRequest) => void;
-  onRescheduleTrial?: (request: ExtendedTrialRequest) => void;
-  onCancelTrial?: (request: ExtendedTrialRequest) => void;
 }
 
-export function TrialRequestCard({ 
-  request, 
-  onAssignTrial, 
-  onEdit,
-  onRescheduleTrial,
-  onCancelTrial
-}: TrialRequestCardProps) {
+export function TrialRequestCard({ request, onAssignTrial, onEdit }: TrialRequestCardProps) {
   return (
     <Card className="mb-4">
       <CardContent className="pt-4">
@@ -49,26 +35,6 @@ export function TrialRequestCard({
               >
                 Назначить пробное
               </Button>
-            )}
-            {request.status === "TRIAL_ASSIGNED" && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => onRescheduleTrial?.(request)}>
-                    Перенести пробное
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-destructive"
-                    onClick={() => onCancelTrial?.(request)}
-                  >
-                    Отменить пробное
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             )}
           </div>
         </div>
