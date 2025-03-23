@@ -24,7 +24,7 @@ export function useTrialRequests() {
     }) => {
       console.log('Updating trial request status:', { id, status, scheduledDate });
       const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { 
-        status,
+        status: status.toUpperCase(), //Corrected line
         scheduledDate: scheduledDate?.toISOString()
       });
       if (!res.ok) {
