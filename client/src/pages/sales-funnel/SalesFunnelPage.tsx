@@ -39,8 +39,6 @@ export default function SalesFunnelPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const { toast } = useToast();
 
-  console.log('Current requests:', requests);
-
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -60,8 +58,7 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    console.log(`Filtering for status ${column.id}:`, requests?.filter(r => r.status === column.id));
-    acc[column.id] = requests?.filter(r => r.status === column.id) || [];
+    acc[column.id] = requests.filter(r => r.status === column.id);
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
@@ -149,7 +146,7 @@ export default function SalesFunnelPage() {
                           {...provided.droppableProps}
                           className="space-y-2 min-h-[200px]"
                         >
-                          {requestsByStatus[column.id]?.map((request, index) => (
+                          {requestsByStatus[column.id].map((request, index) => (
                             <Draggable
                               key={request.id}
                               draggableId={request.id.toString()}

@@ -12,10 +12,6 @@ export function useTrialRequests() {
       const res = await apiRequest("GET", "/api/trial-requests");
       const data = await res.json();
       console.log('Received trial requests:', data);
-      console.log('Requests by status:', data.reduce((acc: any, req: any) => {
-        acc[req.status] = (acc[req.status] || 0) + 1;
-        return acc;
-      }, {}));
       return data;
     },
   });
@@ -47,8 +43,8 @@ export function useTrialRequests() {
           request.id === variables.id
             ? { 
                 ...request, 
-                status: variables.status as string, 
-                scheduledDate: variables.scheduledDate?.toISOString() || null 
+                status: variables.status, 
+                scheduledDate: variables.scheduledDate?.toISOString() || null
               }
             : request
         );
