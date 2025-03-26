@@ -72,23 +72,27 @@ export default function TrialRequestPage() {
     (branch) => branch.id === Number(form.watch("branchId"))
   );
 
-  const schedule = selectedBranch ? JSON.parse(selectedBranch.schedule) : null;
-
-  // Обновляем доступные даты при изменении расписания
+  // Обновляем доступные даты при изменении филиала
   useEffect(() => {
-    if (schedule) {
-      // Преобразуем текст расписания в формат, понятный для getNextLessonDates
-      const scheduleText = Object.entries(schedule)
-        .map(([day, time]) => `${day}: ${time}`)
-        .join('\n');
+    if (selectedBranch?.schedule) {
+      try {
+        const scheduleData = JSON.parse(selectedBranch.schedule);
+        const scheduleText = Object.entries(scheduleData)
+          .filter(([_, time]) => time) // Фильтруем только дни с указанным временем
+          .map(([day, time]) => `${day}: ${time}`)
+          .join('\n');
 
-      const parsedSchedule = parseScheduleFromText(scheduleText);
-      const nextDates = getNextLessonDates(parsedSchedule, 5);
-      setAvailableDates(nextDates);
+        const parsedSchedule = parseScheduleFromText(scheduleText);
+        const nextDates = getNextLessonDates(parsedSchedule, 5);
+        setAvailableDates(nextDates);
+      } catch (error) {
+        console.error('Error parsing schedule:', error);
+        setAvailableDates([]);
+      }
     } else {
       setAvailableDates([]);
     }
-  }, [schedule]);
+  }, [selectedBranch]);
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
@@ -116,6 +120,7 @@ export default function TrialRequestPage() {
         parentPhone: "+7",
         sectionId: undefined,
         branchId: undefined,
+        desiredDate: undefined,
       });
     },
     onError: (error: Error) => {
@@ -215,13 +220,11 @@ export default function TrialRequestPage() {
                         {...field}
                         onChange={(e) => {
                           let value = e.target.value;
-                          // Ensure the value starts with +7
                           if (!value.startsWith('+7')) {
                             value = '+7' + value.replace(/[^\d]/g, '');
                           } else {
                             value = value.replace(/[^\d+]/g, '');
                           }
-                          // Limit to 12 characters (+7 plus 10 digits)
                           value = value.slice(0, 12);
                           field.onChange(value);
                         }}
@@ -239,8 +242,9 @@ export default function TrialRequestPage() {
                     <FormLabel>Секция</FormLabel>
                     <Select
                       onValueChange={(value) => {
-                        field.onChange(parseInt(value));
+                        field.onChange(value ? parseInt(value) : undefined);
                         form.setValue("branchId", undefined);
+                        form.setValue("desiredDate", undefined);
                       }}
                       value={field.value?.toString()}
                     >
@@ -272,7 +276,10 @@ export default function TrialRequestPage() {
                     <FormItem>
                       <FormLabel>Отделение</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        onValueChange={(value) => {
+                          field.onChange(value ? parseInt(value) : undefined);
+                          form.setValue("desiredDate", undefined);
+                        }}
                         value={field.value?.toString()}
                       >
                         <FormControl>
@@ -296,7 +303,7 @@ export default function TrialRequestPage() {
                   )}
                 />
               )}
-              {schedule && (
+              {selectedBranch?.schedule && (
                 <FormField
                   control={form.control}
                   name="desiredDate"
@@ -331,6 +338,21 @@ export default function TrialRequestPage() {
                     </FormItem>
                   )}
                 />
+              )}
+              {selectedBranch?.schedule && (
+                <div className="space-y-2 border rounded-md p-4 bg-muted/50">
+                  <h4 className="text-sm font-medium">Расписание занятий:</h4>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    {Object.entries(JSON.parse(selectedBranch.schedule))
+                      .filter(([_, time]) => time) // Показываем только дни с указанным временем
+                      .map(([day, times]) => (
+                        <div key={day} className="flex justify-between">
+                          <span>{day}:</span>
+                          <span>{times}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               )}
               <Button
                 type="submit"
