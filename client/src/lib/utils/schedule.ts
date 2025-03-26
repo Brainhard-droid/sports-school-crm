@@ -8,45 +8,54 @@ interface WeekSchedule {
   [key: string]: DaySchedule | null; // monday, tuesday, etc.
 }
 
-export function getNextLessonDates(schedule: WeekSchedule, count: number = 5): string[] {
-  const today = new Date();
+export function getNextLessonDates(schedule: Record<string, string>, count: number) {
+  console.log('Getting next lesson dates for schedule:', schedule);
   const dates: string[] = [];
-  const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  let currentDate = today;
-  
-  while (dates.length < count) {
-    const dayOfWeek = weekDays[currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1];
-    const daySchedule = schedule[dayOfWeek];
-    
-    if (daySchedule) {
-      const [startTime] = daySchedule.time.split(' - ');
-      const lessonDate = new Date(currentDate);
-      const [hours, minutes] = startTime.split(':');
-      
-      lessonDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      
-      if (isBefore(today, lessonDate)) {
-        dates.push(format(lessonDate, "yyyy-MM-dd'T'HH:mm"));
+  let currentDate = new Date();
+  let attempts = 0;
+  const maxAttempts = count * 7; // Предотвращаем бесконечный цикл
+
+  while (dates.length < count && attempts < maxAttempts) {
+    const dayName = currentDate.toLocaleString('ru-RU', { weekday: 'long' }).toLowerCase();
+    const time = schedule[dayName];
+
+    console.log('Checking date:', currentDate, 'Day:', dayName, 'Time:', time);
+
+    if (time) {
+      try {
+        const [hours, minutes] = time.split(':').map(Number);
+        const lessonDate = new Date(currentDate);
+        lessonDate.setHours(hours, minutes, 0, 0);
+
+        if (lessonDate > new Date()) {
+          console.log('Adding lesson date:', lessonDate);
+          dates.push(lessonDate.toISOString());
+        }
+      } catch (error) {
+        console.error('Error processing time:', time, error);
       }
     }
-    
-    currentDate = addDays(currentDate, 1);
+
+    currentDate.setDate(currentDate.getDate() + 1);
+    attempts++;
   }
-  
+
+  console.log('Generated dates:', dates);
   return dates;
 }
 
-export function parseScheduleFromText(scheduleText: string): WeekSchedule {
-  const schedule: WeekSchedule = {};
+export function parseScheduleFromText(scheduleText: string) {
+  console.log('Parsing schedule text:', scheduleText);
+  const schedule: Record<string, string> = {};
   const lines = scheduleText.split('\n');
-  
+
   lines.forEach(line => {
     const [day, time] = line.split(':').map(s => s.trim());
     if (day && time) {
-      const normalizedDay = day.toLowerCase();
-      schedule[normalizedDay] = { time };
+      schedule[day.toLowerCase()] = time;
     }
   });
-  
+
+  console.log('Parsed schedule:', schedule);
   return schedule;
 }

@@ -76,23 +76,39 @@ export default function TrialRequestPage() {
   useEffect(() => {
     if (selectedBranch?.schedule) {
       try {
+        console.log('Processing schedule for branch:', selectedBranch);
         const scheduleData = JSON.parse(selectedBranch.schedule);
+        console.log('Parsed schedule data:', scheduleData);
+        
+        // Преобразуем расписание в формат для парсера
         const scheduleText = Object.entries(scheduleData)
-          .filter(([_, time]) => time) // Фильтруем только дни с указанным временем
+          .filter(([_, time]) => time && String(time).trim() !== '')
           .map(([day, time]) => `${day}: ${time}`)
           .join('\n');
-
+        
+        console.log('Schedule text for parsing:', scheduleText);
+        
         const parsedSchedule = parseScheduleFromText(scheduleText);
+        console.log('Parsed schedule:', parsedSchedule);
+        
         const nextDates = getNextLessonDates(parsedSchedule, 5);
+        console.log('Generated next dates:', nextDates);
+        
         setAvailableDates(nextDates);
+        
+        // Автоматически устанавливаем первую доступную дату
+        if (nextDates.length > 0) {
+          form.setValue('desiredDate', nextDates[0]);
+        }
       } catch (error) {
-        console.error('Error parsing schedule:', error);
+        console.error('Error processing schedule:', error);
         setAvailableDates([]);
       }
     } else {
+      console.log('No schedule available for branch');
       setAvailableDates([]);
     }
-  }, [selectedBranch]);
+  }, [selectedBranch, form]);
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
