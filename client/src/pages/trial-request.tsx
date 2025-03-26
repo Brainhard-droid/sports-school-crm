@@ -25,6 +25,9 @@ import {
 import { useState, useEffect } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
 import { getNextLessonDates, parseScheduleFromText } from "@/lib/utils/schedule";
+import { Suspense, lazy } from 'react'; // Import Suspense and lazy
+
+const ErrorBoundary = lazy(() => import('./ErrorBoundary')); //Import ErrorBoundary component
 
 type BranchWithSchedule = {
   id: number;
@@ -175,6 +178,8 @@ export default function TrialRequestPage() {
   }
 
   return (
+    <ErrorBoundary> {/* Added ErrorBoundary */}
+      <Suspense fallback={<div>Loading...</div>}> {/* Added Suspense */}
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
@@ -421,5 +426,7 @@ export default function TrialRequestPage() {
         </DialogContent>
       </Dialog>
     </div>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
