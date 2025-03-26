@@ -27,7 +27,7 @@ import { Loader2, CheckCircle } from "lucide-react";
 import { getNextLessonDates, parseScheduleFromText } from "@/lib/utils/schedule";
 import { Suspense, lazy } from 'react'; // Import Suspense and lazy
 
-const ErrorBoundary = lazy(() => import('./ErrorBoundary')); //Import ErrorBoundary component
+const ErrorBoundary = lazy(() => import('@/components/error-boundary'));
 
 type BranchWithSchedule = {
   id: number;
