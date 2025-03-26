@@ -22,8 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
+import { getNextLessonDates, parseScheduleFromText } from "@/lib/utils/schedule";
 
 type BranchWithSchedule = {
   id: number;
@@ -35,6 +36,7 @@ type BranchWithSchedule = {
 export default function TrialRequestPage() {
   const { toast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -45,7 +47,7 @@ export default function TrialRequestPage() {
       parentPhone: "+7",
       sectionId: undefined,
       branchId: undefined,
-      desiredDate: new Date().toISOString().split('T')[0],
+      desiredDate: undefined,
     },
   });
 
@@ -71,6 +73,22 @@ export default function TrialRequestPage() {
   );
 
   const schedule = selectedBranch ? JSON.parse(selectedBranch.schedule) : null;
+
+  // Обновляем доступные даты при изменении расписания
+  useEffect(() => {
+    if (schedule) {
+      // Преобразуем текст расписания в формат, понятный для getNextLessonDates
+      const scheduleText = Object.entries(schedule)
+        .map(([day, time]) => `${day}: ${time}`)
+        .join('\n');
+
+      const parsedSchedule = parseScheduleFromText(scheduleText);
+      const nextDates = getNextLessonDates(parsedSchedule, 5);
+      setAvailableDates(nextDates);
+    } else {
+      setAvailableDates([]);
+    }
+  }, [schedule]);
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
@@ -98,7 +116,6 @@ export default function TrialRequestPage() {
         parentPhone: "+7",
         sectionId: undefined,
         branchId: undefined,
-        desiredDate: new Date().toISOString().split('T')[0],
       });
     },
     onError: (error: Error) => {
@@ -280,35 +297,41 @@ export default function TrialRequestPage() {
                 />
               )}
               {schedule && (
-                <div className="space-y-2 border rounded-md p-4 bg-muted/50">
-                  <h4 className="text-sm font-medium">Расписание занятий:</h4>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    {Object.entries(schedule).map(([day, times]) => (
-                      <div key={day} className="flex justify-between">
-                        <span>{day}:</span>
-                        <span>{Array.isArray(times) ? times.join(" - ") : times}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="desiredDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Выберите дату пробного занятия</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите дату занятия" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableDates.map((date) => (
+                            <SelectItem key={date} value={date}>
+                              {new Date(date).toLocaleString('ru-RU', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-              <FormField
-                control={form.control}
-                name="desiredDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Желаемая дата занятия</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <Button
                 type="submit"
                 className="w-full"
