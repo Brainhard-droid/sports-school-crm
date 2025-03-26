@@ -295,9 +295,8 @@ export default function TrialRequestPage() {
                         onValueChange={(value) => {
                           const parsedValue = value ? parseInt(value) : undefined;
                           field.onChange(parsedValue);
-                          if (!parsedValue) {
-                            form.setValue("desiredDate", undefined);
-                          }
+                          // Сбрасываем дату при смене филиала
+                          form.setValue("desiredDate", undefined);
                         }}
                         value={field.value?.toString() || ""}
                       >
