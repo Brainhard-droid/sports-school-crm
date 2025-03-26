@@ -58,15 +58,32 @@ export default function TrialRequestPage() {
 
   // Fetch branches with schedule based on selected section
   const sectionId = form.watch("sectionId");
-  const { data: branchesForSection, isLoading: branchesLoading } = useQuery<BranchWithSchedule[]>({
+  const { data: branchesForSection, isLoading: branchesLoading, error: branchesError } = useQuery<BranchWithSchedule[]>({
     queryKey: ["branches-by-section", sectionId],
     enabled: !!sectionId,
     queryFn: async ({ queryKey }) => {
       const [, sectionId] = queryKey;
-      const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
-      return res.json();
+      console.log('Fetching branches for section:', sectionId);
+      try {
+        const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
+        const data = await res.json();
+        console.log('Received branches data:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        throw error;
+      }
     },
+    retry: false,
+    staleTime: 30000,
   });
+
+  // Log any errors or loading states
+  useEffect(() => {
+    if (branchesError) {
+      console.error('Branches query error:', branchesError);
+    }
+  }, [branchesError]);
 
   const selectedBranch = branchesForSection?.find(
     (branch) => branch.id === Number(form.watch("branchId"))
