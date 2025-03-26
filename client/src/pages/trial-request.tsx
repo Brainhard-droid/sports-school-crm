@@ -79,23 +79,23 @@ export default function TrialRequestPage() {
         console.log('Processing schedule for branch:', selectedBranch);
         const scheduleData = JSON.parse(selectedBranch.schedule);
         console.log('Parsed schedule data:', scheduleData);
-        
+
         // Преобразуем расписание в формат для парсера
         const scheduleText = Object.entries(scheduleData)
           .filter(([_, time]) => time && String(time).trim() !== '')
           .map(([day, time]) => `${day}: ${time}`)
           .join('\n');
-        
+
         console.log('Schedule text for parsing:', scheduleText);
-        
+
         const parsedSchedule = parseScheduleFromText(scheduleText);
         console.log('Parsed schedule:', parsedSchedule);
-        
+
         const nextDates = getNextLessonDates(parsedSchedule, 5);
         console.log('Generated next dates:', nextDates);
-        
+
         setAvailableDates(nextDates);
-        
+
         // Автоматически устанавливаем первую доступную дату
         if (nextDates.length > 0) {
           form.setValue('desiredDate', nextDates[0]);
@@ -338,13 +338,11 @@ export default function TrialRequestPage() {
                         <SelectContent>
                           {availableDates.map((date) => (
                             <SelectItem key={date} value={date}>
-                              {new Date(date).toLocaleString('ru-RU', {
+                              {new Date(date).toLocaleDateString('ru-RU', {
                                 weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
+                                day: 'numeric'
                               })}
                             </SelectItem>
                           ))}
@@ -359,14 +357,15 @@ export default function TrialRequestPage() {
                 <div className="space-y-2 border rounded-md p-4 bg-muted/50">
                   <h4 className="text-sm font-medium">Расписание занятий:</h4>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    {Object.entries(JSON.parse(selectedBranch.schedule))
-                      .filter(([_, time]) => time) // Показываем только дни с указанным временем
-                      .map(([day, times]) => (
+                    {Object.entries(JSON.parse(selectedBranch.schedule)).map(([day, times]) => {
+                      const [start, end] = String(times).split(',');
+                      return (
                         <div key={day} className="flex justify-between">
                           <span>{day}:</span>
-                          <span>{times}</span>
+                          <span>{start && end ? `${start} - ${end}` : times}</span>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

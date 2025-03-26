@@ -8,46 +8,54 @@ interface WeekSchedule {
   [key: string]: DaySchedule | null; // monday, tuesday, etc.
 }
 
-export function getNextLessonDates(schedule: Record<string, string>, count: number) {
-  console.log('Getting next lesson dates for schedule:', schedule);
-  const dates: string[] = [];
-  let currentDate = new Date();
-  let attempts = 0;
-  const maxAttempts = count * 7; // Предотвращаем бесконечный цикл
+function getDayNumber(day: string): number {
+  const days = {
+    'Понедельник': 1,
+    'Вторник': 2,
+    'Среда': 3,
+    'Четверг': 4,
+    'Пятница': 5,
+    'Суббота': 6,
+    'Воскресенье': 0
+  };
+  return days[day as keyof typeof days] || 0;
+}
 
-  while (dates.length < count && attempts < maxAttempts) {
-    const dayName = currentDate.toLocaleString('ru-RU', { weekday: 'long' }).toLowerCase();
-    const time = schedule[dayName];
+export function getNextLessonDates(schedule: Record<string, string>, count: number): string[] {
+  const dates: Date[] = [];
+  const today = new Date();
 
-    console.log('Checking date:', currentDate, 'Day:', dayName, 'Time:', time);
+  // Convert schedule to day numbers and times
+  const scheduleDays = Object.entries(schedule).map(([day, time]) => ({
+    dayNum: getDayNumber(day),
+    time: String(time).split(',')[0] // Use first time from range
+  }));
 
-    if (time) {
-      try {
-        const [hours, minutes] = time.split(':').map(Number);
-        const lessonDate = new Date(currentDate);
-        lessonDate.setHours(hours, minutes, 0, 0);
+  let currentDate = new Date(today);
+  while (dates.length < count) {
+    const dayOfWeek = currentDate.getDay();
+    const scheduleDay = scheduleDays.find(s => s.dayNum === dayOfWeek);
 
-        if (lessonDate > new Date()) {
-          console.log('Adding lesson date:', lessonDate);
-          dates.push(lessonDate.toISOString());
-        }
-      } catch (error) {
-        console.error('Error processing time:', time, error);
+    if (scheduleDay) {
+      const [hours, minutes] = scheduleDay.time.split(':').map(Number);
+      const lessonDate = new Date(currentDate);
+      lessonDate.setHours(hours, minutes, 0, 0);
+
+      if (lessonDate > today) {
+        dates.push(lessonDate);
       }
     }
 
     currentDate.setDate(currentDate.getDate() + 1);
-    attempts++;
   }
 
-  console.log('Generated dates:', dates);
-  return dates;
+  return dates.map(date => date.toISOString().split('T')[0]);
 }
 
-export function parseScheduleFromText(scheduleText: string) {
-  console.log('Parsing schedule text:', scheduleText);
+export function parseScheduleFromText(text: string): Record<string, string> {
+  console.log('Parsing schedule text:', text);
   const schedule: Record<string, string> = {};
-  const lines = scheduleText.split('\n');
+  const lines = text.split('\n');
 
   lines.forEach(line => {
     const [day, time] = line.split(':').map(s => s.trim());
