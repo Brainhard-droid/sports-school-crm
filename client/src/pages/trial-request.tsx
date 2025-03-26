@@ -293,10 +293,13 @@ export default function TrialRequestPage() {
                       <FormLabel>Отделение</FormLabel>
                       <Select
                         onValueChange={(value) => {
-                          field.onChange(value ? parseInt(value) : undefined);
-                          form.setValue("desiredDate", undefined);
+                          const parsedValue = value ? parseInt(value) : undefined;
+                          field.onChange(parsedValue);
+                          if (!parsedValue) {
+                            form.setValue("desiredDate", undefined);
+                          }
                         }}
-                        value={field.value?.toString()}
+                        value={field.value?.toString() || ""}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -319,7 +322,7 @@ export default function TrialRequestPage() {
                   )}
                 />
               )}
-              {selectedBranch?.schedule && (
+              {selectedBranch?.schedule && selectedBranch.schedule !== "{}" && (
                 <FormField
                   control={form.control}
                   name="desiredDate"
