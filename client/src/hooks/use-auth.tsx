@@ -32,15 +32,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       console.log('Fetching user data...');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found, user not authenticated');
+        return null;
+      }
       const response = await fetch('/api/user', {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.status === 401) {
         console.log('User not authenticated');
+        localStorage.removeItem('token'); //Remove token on 401
         return null;
       }
 
@@ -105,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       console.log('Logout successful');
+      localStorage.removeItem('token'); //Remove token on logout
       queryClient.setQueryData(["/api/user"], null);
       queryClient.invalidateQueries();
     },
