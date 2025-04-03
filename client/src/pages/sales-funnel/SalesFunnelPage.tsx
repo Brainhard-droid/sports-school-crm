@@ -30,9 +30,13 @@ export default function SalesFunnelPage() {
     if (!result.destination) return;
 
     const requestId = parseInt(result.draggableId);
+    const sourceStatus = result.source.droppableId as keyof typeof TrialRequestStatus;
     const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
 
-    console.log('Dragging request:', { requestId, newStatus });
+    console.log('Dragging request:', { requestId, sourceStatus, newStatus });
+
+    // Если карточка уже была в колонке, не делаем ничего
+    if (sourceStatus === newStatus) return;
 
     // Если перетаскиваем в "Пробное назначено", открываем модальное окно
     if (newStatus === TrialRequestStatus.TRIAL_ASSIGNED) {

@@ -48,11 +48,21 @@ export default function TrialRequestPage() {
     },
   });
 
+  const branchId = form.watch("branchId");
   const selectedBranch = branchesForSection?.find(
-    (branch) => branch.id === Number(form.watch("branchId"))
+    (branch: { id: number }) => branch.id === Number(branchId)
   );
 
-  const schedule = selectedBranch?.schedule ? JSON.parse(selectedBranch.schedule) : null;
+  // Безопасно парсим JSON расписания, проверяя на null/undefined
+  const schedule = (() => {
+    try {
+      if (!selectedBranch?.schedule) return null;
+      return JSON.parse(selectedBranch.schedule);
+    } catch (e) {
+      console.error("Ошибка при парсинге расписания:", e);
+      return null;
+    }
+  })();
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
@@ -187,8 +197,10 @@ export default function TrialRequestPage() {
                       <FormLabel>Секция</FormLabel>
                       <Select
                         onValueChange={(value) => {
-                          field.onChange(parseInt(value));
-                          form.setValue("branchId", undefined);
+                          const numValue = parseInt(value);
+                          field.onChange(numValue);
+                          // Для TypeScript сделаем явное приведение типа к null вместо undefined
+                          form.setValue("branchId", null as any);
                         }}
                         value={field.value?.toString()}
                         disabled={sectionsLoading}
@@ -199,14 +211,14 @@ export default function TrialRequestPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {sections?.map((section) => (
+                          {sections && Array.isArray(sections) ? sections.map((section: { id: number, name: string }) => (
                             <SelectItem
                               key={section.id}
                               value={section.id.toString()}
                             >
                               {section.name}
                             </SelectItem>
-                          ))}
+                          )) : null}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -231,14 +243,14 @@ export default function TrialRequestPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {branchesForSection?.map((branch) => (
+                            {branchesForSection && Array.isArray(branchesForSection) ? branchesForSection.map((branch: { id: number, name: string, address: string }) => (
                               <SelectItem
                                 key={branch.id}
                                 value={branch.id.toString()}
                               >
                                 {branch.name} - {branch.address}
                               </SelectItem>
-                            ))}
+                            )) : null}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -253,7 +265,7 @@ export default function TrialRequestPage() {
                       {Object.entries(schedule).map(([day, times]) => (
                         <div key={day} className="flex justify-between">
                           <span>{day}:</span>
-                          <span>{Array.isArray(times) ? times.join(" - ") : times}</span>
+                          <span>{Array.isArray(times) ? times.join(" - ") : String(times)}</span>
                         </div>
                       ))}
                     </div>

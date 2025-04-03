@@ -50,7 +50,7 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
                   <DropdownMenuItem onClick={() => onAssignTrial(request)}>
                     Перенести пробное
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onEdit(request)}>
+                  <DropdownMenuItem>
                     Отменить пробное
                   </DropdownMenuItem>
                 </>

@@ -1,4 +1,4 @@
-import { addDays, parse, isBefore, format } from "date-fns";
+import { addDays, parse, isBefore, format, getDay } from "date-fns";
 
 interface DaySchedule {
   time: string; // формат "15:00 - 17:00"
@@ -8,48 +8,89 @@ interface WeekSchedule {
   [key: string]: DaySchedule | null; // monday, tuesday, etc.
 }
 
+type ScheduleFormat = {
+  dayOfWeek: number; // 0 = Воскресенье, 1 = Понедельник, ...
+  startTime: string; // формат "15:00"
+  endTime: string; // формат "17:00"
+};
+
 function getDayNumber(day: string): number {
-  const days = {
+  const days: Record<string, number> = {
     'Понедельник': 1,
     'Вторник': 2,
     'Среда': 3,
     'Четверг': 4,
     'Пятница': 5,
     'Суббота': 6,
-    'Воскресенье': 0
+    'Воскресенье': 0,
+    'понедельник': 1,
+    'вторник': 2,
+    'среда': 3,
+    'четверг': 4,
+    'пятница': 5,
+    'суббота': 6,
+    'воскресенье': 0,
   };
-  return days[day as keyof typeof days] || 0;
+  return days[day] || 0;
 }
 
-export function getNextLessonDates(schedule: Record<string, string>, count: number): string[] {
-  const dates: Date[] = [];
+export function getNextLessonDates(schedule: Record<string, string>, count: number = 5): { date: Date, timeLabel: string }[] {
+  const results: { date: Date, timeLabel: string }[] = [];
   const today = new Date();
 
-  // Convert schedule to day numbers and times
-  const scheduleDays = Object.entries(schedule).map(([day, time]) => ({
-    dayNum: getDayNumber(day),
-    time: String(time).split(',')[0] // Use first time from range
-  }));
+  // Создаем массив объектов расписания
+  const scheduleDays: { dayNum: number, startTime: string, endTime: string }[] = [];
+  
+  Object.entries(schedule).forEach(([day, timeRange]) => {
+    const dayNum = getDayNumber(day);
+    if (dayNum === undefined) return;
+    
+    const times = String(timeRange).split(' - ');
+    if (times.length === 2) {
+      scheduleDays.push({
+        dayNum,
+        startTime: times[0].trim(),
+        endTime: times[1].trim()
+      });
+    }
+  });
 
+  // Сортируем дни по дням недели
+  scheduleDays.sort((a, b) => {
+    const todayNum = today.getDay();
+    // Вычисляем дни от сегодня (с учетом перехода на следующую неделю)
+    const daysFromTodayA = (a.dayNum - todayNum + 7) % 7;
+    const daysFromTodayB = (b.dayNum - todayNum + 7) % 7;
+    return daysFromTodayA - daysFromTodayB;
+  });
+
+  // Генерируем даты на ближайшие несколько недель
+  const daysToCheck = 21; // Проверяем на 3 недели вперед
   let currentDate = new Date(today);
-  while (dates.length < count) {
+  
+  for (let i = 0; i < daysToCheck && results.length < count; i++) {
     const dayOfWeek = currentDate.getDay();
-    const scheduleDay = scheduleDays.find(s => s.dayNum === dayOfWeek);
-
-    if (scheduleDay) {
-      const [hours, minutes] = scheduleDay.time.split(':').map(Number);
-      const lessonDate = new Date(currentDate);
-      lessonDate.setHours(hours, minutes, 0, 0);
-
-      if (lessonDate > today) {
-        dates.push(lessonDate);
+    const matchingScheduleDay = scheduleDays.find(sd => sd.dayNum === dayOfWeek);
+    
+    if (matchingScheduleDay) {
+      const [startHours, startMinutes] = matchingScheduleDay.startTime.split(':').map(Number);
+      const dateObj = new Date(currentDate);
+      dateObj.setHours(startHours, startMinutes, 0, 0);
+      
+      // Проверяем, что дата в будущем
+      if (dateObj > today) {
+        results.push({
+          date: dateObj,
+          timeLabel: `${matchingScheduleDay.startTime} - ${matchingScheduleDay.endTime}`
+        });
       }
     }
-
+    
+    // Переходим к следующему дню
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  return dates.map(date => date.toISOString().split('T')[0]);
+  return results.slice(0, count);
 }
 
 export function parseScheduleFromText(text: string): Record<string, string> {
@@ -66,4 +107,8 @@ export function parseScheduleFromText(text: string): Record<string, string> {
 
   console.log('Parsed schedule:', schedule);
   return schedule;
+}
+
+export function formatDateTime(date: Date): string {
+  return date.toISOString().slice(0, 16);
 }

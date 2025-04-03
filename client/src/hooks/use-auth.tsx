@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useTransition } from "react";
 import {
   useQuery,
   useMutation,
@@ -23,6 +23,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
 
   const {
     data: user,
@@ -90,10 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       console.error('Login error:', error);
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
+      startTransition(() => {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
       });
     },
   });
@@ -118,10 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       console.error('Logout error:', error);
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
+      startTransition(() => {
+        toast({
+          title: "Logout failed",
+          description: error.message,
+          variant: "destructive",
+        });
       });
     },
   });
@@ -153,10 +158,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       console.error('Registration error:', error);
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
+      startTransition(() => {
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
       });
     },
   });
