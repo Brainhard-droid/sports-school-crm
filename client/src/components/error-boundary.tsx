@@ -1,40 +1,37 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from "react";
+import { Button } from "./ui/button";
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-  public static getDerivedStateFromError(_: Error): State {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, info);
   }
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Что-то пошло не так</h2>
-            <button
-              className="text-blue-500 hover:text-blue-700"
-              onClick={() => this.setState({ hasError: false })}
-            >
-              Попробовать снова
-            </button>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+          <h2>Что-то пошло не так</h2>
+          <Button onClick={() => this.setState({ hasError: false })}>
+            Попробовать снова
+          </Button>
         </div>
       );
     }
@@ -42,5 +39,3 @@ class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-export default ErrorBoundary;
