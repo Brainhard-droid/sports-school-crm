@@ -25,6 +25,7 @@ export default function TrialRequestPage() {
   const [useCustomDate, setUseCustomDate] = useState(false);
   const [selectedDateValue, setSelectedDateValue] = useState<string | null>(null);
   const isProcessingDateSelection = useRef(false);
+  const isInitialMount = useRef(true);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -75,12 +76,7 @@ export default function TrialRequestPage() {
   // Генерировать ближайшие даты на основе расписания при изменении филиала
   useEffect(() => {
     if (schedule) {
-      // Сбрасываем флаг обработки выбора даты
-      isProcessingDateSelection.current = false;
-      
-      // Преобразуем расписание в формат, понятный функции getNextLessonDates, если нужно
       const formattedSchedule = Object.entries(schedule).reduce((acc, [day, times]) => {
-        // Проверяем, является ли times строкой или массивом
         if (typeof times === 'string') {
           acc[day] = times;
         } else if (Array.isArray(times)) {
@@ -89,20 +85,23 @@ export default function TrialRequestPage() {
         return acc;
       }, {} as Record<string, string>);
       
-      // Получаем 5 ближайших дат занятий на основе расписания
       const nextDates = getNextLessonDates(formattedSchedule, 5);
       setSuggestedDates(nextDates);
       
-      // Если есть предложенные даты, устанавливаем первую по умолчанию
-      if (nextDates.length > 0) {
+      // Устанавливаем значение по умолчанию только при первом монтировании
+      if (isInitialMount.current && nextDates.length > 0) {
         const defaultDateStr = format(nextDates[0].date, "yyyy-MM-dd");
         form.setValue("desiredDate", defaultDateStr);
         setSelectedDateValue(defaultDateStr);
         setUseCustomDate(false);
+        isInitialMount.current = false;
       }
     } else {
       setSuggestedDates([]);
-      setSelectedDateValue(null);
+      if (isInitialMount.current) {
+        setSelectedDateValue(null);
+        isInitialMount.current = false;
+      }
     }
   }, [schedule, form]);
 
