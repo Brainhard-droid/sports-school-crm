@@ -125,6 +125,18 @@ export function parseScheduleFromText(text: string): Record<string, string> {
   return schedule;
 }
 
+/**
+ * Преобразует объект Date в строку формата "yyyy-MM-ddTHH:mm" для input type="datetime-local"
+ * Сохраняет локальное время, а не UTC
+ */
 export function formatDateTime(date: Date): string {
-  return date.toISOString().slice(0, 16);
+  // Получаем год, месяц, день, часы и минуты в локальном часовом поясе
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  // Формируем строку в формате "yyyy-MM-ddTHH:mm"
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }

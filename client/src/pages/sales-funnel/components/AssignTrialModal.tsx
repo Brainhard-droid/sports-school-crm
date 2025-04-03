@@ -82,10 +82,24 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
 
     setIsLoading(true);
     try {
+      // Преобразуем строку даты в объект Date, сохраняя правильное местное время
+      const dateTimeParts = finalDate.split('T');
+      const dateParts = dateTimeParts[0].split('-').map(Number);
+      const timeParts = dateTimeParts[1].split(':').map(Number);
+      
+      // Создаем объект Date в локальном часовом поясе
+      const scheduledDateObj = new Date(
+        dateParts[0], // год
+        dateParts[1] - 1, // месяц (0-11)
+        dateParts[2], // день
+        timeParts[0], // час
+        timeParts[1]  // минута
+      );
+      
       await updateStatus({
         id: request.id,
         status: TrialRequestStatus.TRIAL_ASSIGNED,
-        scheduledDate: new Date(finalDate)
+        scheduledDate: scheduledDateObj
       });
 
       toast({
