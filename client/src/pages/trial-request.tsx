@@ -12,7 +12,7 @@ import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, CheckCircle } from "lucide-react";
-import { ErrorBoundary } from "@/components/error-boundary";
+import ErrorBoundary from "@/components/error-boundary";
 
 export default function TrialRequestPage() {
   const { toast } = useToast();
