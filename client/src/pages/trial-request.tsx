@@ -73,8 +73,25 @@ export default function TrialRequestPage() {
   // Генерировать ближайшие даты на основе расписания при изменении филиала
   useEffect(() => {
     if (schedule) {
+      console.log('Текущее расписание:', schedule);
+      
+      // Преобразуем расписание в формат, понятный функции getNextLessonDates, если нужно
+      const formattedSchedule = Object.entries(schedule).reduce((acc, [day, times]) => {
+        // Проверяем, является ли times строкой или массивом
+        if (typeof times === 'string') {
+          acc[day] = times;
+        } else if (Array.isArray(times)) {
+          acc[day] = times.join(' - ');
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      
+      console.log('Форматированное расписание:', formattedSchedule);
+      
       // Получаем 5 ближайших дат занятий на основе расписания
-      const nextDates = getNextLessonDates(schedule, 5);
+      const nextDates = getNextLessonDates(formattedSchedule, 5);
+      console.log('Предлагаемые даты:', nextDates);
+      
       setSuggestedDates(nextDates);
       
       // Если есть предложенные даты, устанавливаем первую по умолчанию

@@ -34,18 +34,31 @@ function getDayNumber(day: string): number {
   return days[day] || 0;
 }
 
-export function getNextLessonDates(schedule: Record<string, string>, count: number = 5): { date: Date, timeLabel: string }[] {
+export function getNextLessonDates(schedule: Record<string, string | string[]>, count: number = 5): { date: Date, timeLabel: string }[] {
   const results: { date: Date, timeLabel: string }[] = [];
   const today = new Date();
+  
+  console.log("Получение дат на основе расписания:", schedule);
 
   // Создаем массив объектов расписания
   const scheduleDays: { dayNum: number, startTime: string, endTime: string }[] = [];
   
   Object.entries(schedule).forEach(([day, timeRange]) => {
     const dayNum = getDayNumber(day);
+    console.log(`День: ${day}, номер дня: ${dayNum}, диапазон времени:`, timeRange);
+    
     if (dayNum === undefined) return;
     
-    const times = String(timeRange).split(' - ');
+    // Обрабатываем разные форматы timeRange
+    let times: string[] = [];
+    if (typeof timeRange === 'string') {
+      times = timeRange.split(' - ');
+    } else if (Array.isArray(timeRange) && timeRange.length >= 2) {
+      times = [timeRange[0], timeRange[1]];
+    }
+    
+    console.log("Разбор времени:", times);
+    
     if (times.length === 2) {
       scheduleDays.push({
         dayNum,
@@ -54,6 +67,8 @@ export function getNextLessonDates(schedule: Record<string, string>, count: numb
       });
     }
   });
+  
+  console.log("Дни расписания после обработки:", scheduleDays);
 
   // Сортируем дни по дням недели
   scheduleDays.sort((a, b) => {
@@ -90,6 +105,7 @@ export function getNextLessonDates(schedule: Record<string, string>, count: numb
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
+  console.log("Сформированные даты:", results);
   return results.slice(0, count);
 }
 
