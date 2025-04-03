@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,8 @@ export default function TrialRequestPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [suggestedDates, setSuggestedDates] = useState<{date: Date, timeLabel: string}[]>([]);
   const [useCustomDate, setUseCustomDate] = useState(false);
+  const [selectedDateValue, setSelectedDateValue] = useState<string | null>(null);
+  const isProcessingDateSelection = useRef(false);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -73,7 +75,8 @@ export default function TrialRequestPage() {
   // Генерировать ближайшие даты на основе расписания при изменении филиала
   useEffect(() => {
     if (schedule) {
-      console.log('Текущее расписание:', schedule);
+      // Сбрасываем флаг обработки выбора даты
+      isProcessingDateSelection.current = false;
       
       // Преобразуем расписание в формат, понятный функции getNextLessonDates, если нужно
       const formattedSchedule = Object.entries(schedule).reduce((acc, [day, times]) => {
@@ -86,21 +89,20 @@ export default function TrialRequestPage() {
         return acc;
       }, {} as Record<string, string>);
       
-      console.log('Форматированное расписание:', formattedSchedule);
-      
       // Получаем 5 ближайших дат занятий на основе расписания
       const nextDates = getNextLessonDates(formattedSchedule, 5);
-      console.log('Предлагаемые даты:', nextDates);
-      
       setSuggestedDates(nextDates);
       
       // Если есть предложенные даты, устанавливаем первую по умолчанию
       if (nextDates.length > 0) {
-        form.setValue("desiredDate", format(nextDates[0].date, "yyyy-MM-dd"));
+        const defaultDateStr = format(nextDates[0].date, "yyyy-MM-dd");
+        form.setValue("desiredDate", defaultDateStr);
+        setSelectedDateValue(defaultDateStr);
         setUseCustomDate(false);
       }
     } else {
       setSuggestedDates([]);
+      setSelectedDateValue(null);
     }
   }, [schedule, form]);
 
@@ -322,15 +324,33 @@ export default function TrialRequestPage() {
                           <div className="flex flex-col space-y-2">
                             {suggestedDates.map((item, index) => {
                               const dateStr = format(item.date, "yyyy-MM-dd");
-                              const isSelected = !useCustomDate && field.value === dateStr;
+                              // Используем состояние selectedDateValue для определения выбора
+                              const isSelected = !useCustomDate && (
+                                selectedDateValue === dateStr || 
+                                (!selectedDateValue && field.value === dateStr)
+                              );
                               
                               return (
                                 <div 
                                   key={index} 
                                   className={`flex items-center space-x-2 border rounded-md p-3 cursor-pointer ${isSelected ? 'border-primary bg-primary/5' : ''}`}
                                   onClick={() => {
-                                    field.onChange(dateStr);
+                                    if (isProcessingDateSelection.current) return;
+                                    isProcessingDateSelection.current = true;
+                                    
+                                    // Установить выбранную дату в состоянии компонента
+                                    setSelectedDateValue(dateStr);
+                                    
+                                    // Установить выбранную дату в форме
+                                    form.setValue("desiredDate", dateStr);
+                                    
+                                    // Сбросить флаг пользовательской даты
                                     setUseCustomDate(false);
+                                    
+                                    // Через небольшую задержку разрешаем следующий выбор
+                                    setTimeout(() => {
+                                      isProcessingDateSelection.current = false;
+                                    }, 100);
                                   }}
                                 >
                                   <div 
@@ -356,11 +376,21 @@ export default function TrialRequestPage() {
                             <div 
                               className="flex items-center space-x-2 cursor-pointer"
                               onClick={() => {
+                                if (isProcessingDateSelection.current) return;
+                                isProcessingDateSelection.current = true;
+                                
                                 setUseCustomDate(true);
+                                // Сбрасываем выбор из списка предложенных дат
+                                setSelectedDateValue(null);
+                                
                                 // Если дата еще не установлена, устанавливаем текущую
                                 if (!field.value) {
-                                  field.onChange(new Date().toISOString().split('T')[0]);
+                                  form.setValue("desiredDate", new Date().toISOString().split('T')[0]);
                                 }
+                                
+                                setTimeout(() => {
+                                  isProcessingDateSelection.current = false;
+                                }, 100);
                               }}
                             >
                               <div 
