@@ -72,7 +72,7 @@ export default function TrialRequestPage() {
       return null;
     }
   })();
-  
+
   // Генерировать ближайшие даты на основе расписания при изменении филиала
   useEffect(() => {
     if (schedule) {
@@ -84,15 +84,20 @@ export default function TrialRequestPage() {
         }
         return acc;
       }, {} as Record<string, string>);
-      
+
       const nextDates = getNextLessonDates(formattedSchedule, 5);
       setSuggestedDates(nextDates);
-      
+
       // Устанавливаем значение по умолчанию только при первом монтировании
       if (isInitialMount.current && nextDates.length > 0) {
-        const defaultDateStr = format(nextDates[0].date, "yyyy-MM-dd");
-        form.setValue("desiredDate", defaultDateStr);
-        setSelectedDateValue(defaultDateStr);
+        const defaultDate = nextDates[0].date;
+        const [timeStart] = nextDates[0].timeLabel.split(' - ');
+        const [hours, minutes] = timeStart.split(':');
+
+        defaultDate.setHours(parseInt(hours), parseInt(minutes));
+
+        form.setValue("desiredDate", defaultDate.toISOString());
+        setSelectedDateValue(format(defaultDate, "yyyy-MM-dd"));
         setUseCustomDate(false);
         isInitialMount.current = false;
       }
@@ -328,7 +333,7 @@ export default function TrialRequestPage() {
                                 selectedDateValue === dateStr || 
                                 (!selectedDateValue && field.value === dateStr)
                               );
-                              
+
                               return (
                                 <div 
                                   key={index} 
@@ -336,17 +341,17 @@ export default function TrialRequestPage() {
                                   onClick={() => {
                                     if (isProcessingDateSelection.current) return;
                                     isProcessingDateSelection.current = true;
-                                    
+
                                     // Установить выбранную дату в состоянии компонента
                                     setSelectedDateValue(dateStr);
-                                    
+
                                     // Установить выбранную дату в форме
                                     const timeStr = item.timeLabel.split(' - ')[0];
                                     form.setValue("desiredDate", `${dateStr}T${timeStr}:00.000Z`);
-                                    
+
                                     // Сбросить флаг пользовательской даты
                                     setUseCustomDate(false);
-                                    
+
                                     // Через небольшую задержку разрешаем следующий выбор
                                     setTimeout(() => {
                                       isProcessingDateSelection.current = false;
@@ -371,23 +376,23 @@ export default function TrialRequestPage() {
                               );
                             })}
                           </div>
-                          
+
                           <div className="space-y-2 pt-2">
                             <div 
                               className="flex items-center space-x-2 cursor-pointer"
                               onClick={() => {
                                 if (isProcessingDateSelection.current) return;
                                 isProcessingDateSelection.current = true;
-                                
+
                                 setUseCustomDate(true);
                                 // Сбрасываем выбор из списка предложенных дат
                                 setSelectedDateValue(null);
-                                
+
                                 // Если дата еще не установлена, устанавливаем текущую
                                 if (!field.value) {
                                   form.setValue("desiredDate", new Date().toISOString().split('T')[0]);
                                 }
-                                
+
                                 setTimeout(() => {
                                   isProcessingDateSelection.current = false;
                                 }, 100);
@@ -402,7 +407,7 @@ export default function TrialRequestPage() {
                                 Выбрать другую дату
                               </Label>
                             </div>
-                            
+
                             {useCustomDate && (
                               <div className="pl-6 pt-2">
                                 <FormControl>
