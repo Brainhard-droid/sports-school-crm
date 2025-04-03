@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -18,21 +20,30 @@ import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
 
+// Loading Fallback Component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
+
 function Router() {
   return (
-    <Switch>
-      <Route path="/trial-request" component={TrialRequest} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/reset-password/:token" component={ResetPassword} />
-      <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/students" component={StudentsPage} />
-      <ProtectedRoute path="/groups" component={Groups} />
-      <ProtectedRoute path="/groups/:id" component={GroupDetails} />
-      <ProtectedRoute path="/attendance" component={Attendance} />
-      <ProtectedRoute path="/payments" component={Payments} />
-      <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<LoadingFallback />}>
+      <Switch>
+        <Route path="/trial-request" component={TrialRequest} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/reset-password/:token" component={ResetPassword} />
+        <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/students" component={StudentsPage} />
+        <ProtectedRoute path="/groups" component={Groups} />
+        <ProtectedRoute path="/groups/:id" component={GroupDetails} />
+        <ProtectedRoute path="/attendance" component={Attendance} />
+        <ProtectedRoute path="/payments" component={Payments} />
+        <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

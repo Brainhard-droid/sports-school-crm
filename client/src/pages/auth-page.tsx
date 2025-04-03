@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useState, useEffect, useTransition } from "react";
 import * as z from 'zod';
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -40,9 +40,11 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      startTransition(() => {
+        setLocation("/");
+      });
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, startTransition]);
 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   type ForgotPasswordFormData = {

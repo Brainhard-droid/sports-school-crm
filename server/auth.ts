@@ -28,9 +28,8 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Initialize Passport
-  app.use(passport.initialize());
-  app.use(passport.session());
+  // Passport должен инициализироваться после настройки сессии
+  // Инициализация уже выполнена в server/index.ts
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -78,7 +77,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', req.body);
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error('Authentication error:', err);
         return next(err);

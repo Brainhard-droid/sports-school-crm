@@ -41,6 +41,11 @@ app.use(session({
   }
 }));
 
+// Инициализация Passport (должна быть после настройки сессии)
+import passport from "passport";
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Setup authentication
 setupAuth(app);
 

@@ -29,36 +29,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<SelectUser>({
+  } = useQuery<SelectUser | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       console.log('Fetching user data...');
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('No token found, user not authenticated');
-        return null;
-      }
-      const response = await fetch('/api/user', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          console.log('User not authenticated');
+          return null;
         }
-      });
 
-      if (response.status === 401) {
-        console.log('User not authenticated');
-        localStorage.removeItem('token'); //Remove token on 401
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await response.json();
+        console.log('User data received:', userData);
+        return userData;
+      } catch (error) {
+        console.error('Error fetching user data:', error);
         return null;
       }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-
-      const userData = await response.json();
-      console.log('User data received:', userData);
-      return userData;
     },
     retry: false,
     gcTime: 0, // Disable caching
@@ -115,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       console.log('Logout successful');
-      localStorage.removeItem('token'); //Remove token on logout
       queryClient.setQueryData(["/api/user"], null);
       queryClient.invalidateQueries();
     },
