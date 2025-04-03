@@ -319,44 +319,56 @@ export default function TrialRequestPage() {
                       <FormLabel>Желаемая дата занятия</FormLabel>
                       {suggestedDates.length > 0 ? (
                         <div className="space-y-4">
-                          <RadioGroup
-                            value={useCustomDate ? "" : field.value}
-                            onValueChange={(value) => {
-                              if (value) {
-                                field.onChange(value);
-                                setUseCustomDate(false);
-                              }
-                            }}
-                            className="flex flex-col space-y-2"
-                          >
-                            {suggestedDates.map((item, index) => (
-                              <div key={index} className="flex items-center space-x-2 border rounded-md p-3">
-                                <RadioGroupItem value={format(item.date, "yyyy-MM-dd")} id={`date-${index}`} />
-                                <Label htmlFor={`date-${index}`} className="flex-1 flex items-center">
-                                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                                  <span>
-                                    {format(item.date, "dd.MM.yyyy")} ({format(item.date, "EEEE")})
-                                    <span className="block text-sm text-muted-foreground">
-                                      {item.timeLabel}
+                          <div className="flex flex-col space-y-2">
+                            {suggestedDates.map((item, index) => {
+                              const dateStr = format(item.date, "yyyy-MM-dd");
+                              const isSelected = !useCustomDate && field.value === dateStr;
+                              
+                              return (
+                                <div 
+                                  key={index} 
+                                  className={`flex items-center space-x-2 border rounded-md p-3 cursor-pointer ${isSelected ? 'border-primary bg-primary/5' : ''}`}
+                                  onClick={() => {
+                                    field.onChange(dateStr);
+                                    setUseCustomDate(false);
+                                  }}
+                                >
+                                  <div 
+                                    className={`flex h-4 w-4 items-center justify-center rounded-full border ${isSelected ? 'border-primary' : 'border-muted-foreground'}`}
+                                  >
+                                    {isSelected && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                  </div>
+                                  <div className="flex-1 flex items-center">
+                                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                                    <span>
+                                      {format(item.date, "dd.MM.yyyy")} ({format(item.date, "EEEE")})
+                                      <span className="block text-sm text-muted-foreground">
+                                        {item.timeLabel}
+                                      </span>
                                     </span>
-                                  </span>
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                           
                           <div className="space-y-2 pt-2">
-                            <div className="flex items-center space-x-2">
+                            <div 
+                              className="flex items-center space-x-2 cursor-pointer"
+                              onClick={() => {
+                                setUseCustomDate(true);
+                                // Если дата еще не установлена, устанавливаем текущую
+                                if (!field.value) {
+                                  field.onChange(new Date().toISOString().split('T')[0]);
+                                }
+                              }}
+                            >
                               <div 
                                 className={`flex h-4 w-4 items-center justify-center rounded-full border ${useCustomDate ? 'border-primary' : 'border-muted-foreground'}`}
-                                onClick={() => setUseCustomDate(true)}
                               >
                                 {useCustomDate && <div className="h-2 w-2 rounded-full bg-primary" />}
                               </div>
-                              <Label 
-                                className="cursor-pointer" 
-                                onClick={() => setUseCustomDate(true)}
-                              >
+                              <Label className="cursor-pointer">
                                 Выбрать другую дату
                               </Label>
                             </div>
