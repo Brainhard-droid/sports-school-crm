@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +11,18 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Calendar } from "lucide-react";
 import ErrorBoundary from "@/components/error-boundary";
+import { getNextLessonDates, formatDateTime } from "@/lib/utils/schedule";
+import { format } from "date-fns";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export default function TrialRequestPage() {
   const { toast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [suggestedDates, setSuggestedDates] = useState<{date: Date, timeLabel: string}[]>([]);
+  const [useCustomDate, setUseCustomDate] = useState(false);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -63,6 +69,23 @@ export default function TrialRequestPage() {
       return null;
     }
   })();
+  
+  // Генерировать ближайшие даты на основе расписания при изменении филиала
+  useEffect(() => {
+    if (schedule) {
+      // Получаем 5 ближайших дат занятий на основе расписания
+      const nextDates = getNextLessonDates(schedule, 5);
+      setSuggestedDates(nextDates);
+      
+      // Если есть предложенные даты, устанавливаем первую по умолчанию
+      if (nextDates.length > 0) {
+        form.setValue("desiredDate", format(nextDates[0].date, "yyyy-MM-dd"));
+        setUseCustomDate(false);
+      }
+    } else {
+      setSuggestedDates([]);
+    }
+  }, [schedule, form]);
 
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: InsertTrialRequest) => {
@@ -277,13 +300,72 @@ export default function TrialRequestPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Желаемая дата занятия</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          min={new Date().toISOString().split('T')[0]}
-                        />
-                      </FormControl>
+                      {suggestedDates.length > 0 ? (
+                        <div className="space-y-4">
+                          <RadioGroup
+                            value={useCustomDate ? "" : field.value}
+                            onValueChange={(value) => {
+                              if (value) {
+                                field.onChange(value);
+                                setUseCustomDate(false);
+                              }
+                            }}
+                            className="flex flex-col space-y-2"
+                          >
+                            {suggestedDates.map((item, index) => (
+                              <div key={index} className="flex items-center space-x-2 border rounded-md p-3">
+                                <RadioGroupItem value={format(item.date, "yyyy-MM-dd")} id={`date-${index}`} />
+                                <Label htmlFor={`date-${index}`} className="flex-1 flex items-center">
+                                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <span>
+                                    {format(item.date, "dd.MM.yyyy")} ({format(item.date, "EEEE")})
+                                    <span className="block text-sm text-muted-foreground">
+                                      {item.timeLabel}
+                                    </span>
+                                  </span>
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                          
+                          <div className="space-y-2 pt-2">
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className={`flex h-4 w-4 items-center justify-center rounded-full border ${useCustomDate ? 'border-primary' : 'border-muted-foreground'}`}
+                                onClick={() => setUseCustomDate(true)}
+                              >
+                                {useCustomDate && <div className="h-2 w-2 rounded-full bg-primary" />}
+                              </div>
+                              <Label 
+                                className="cursor-pointer" 
+                                onClick={() => setUseCustomDate(true)}
+                              >
+                                Выбрать другую дату
+                              </Label>
+                            </div>
+                            
+                            {useCustomDate && (
+                              <div className="pl-6 pt-2">
+                                <FormControl>
+                                  <Input
+                                    type="date"
+                                    {...field}
+                                    min={new Date().toISOString().split('T')[0]}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </FormControl>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
