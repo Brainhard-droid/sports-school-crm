@@ -36,7 +36,7 @@ export default function TrialRequestPage() {
       parentPhone: "+7",
       sectionId: undefined,
       branchId: undefined,
-      desiredDate: new Date().toISOString().split('T')[0],
+      desiredDate: `${new Date().toISOString().split('T')[0]}T17:30:00.000Z`,
     },
   });
 
@@ -341,7 +341,8 @@ export default function TrialRequestPage() {
                                     setSelectedDateValue(dateStr);
                                     
                                     // Установить выбранную дату в форме
-                                    form.setValue("desiredDate", dateStr);
+                                    const timeStr = item.timeLabel.split(' - ')[0];
+                                    form.setValue("desiredDate", `${dateStr}T${timeStr}:00.000Z`);
                                     
                                     // Сбросить флаг пользовательской даты
                                     setUseCustomDate(false);
