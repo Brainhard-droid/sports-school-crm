@@ -60,6 +60,15 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       } else if (request.desiredDate) {
         // Если нет подходящих дат, используем желаемую дату из заявки
         const desiredDate = new Date(request.desiredDate);
+        
+        // Проверяем, есть ли информация о времени в notes
+        const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
+        if (timeMatch) {
+          // Если есть, устанавливаем часы и минуты из notes
+          const [hours, minutes] = timeMatch[1].split(':').map(Number);
+          desiredDate.setHours(hours, minutes);
+        }
+        
         setScheduledDate(formatDateTime(desiredDate));
         setCustomDate(formatDateTime(desiredDate));
         setUseCustomDate(true);

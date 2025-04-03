@@ -65,7 +65,21 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
             <span>
               {request.scheduledDate
                 ? `Пробное: ${formatDate(request.scheduledDate)}`
-                : `Желаемая дата: ${formatDate(request.desiredDate)}`}
+                : (() => {
+                    // Проверяем, есть ли информация о времени в notes (формат "TIME:16:30")
+                    const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
+                    const timeStr = timeMatch ? timeMatch[1] : '09:00';
+                    
+                    // Создаем объект Date с правильным временем для отображения
+                    const date = new Date(request.desiredDate);
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    
+                    // Устанавливаем часы и минуты
+                    date.setHours(hours, minutes);
+                    
+                    return `Желаемая дата: ${formatDate(date)}`;
+                  })()
+              }
             </span>
           </div>
 

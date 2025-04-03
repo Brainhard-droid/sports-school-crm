@@ -685,6 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const request = await storage.createTrialRequest({
         ...parsed.data,
         desiredDate: new Date(parsed.data.desiredDate),
+        notes: parsed.data.notes || '',
       });
 
       console.log('Created trial request:', request);

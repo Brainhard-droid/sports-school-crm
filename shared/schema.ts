@@ -193,8 +193,7 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
     status: true,
     scheduledDate: true,
     createdAt: true,
-    updatedAt: true,
-    notes: true
+    updatedAt: true
   })
   .extend({
     childAge: z.number().min(3, "Минимальный возраст 3 года").max(18, "Максимальный возраст 18 лет"),
@@ -209,7 +208,8 @@ export const insertTrialRequestSchema = createInsertSchema(trialRequests)
       "Дата не может быть в прошлом"
     ),
     sectionId: z.number().positive("Выберите секцию"),
-    branchId: z.number().positive("Выберите отделение")
+    branchId: z.number().positive("Выберите отделение"),
+    notes: z.string().optional()
   });
 
 // Insert types

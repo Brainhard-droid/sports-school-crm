@@ -345,17 +345,14 @@ export default function TrialRequestPage() {
                                     // Установить выбранную дату в состоянии компонента
                                     setSelectedDateValue(dateStr);
 
-                                    // Установить выбранную дату в форме с корректным временем
                                     // Берем время из timeLabel, который содержит строку вида "16:30 - 18:00"
                                     const timeStr = item.timeLabel.split(' - ')[0];
                                     
-                                    // Создаем объект даты из dateStr и добавляем часы и минуты из timeStr
-                                    const [hours, minutes] = timeStr.split(':').map(Number);
-                                    const selectedDate = new Date(dateStr);
-                                    selectedDate.setHours(hours, minutes, 0, 0);
+                                    // Устанавливаем только дату в поле desiredDate
+                                    form.setValue("desiredDate", dateStr);
                                     
-                                    // Устанавливаем полную дату с корректным временем
-                                    form.setValue("desiredDate", selectedDate.toISOString());
+                                    // Сохраняем информацию о времени в поле notes (которое потом будет использоваться для отображения)
+                                    form.setValue("notes", `TIME:${timeStr}`);
 
                                     // Сбросить флаг пользовательской даты
                                     setUseCustomDate(false);
