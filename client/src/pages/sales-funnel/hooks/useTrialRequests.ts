@@ -23,8 +23,8 @@ export function useTrialRequests() {
       scheduledDate?: Date;
     }) => {
       console.log('Updating trial request status:', { id, status, scheduledDate });
-      const res = await apiRequest("PUT", `/api/trial-requests/${id}`, { 
-        status: status.toUpperCase(), //Corrected line
+      const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, { 
+        status: status.toUpperCase(),
         scheduledDate: scheduledDate?.toISOString()
       });
       if (!res.ok) {

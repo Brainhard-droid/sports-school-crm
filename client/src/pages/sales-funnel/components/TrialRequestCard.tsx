@@ -36,24 +36,20 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
               <DropdownMenuItem onClick={() => onEdit(request)}>
                 Редактировать
               </DropdownMenuItem>
-              {request.status === TrialRequestStatus.NEW && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onAssignTrial(request)}>
-                    Назначить пробное
-                  </DropdownMenuItem>
-                </>
-              )}
+              
+              {/* Всегда показываем пункт меню "Назначить/Перенести пробное" для всех типов заявок */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onAssignTrial(request)}>
+                {request.status === TrialRequestStatus.TRIAL_ASSIGNED
+                  ? "Перенести пробное"
+                  : "Назначить пробное"}
+              </DropdownMenuItem>
+              
+              {/* Опциональные пункты меню в зависимости от статуса */}
               {request.status === TrialRequestStatus.TRIAL_ASSIGNED && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onAssignTrial(request)}>
-                    Перенести пробное
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    Отменить пробное
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem>
+                  Отменить пробное
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

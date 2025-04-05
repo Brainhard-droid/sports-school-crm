@@ -49,19 +49,13 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   });
 
   useEffect(() => {
-    if (request && branchSchedule) {
-      // Генерируем 5 ближайших дат занятий на основе расписания
-      const nextDates = getNextLessonDates(branchSchedule, 5);
-      setSuggestedDates(nextDates);
-      
-      // Выбираем первую дату из списка или используем желаемую дату из заявки
-      if (nextDates.length > 0) {
-        setScheduledDate(formatDateTime(nextDates[0].date));
-      } else if (request.desiredDate) {
-        // Если нет подходящих дат, используем желаемую дату из заявки
+    if (request) {
+      // Если у заявки есть желаемая дата, сначала используем её
+      if (request.desiredDate) {
+        // Конвертируем desiredDate в объект Date
         const desiredDate = new Date(request.desiredDate);
         
-        // Проверяем, есть ли информация о времени в notes
+        // Проверяем, есть ли информация о времени в notes (формат "TIME:16:30")
         const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
         if (timeMatch) {
           // Если есть, устанавливаем часы и минуты из notes
@@ -69,9 +63,53 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
           desiredDate.setHours(hours, minutes);
         }
         
-        setScheduledDate(formatDateTime(desiredDate));
+        // Устанавливаем желаемую дату как выбранную по умолчанию
         setCustomDate(formatDateTime(desiredDate));
-        setUseCustomDate(true);
+        // Если ещё не загружено расписание, показываем желаемую дату пользователя
+        if (!branchSchedule) {
+          setUseCustomDate(true);
+        }
+      }
+      
+      // Если есть расписание, генерируем даты занятий
+      if (branchSchedule) {
+        // Генерируем 5 ближайших дат занятий на основе расписания
+        const nextDates = getNextLessonDates(branchSchedule, 5);
+        setSuggestedDates(nextDates);
+        
+        // Если есть желаемая дата, проверяем, совпадает ли она с одной из дат расписания
+        if (request.desiredDate && nextDates.length > 0) {
+          const desiredDate = new Date(request.desiredDate);
+          
+          // Проверяем, есть ли информация о времени в notes
+          const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
+          if (timeMatch) {
+            const [hours, minutes] = timeMatch[1].split(':').map(Number);
+            desiredDate.setHours(hours, minutes);
+          }
+          
+          // Проверяем, совпадает ли желаемая дата с одной из предложенных дат
+          const matchingDateIndex = nextDates.findIndex(date => 
+            date.date.getFullYear() === desiredDate.getFullYear() &&
+            date.date.getMonth() === desiredDate.getMonth() &&
+            date.date.getDate() === desiredDate.getDate() &&
+            date.date.getHours() === desiredDate.getHours()
+          );
+          
+          if (matchingDateIndex >= 0) {
+            // Если дата совпадает с расписанием, выбираем её
+            setScheduledDate(formatDateTime(nextDates[matchingDateIndex].date));
+            setUseCustomDate(false);
+          } else {
+            // Если не совпадает, используем пользовательскую дату
+            setScheduledDate("");
+            setUseCustomDate(true);
+          }
+        } else if (nextDates.length > 0) {
+          // Если нет желаемой даты, выбираем первую дату из списка
+          setScheduledDate(formatDateTime(nextDates[0].date));
+          setUseCustomDate(false);
+        }
       }
     }
   }, [request, branchSchedule]);
