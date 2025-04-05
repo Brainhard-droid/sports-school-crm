@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
 // import { BranchSectionFormModal } from "./modals/BranchSectionFormModal";
+import { ScheduleModal } from "@/components/schedule/schedule-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -178,6 +179,64 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
     }
   };
 
+  // Обработчик сохранения расписания
+  const handleSaveSchedule = async (formattedSchedule: string) => {
+    try {
+      if (selectedBranchSection.id) {
+        // Обновление существующей связи
+        await apiRequest("PATCH", `/api/branch-sections/${selectedBranchSection.id}`, {
+          schedule: formattedSchedule
+        });
+        
+        // Обновляем локальное состояние
+        setBranchSections(prev => 
+          prev.map(bs => bs.id === selectedBranchSection.id 
+            ? {...bs, schedule: formattedSchedule}
+            : bs
+          )
+        );
+        
+        toast({
+          title: "Расписание обновлено",
+          description: "Расписание секции в филиале обновлено"
+        });
+      } else {
+        // Создание новой связи
+        console.log('Creating new branch-section connection', {
+          branchId: selectedBranchSection.branchId,
+          sectionId: selectedBranchSection.sectionId,
+          schedule: formattedSchedule,
+          active: true
+        });
+        
+        const newLink = await apiRequest("POST", "/api/branch-sections", {
+          branchId: selectedBranchSection.branchId,
+          sectionId: selectedBranchSection.sectionId,
+          schedule: formattedSchedule,
+          active: true
+        }).then(res => res.json());
+        
+        // Добавляем в локальное состояние
+        setBranchSections(prev => [...prev, newLink]);
+        
+        toast({
+          title: "Связь создана",
+          description: "Секция успешно добавлена в филиал с расписанием"
+        });
+      }
+      
+      // Обновляем кэш запроса
+      queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
+    } catch (error) {
+      console.error("Ошибка при сохранении расписания:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить расписание",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="border rounded-md overflow-hidden">
@@ -233,115 +292,16 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
         </div>
       </div>
       
-      {/* Здесь будет модальное окно для редактирования расписания */}
+      {/* Новый компонент ScheduleModal для управления расписанием */}
       {scheduleModalOpen && (
-        <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedBranchSection.id ? "Редактирование расписания" : "Добавление секции в филиал"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <p className="mb-4">
-                <strong>Филиал:</strong> {selectedBranchSection.branchName}<br />
-                <strong>Секция:</strong> {selectedBranchSection.sectionName}
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="schedule">Расписание занятий</Label>
-                  <Textarea
-                    id="schedule"
-                    placeholder="Например: Понедельник, Среда, Пятница - 18:00-19:30"
-                    className="mt-1"
-                    value={selectedBranchSection.schedule}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedBranchSection({
-                      ...selectedBranchSection,
-                      schedule: e.target.value
-                    })}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setScheduleModalOpen(false)}
-              >
-                Отмена
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    if (selectedBranchSection.id) {
-                      // Обновление существующей связи
-                      await apiRequest("PATCH", `/api/branch-sections/${selectedBranchSection.id}`, {
-                        schedule: selectedBranchSection.schedule
-                      });
-                      
-                      // Обновляем локальное состояние
-                      setBranchSections(prev => 
-                        prev.map(bs => bs.id === selectedBranchSection.id 
-                          ? {...bs, schedule: selectedBranchSection.schedule || ''}
-                          : bs
-                        )
-                      );
-                      
-                      toast({
-                        title: "Расписание обновлено",
-                        description: "Расписание секции в филиале обновлено"
-                      });
-                    } else {
-                      // Создание новой связи
-                      console.log('Creating new branch-section connection', {
-                        branchId: selectedBranchSection.branchId,
-                        sectionId: selectedBranchSection.sectionId,
-                        schedule: selectedBranchSection.schedule || '',
-                        active: true
-                      });
-                      
-                      const newLink = await apiRequest("POST", "/api/branch-sections", {
-                        branchId: selectedBranchSection.branchId,
-                        sectionId: selectedBranchSection.sectionId,
-                        schedule: selectedBranchSection.schedule || '',
-                        active: true
-                      }).then(res => res.json());
-                      
-                      console.log('Received new link data', newLink);
-                      
-                      // Добавляем в локальное состояние
-                      setBranchSections(prev => {
-                        console.log('Previous branchSections state', prev);
-                        const updated = [...prev, newLink];
-                        console.log('Updated branchSections state', updated);
-                        return updated;
-                      });
-                      
-                      toast({
-                        title: "Связь создана",
-                        description: "Секция успешно добавлена в филиал"
-                      });
-                    }
-                    
-                    // Закрываем модальное окно
-                    setScheduleModalOpen(false);
-                    
-                    // Обновляем кэш запроса
-                    queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
-                  } catch (error) {
-                    toast({
-                      title: "Ошибка",
-                      description: "Не удалось сохранить данные",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-              >
-                Сохранить
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ScheduleModal
+          isOpen={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+          onSave={handleSaveSchedule}
+          title={selectedBranchSection.id ? "Редактирование расписания" : "Добавление расписания"}
+          initialSchedule={selectedBranchSection.schedule}
+          entityName={`Филиал: ${selectedBranchSection.branchName} | Секция: ${selectedBranchSection.sectionName}`}
+        />
       )}
     </div>
   );
