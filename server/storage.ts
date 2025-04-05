@@ -437,28 +437,49 @@ export class PostgresStorage implements IStorage {
 
   async getGroupScheduleDates(groupId: number, month: number, year: number): Promise<Date[]> {
     try {
+      console.log(`Getting schedule dates for group ${groupId}, month ${month}, year ${year}`);
+      
       // Get group's schedule
       const groupSchedules = await db
         .select()
         .from(schedules)
         .where(eq(schedules.groupId, groupId));
+      
+      console.log(`Found ${groupSchedules.length} schedule entries for group ${groupId}:`, groupSchedules);
+
+      if (groupSchedules.length === 0) {
+        console.log('No schedule entries found for this group, returning empty array');
+        return [];
+      }
 
       // Get all days of the month
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       const daysInMonth = endDate.getDate();
+      
+      console.log(`Processing dates for month with ${daysInMonth} days`);
 
       // Filter dates based on schedule
       const scheduleDates: Date[] = [];
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month - 1, day);
-        const dayOfWeek = date.getDay() || 7; // Convert Sunday (0) to 7
+        // JavaScript's getDay returns 0 for Sunday, 1 for Monday, etc.
+        const dayOfWeek = date.getDay();
+        
+        const matchingSchedule = groupSchedules.find(schedule => {
+          // Convert dayOfWeek from DB to match JavaScript's convention if needed
+          // If dayOfWeek in DB is 1-7 (Monday to Sunday) and we want to match with JS's 0-6 (Sunday to Saturday)
+          const scheduleDay = schedule.dayOfWeek === 7 ? 0 : schedule.dayOfWeek;
+          return scheduleDay === dayOfWeek;
+        });
 
-        if (groupSchedules.some(schedule => schedule.dayOfWeek === dayOfWeek)) {
+        if (matchingSchedule) {
+          console.log(`Adding date ${date.toISOString()} for day of week ${dayOfWeek}`);
           scheduleDates.push(date);
         }
       }
 
+      console.log(`Returning ${scheduleDates.length} schedule dates`);
       return scheduleDates;
     } catch (error) {
       console.error('Error getting schedule dates:', error);

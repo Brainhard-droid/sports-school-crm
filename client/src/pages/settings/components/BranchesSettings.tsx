@@ -71,8 +71,10 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
       setIsLoading(true);
       try {
         // Загружаем только активные связи
-        const response = await fetch("/api/branch-sections");
+        const response = await apiRequest("GET", "/api/branch-sections?showAll=true");
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error fetching branch sections:", errorText);
           throw new Error("Ошибка загрузки связей филиалов и секций");
         }
         const data = await response.json();
@@ -329,8 +331,10 @@ export default function BranchesSettings() {
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
     queryKey: ["/api/branches"],
     queryFn: async () => {
-      const response = await fetch("/api/branches");
+      const response = await apiRequest("GET", "/api/branches");
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error fetching branches:", errorText);
         throw new Error("Ошибка загрузки филиалов");
       }
       return response.json();
@@ -340,8 +344,10 @@ export default function BranchesSettings() {
   const { data: sections = [], isLoading: sectionsLoading } = useQuery({
     queryKey: ["/api/sports-sections"],
     queryFn: async () => {
-      const response = await fetch("/api/sports-sections");
+      const response = await apiRequest("GET", "/api/sports-sections");
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error fetching sections:", errorText);
         throw new Error("Ошибка загрузки секций");
       }
       return response.json();
