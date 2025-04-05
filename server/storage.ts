@@ -382,21 +382,39 @@ export class PostgresStorage implements IStorage {
   }
 
   // Attendance
-  async getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]> {
+  async getAttendance(groupId: number, date: Date): Promise<Attendance[]>;
+  async getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]>;
+  async getAttendance(groupId: number, dateOrMonth: Date | number, year?: number): Promise<Attendance[]> {
     try {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      if (dateOrMonth instanceof Date) {
+        const date = dateOrMonth;
+        // Если передана конкретная дата
+        return await db
+          .select()
+          .from(attendance)
+          .where(
+            and(
+              eq(attendance.groupId, groupId),
+              eq(attendance.date, date)
+            )
+          );
+      } else {
+        // Если переданы месяц и год
+        const month = dateOrMonth;
+        const startDate = new Date(year!, month - 1, 1);
+        const endDate = new Date(year!, month, 0);
 
-      return await db
-        .select()
-        .from(attendance)
-        .where(
-          and(
-            eq(attendance.groupId, groupId),
-            gte(attendance.date, startDate),
-            lte(attendance.date, endDate)
-          )
-        );
+        return await db
+          .select()
+          .from(attendance)
+          .where(
+            and(
+              eq(attendance.groupId, groupId),
+              gte(attendance.date, startDate),
+              lte(attendance.date, endDate)
+            )
+          );
+      }
     } catch (error) {
       console.error('Error getting attendance:', error);
       throw error;
@@ -846,6 +864,7 @@ interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   getStudentGroups(studentId: number): Promise<StudentGroup[]>;
   getGroupStudents(groupId: number): Promise<StudentGroup[]>;
+  getAttendance(groupId: number, date: Date): Promise<Attendance[]>;
   getAttendance(groupId: number, month: number, year: number): Promise<Attendance[]>;
   createAttendance(data: InsertAttendance): Promise<Attendance>;
   updateAttendance(id: number, data: Partial<Attendance>): Promise<Attendance>;

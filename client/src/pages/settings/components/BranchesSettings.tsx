@@ -309,7 +309,9 @@ export default function BranchesSettings() {
       await apiRequest("DELETE", `/api/sports-sections/${id}`);
     },
     onSuccess: () => {
+      // Обновляем обе коллекции данных - секции и связи филиалов с секциями
       queryClient.invalidateQueries({ queryKey: ["/api/sports-sections"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
       toast({
         title: "Секция удалена",
         description: "Спортивная секция была успешно удалена",
