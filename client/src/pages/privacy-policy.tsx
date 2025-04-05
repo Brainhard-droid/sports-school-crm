@@ -1,22 +1,10 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        <div className="mb-6">
-          <Button variant="ghost" asChild>
-            <Link to="/" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Вернуться на главную
-            </Link>
-          </Button>
-        </div>
-        
         <Card className="shadow-lg">
           <CardHeader className="border-b pb-4">
             <CardTitle className="text-2xl">Политика конфиденциальности</CardTitle>
