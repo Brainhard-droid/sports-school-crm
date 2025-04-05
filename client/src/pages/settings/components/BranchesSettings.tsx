@@ -453,13 +453,13 @@ export default function BranchesSettings() {
           
           {branchesLoading ? (
             <div className="text-center p-6">Загрузка...</div>
-          ) : branches.length === 0 ? (
+          ) : branches.filter((branch: Branch) => branch.active).length === 0 ? (
             <div className="text-center p-6 border rounded-md">
               Нет доступных филиалов. Добавьте новый филиал.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {branches.map((branch: Branch) => (
+              {branches.filter((branch: Branch) => branch.active).map((branch: Branch) => (
                 <Card key={branch.id} className="relative">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
@@ -512,13 +512,13 @@ export default function BranchesSettings() {
           
           {sectionsLoading ? (
             <div className="text-center p-6">Загрузка...</div>
-          ) : sections.length === 0 ? (
+          ) : sections.filter((section: Section) => section.active).length === 0 ? (
             <div className="text-center p-6 border rounded-md">
               Нет доступных секций. Добавьте новую секцию.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sections.map((section: Section) => (
+              {sections.filter((section: Section) => section.active).map((section: Section) => (
                 <Card key={section.id} className="relative">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
@@ -566,15 +566,15 @@ export default function BranchesSettings() {
           
           {branchesLoading || sectionsLoading ? (
             <div className="text-center p-6">Загрузка...</div>
-          ) : branches.length === 0 || sections.length === 0 ? (
+          ) : branches.filter((branch: Branch) => branch.active).length === 0 || sections.filter((section: Section) => section.active).length === 0 ? (
             <div className="text-center p-6 border rounded-md">
-              Необходимо добавить филиалы и секции перед настройкой связей между ними.
+              Необходимо добавить активные филиалы и секции перед настройкой связей между ними.
             </div>
           ) : (
             <div className="grid gap-6">
               <SectionBranchMatrix 
-                branches={branches.filter(branch => branch.active)} 
-                sections={sections.filter(section => section.active)} 
+                branches={branches.filter((branch: Branch) => branch.active)} 
+                sections={sections.filter((section: Section) => section.active)} 
               />
             </div>
           )}
