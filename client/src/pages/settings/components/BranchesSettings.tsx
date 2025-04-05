@@ -67,6 +67,7 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
     queryFn: async () => {
       setIsLoading(true);
       try {
+        // Загружаем только активные связи
         const response = await fetch("/api/branch-sections");
         if (!response.ok) {
           throw new Error("Ошибка загрузки связей филиалов и секций");
@@ -572,8 +573,8 @@ export default function BranchesSettings() {
           ) : (
             <div className="grid gap-6">
               <SectionBranchMatrix 
-                branches={branches} 
-                sections={sections} 
+                branches={branches.filter(branch => branch.active)} 
+                sections={sections.filter(section => section.active)} 
               />
             </div>
           )}

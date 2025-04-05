@@ -918,10 +918,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.isAuthenticated()) return res.sendStatus(401);
       
-      // Get all branch sections
-      const branchSectionsList = await db
-        .select()
+      const showAll = req.query.showAll === 'true';
+      
+      // Get all branch sections, filtering for active by default
+      let query = db
+        .select({
+          id: branchSections.id,
+          branchId: branchSections.branchId,
+          sectionId: branchSections.sectionId,
+          schedule: branchSections.schedule,
+          active: branchSections.active
+        })
         .from(branchSections);
+      
+      // Only filter for active connections if showAll is not specified
+      if (!showAll) {
+        query = query.where(eq(branchSections.active, true));
+      }
+        
+      const branchSectionsList = await query;
       
       res.json(branchSectionsList);
     } catch (error) {
