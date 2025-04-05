@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { errorHandler } from "./middleware/error";
 import { db } from './db';
 import { eq, and } from 'drizzle-orm';
+import { registerRoutes } from "./routes";
 import { 
   sportsSections, 
   branches, 
@@ -450,14 +451,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Регистрация API маршрутов
+  // Регистрация API маршрутов из router.ts
+  const server = await registerRoutes(app);
+  
+  // Дополнительные маршруты из apiRoutes
   app.use('/api', apiRoutes);
 
   // Глобальный обработчик ошибок должен быть последним middleware
   app.use(errorHandler);
-
-  // Создаем HTTP сервер
-  const server = createServer(app);
 
   if (app.get("env") === "development") {
     await setupVite(app, server);
