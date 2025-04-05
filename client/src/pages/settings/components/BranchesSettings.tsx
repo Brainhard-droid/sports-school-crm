@@ -551,20 +551,58 @@ export default function BranchesSettings() {
         <TabsContent value="branch-sections" className="mt-6">
           <div className="flex justify-between mb-4">
             <h3 className="text-lg font-medium">Связи филиалов и секций</h3>
-            <Button onClick={() => {
-              // Принудительное обновление всех данных
-              queryClient.invalidateQueries({ queryKey: ["/api/branches"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/sports-sections"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
-              
-              toast({
-                title: "Данные обновлены",
-                description: "Список связей филиалов и секций обновлен",
-              });
-            }}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Обновить данные
-            </Button>
+            <div className="flex space-x-2">
+              <Button 
+                variant="default"
+                onClick={() => {
+                  // Сохраняем все настройки связей и обновляем кэш
+                  apiRequest("GET", "/api/sync-branch-sections")
+                    .then(response => {
+                      if (response.ok) {
+                        toast({
+                          title: "Успешно",
+                          description: "Данные связей филиалов и секций сохранены в базе данных",
+                        });
+                        // Инвалидируем кэш для обновления данных в приложении
+                        queryClient.invalidateQueries({ queryKey: ["/api/branches-by-section"] });
+                      } else {
+                        toast({
+                          title: "Ошибка",
+                          description: "Не удалось сохранить данные",
+                          variant: "destructive",
+                        });
+                      }
+                    })
+                    .catch(error => {
+                      toast({
+                        title: "Ошибка",
+                        description: `Ошибка при сохранении данных: ${error.message}`,
+                        variant: "destructive",
+                      });
+                    });
+                }}
+              >
+                <span className="mr-2">💾</span>
+                Сохранить данные
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  // Принудительное обновление всех данных
+                  queryClient.invalidateQueries({ queryKey: ["/api/branches"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/sports-sections"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
+                  
+                  toast({
+                    title: "Данные обновлены",
+                    description: "Список связей филиалов и секций обновлен",
+                  });
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Обновить данные
+              </Button>
+            </div>
           </div>
           
           {branchesLoading || sectionsLoading ? (

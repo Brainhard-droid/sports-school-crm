@@ -19,7 +19,7 @@ import {
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { sportsSections as sportsTable, branches as branchesTable, branchSections } from "@shared/schema";
 import { db } from './db';
 
@@ -29,7 +29,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Добавляем новые роуты для спортивных секций и филиалов
   app.get("/api/sports-sections", async (_req, res) => {
     try {
-      const sections = await db.select().from(sportsTable);
+      const sections = await db
+        .select()
+        .from(sportsTable)
+        .where(eq(sportsTable.active, true)); // Только активные секции
       res.json(sections);
     } catch (error) {
       console.error('Error getting sports sections:', error);
@@ -45,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing sectionId parameter" });
       }
 
-      // Получаем филиалы с расписанием для выбранной секции
+      // Получаем только активные филиалы с расписанием для выбранной секции
       const branchesWithSchedule = await db
         .select({
           id: branchesTable.id,
@@ -55,7 +58,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(branchSections)
         .innerJoin(branchesTable, eq(branchesTable.id, branchSections.branchId))
-        .where(eq(branchSections.sectionId, sectionId));
+        .where(
+          and(
+            eq(branchSections.sectionId, sectionId),
+            eq(branchSections.active, true),
+            eq(branchesTable.active, true)
+          )
+        );
 
       res.json(branchesWithSchedule);
     } catch (error) {
@@ -1048,6 +1057,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(branchSection);
     } catch (error) {
       console.error('Error deleting branch section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Новый эндпоинт для синхронизации данных связей филиалов и секций
+  app.get("/api/sync-branch-sections", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      // Обновляем данные в кэше и БД
+      const branchSectionsData = await db
+        .select()
+        .from(branchSections)
+        .where(eq(branchSections.active, true));
+      
+      console.log('Syncing branch sections data, count:', branchSectionsData.length);
+      
+      // Обновляем каждую связь для обеспечения консистентности данных
+      for (const conn of branchSectionsData) {
+        await db
+          .update(branchSections)
+          .set({ 
+            schedule: conn.schedule
+          })
+          .where(eq(branchSections.id, conn.id));
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Branch-section connections synchronized successfully", 
+        count: branchSectionsData.length 
+      });
+    } catch (error) {
+      console.error('Error syncing branch sections:', error);
       res.status(500).json({ error: (error as Error).message });
     }
   });
