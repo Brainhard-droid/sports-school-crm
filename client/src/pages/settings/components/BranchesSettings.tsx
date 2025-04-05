@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
-import { ScheduleFormModal } from "./modals/ScheduleFormModal";
+import ScheduleFormModal from "./modals/ScheduleFormModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -242,9 +242,8 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
           sectionName={selectedBranchSection.sectionName}
           branchId={selectedBranchSection.branchId}
           sectionId={selectedBranchSection.sectionId}
-          existingSchedule={selectedBranchSection.schedule}
-          existingId={selectedBranchSection.id}
-          onSuccess={() => {
+          initialSchedule={selectedBranchSection.schedule}
+          onScheduleUpdated={() => {
             // Обновляем кэш запроса при успешном сохранении
             queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
           }}

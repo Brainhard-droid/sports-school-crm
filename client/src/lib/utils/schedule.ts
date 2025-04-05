@@ -1,142 +1,124 @@
-import { addDays, parse, isBefore, format, getDay } from "date-fns";
+import { format, addDays, isAfter, parseISO, isValid } from "date-fns";
+import { ru } from "date-fns/locale";
 
-interface DaySchedule {
-  time: string; // формат "15:00 - 17:00"
-}
-
-interface WeekSchedule {
-  [key: string]: DaySchedule | null; // monday, tuesday, etc.
-}
-
-type ScheduleFormat = {
-  dayOfWeek: number; // 0 = Воскресенье, 1 = Понедельник, ...
-  startTime: string; // формат "15:00"
-  endTime: string; // формат "17:00"
+// Типы данных расписания
+export type TimeRange = {
+  start: string; // "HH:MM" формат
+  end: string; // "HH:MM" формат
 };
 
-function getDayNumber(day: string): number {
-  const days: Record<string, number> = {
-    'Понедельник': 1,
-    'Вторник': 2,
-    'Среда': 3,
-    'Четверг': 4,
-    'Пятница': 5,
-    'Суббота': 6,
-    'Воскресенье': 0,
-    'понедельник': 1,
-    'вторник': 2,
-    'среда': 3,
-    'четверг': 4,
-    'пятница': 5,
-    'суббота': 6,
-    'воскресенье': 0,
-  };
-  return days[day] || 0;
+export type WeekDaySchedule = {
+  [key: string]: TimeRange[];
+};
+
+// Дни недели на русском для сопоставления с названиями в расписании
+const DAYS_OF_WEEK = [
+  "Воскресенье",
+  "Понедельник",
+  "Вторник",
+  "Среда",
+  "Четверг",
+  "Пятница",
+  "Суббота",
+];
+
+// Эта функция получает ближайшие N дат занятий на основе расписания
+export function getNextLessonDates(schedule: WeekDaySchedule, count: number = 5): { date: Date, timeLabel: string }[] {
+  const result: { date: Date, timeLabel: string }[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Максимальное количество дней для поиска (3 недели вперед)
+  const MAX_DAYS = 21;
+  
+  // Проходим по следующим дням и находим подходящие даты
+  for (let dayOffset = 0; result.length < count && dayOffset < MAX_DAYS; dayOffset++) {
+    const currentDate = addDays(today, dayOffset);
+    const dayOfWeek = DAYS_OF_WEEK[currentDate.getDay()].toLowerCase();
+    
+    // Проверяем все дни недели в расписании
+    Object.entries(schedule).forEach(([scheduleDay, timeRanges]) => {
+      // Если текущий день недели есть в расписании
+      if (scheduleDay.toLowerCase().includes(dayOfWeek) && timeRanges && timeRanges.length > 0) {
+        timeRanges.forEach(timeRange => {
+          const [hours, minutes] = timeRange.start.split(":").map(Number);
+          const [endHours, endMinutes] = timeRange.end.split(":").map(Number);
+          
+          const lessonDate = new Date(currentDate);
+          lessonDate.setHours(hours, minutes, 0, 0);
+          
+          // Только будущие даты
+          if (isAfter(lessonDate, new Date())) {
+            const timeLabel = `${timeRange.start} - ${timeRange.end}`;
+            result.push({
+              date: lessonDate,
+              timeLabel
+            });
+          }
+        });
+      }
+    });
+  }
+  
+  // Сортируем по дате (от ближайшей к дальней)
+  result.sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  // Ограничиваем количество результатов
+  return result.slice(0, count);
 }
 
-export function getNextLessonDates(schedule: Record<string, string | string[]>, count: number = 5): { date: Date, timeLabel: string }[] {
-  const results: { date: Date, timeLabel: string }[] = [];
-  const today = new Date();
+// Форматирует дату и время в читаемый формат
+export function formatDateTime(date: Date): string {
+  if (!date || !isValid(date)) return "";
   
-  console.log("Получение дат на основе расписания:", schedule);
+  return format(date, "d MMMM yyyy 'в' HH:mm", { locale: ru });
+}
 
-  // Создаем массив объектов расписания
-  const scheduleDays: { dayNum: number, startTime: string, endTime: string }[] = [];
+// Преобразует строку расписания в объект
+export function parseScheduleString(scheduleText: string): WeekDaySchedule {
+  if (!scheduleText) return {};
   
-  Object.entries(schedule).forEach(([day, timeRange]) => {
-    const dayNum = getDayNumber(day);
-    console.log(`День: ${day}, номер дня: ${dayNum}, диапазон времени:`, timeRange);
+  const result: WeekDaySchedule = {};
+  const lines = scheduleText.split("\n");
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (!line) return;
     
-    if (dayNum === undefined) return;
+    // Примеры форматов строк расписания:
+    // "Понедельник: 16:00 - 18:00"
+    // "Понедельник: 16:00-18:00"
+    const match = line.match(/^([^:]+):\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
     
-    // Обрабатываем разные форматы timeRange
-    let times: string[] = [];
-    if (typeof timeRange === 'string') {
-      times = timeRange.split(' - ');
-    } else if (Array.isArray(timeRange) && timeRange.length >= 2) {
-      times = [timeRange[0], timeRange[1]];
-    }
-    
-    console.log("Разбор времени:", times);
-    
-    if (times.length === 2) {
-      scheduleDays.push({
-        dayNum,
-        startTime: times[0].trim(),
-        endTime: times[1].trim()
+    if (match) {
+      const [, day, startHour, startMin, endHour, endMin] = match;
+      const dayName = day.trim();
+      
+      if (!result[dayName]) {
+        result[dayName] = [];
+      }
+      
+      const start = `${startHour.padStart(2, '0')}:${startMin}`;
+      const end = `${endHour.padStart(2, '0')}:${endMin}`;
+      
+      result[dayName].push({
+        start,
+        end
       });
     }
   });
   
-  console.log("Дни расписания после обработки:", scheduleDays);
-
-  // Сортируем дни по дням недели
-  scheduleDays.sort((a, b) => {
-    const todayNum = today.getDay();
-    // Вычисляем дни от сегодня (с учетом перехода на следующую неделю)
-    const daysFromTodayA = (a.dayNum - todayNum + 7) % 7;
-    const daysFromTodayB = (b.dayNum - todayNum + 7) % 7;
-    return daysFromTodayA - daysFromTodayB;
-  });
-
-  // Генерируем даты на ближайшие несколько недель
-  const daysToCheck = 21; // Проверяем на 3 недели вперед
-  let currentDate = new Date(today);
-  
-  for (let i = 0; i < daysToCheck && results.length < count; i++) {
-    const dayOfWeek = currentDate.getDay();
-    const matchingScheduleDay = scheduleDays.find(sd => sd.dayNum === dayOfWeek);
-    
-    if (matchingScheduleDay) {
-      const [startHours, startMinutes] = matchingScheduleDay.startTime.split(':').map(Number);
-      const dateObj = new Date(currentDate);
-      dateObj.setHours(startHours, startMinutes, 0, 0);
-      
-      // Проверяем, что дата в будущем
-      if (dateObj > today) {
-        results.push({
-          date: dateObj,
-          timeLabel: `${matchingScheduleDay.startTime} - ${matchingScheduleDay.endTime}`
-        });
-      }
-    }
-    
-    // Переходим к следующему дню
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  console.log("Сформированные даты:", results);
-  return results.slice(0, count);
+  return result;
 }
 
-export function parseScheduleFromText(text: string): Record<string, string> {
-  console.log('Parsing schedule text:', text);
-  const schedule: Record<string, string> = {};
-  const lines = text.split('\n');
-
-  lines.forEach(line => {
-    const [day, time] = line.split(':').map(s => s.trim());
-    if (day && time) {
-      schedule[day.toLowerCase()] = time;
-    }
-  });
-
-  console.log('Parsed schedule:', schedule);
-  return schedule;
-}
-
-/**
- * Преобразует объект Date в строку формата "yyyy-MM-ddTHH:mm" для input type="datetime-local"
- * Сохраняет локальное время, а не UTC
- */
-export function formatDateTime(date: Date): string {
-  // Получаем год, месяц, день, часы и минуты в локальном часовом поясе
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  
-  // Формируем строку в формате "yyyy-MM-ddTHH:mm"
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+// Преобразует объект расписания обратно в строку
+export function scheduleToString(schedule: WeekDaySchedule): string {
+  return Object.entries(schedule)
+    .map(([day, timeRanges]) => {
+      return timeRanges.map(timeRange => 
+        `${day}: ${timeRange.start} - ${timeRange.end}`
+      ).join("\n");
+    })
+    .filter(line => line)
+    .join("\n");
 }

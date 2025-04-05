@@ -895,14 +895,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const id = parseInt(req.params.id);
       
-      // Soft delete - set active flag to false
-      const [section] = await db
-        .update(sportsTable)
-        .set({ active: false })
+      // Проверяем, есть ли связи секции с филиалами
+      const branchSectionLinks = await db
+        .select()
+        .from(branchSectionTable)
+        .where(eq(branchSectionTable.sectionId, id));
+      
+      if (branchSectionLinks.length > 0) {
+        // Если есть связи, удаляем сначала их
+        await db
+          .delete(branchSectionTable)
+          .where(eq(branchSectionTable.sectionId, id));
+      }
+      
+      // Полное удаление секции
+      const deleted = await db
+        .delete(sportsTable)
         .where(eq(sportsTable.id, id))
         .returning();
       
-      if (!section) {
+      if (!deleted || deleted.length === 0) {
         return res.status(404).json({ error: "Sports section not found" });
       }
       
