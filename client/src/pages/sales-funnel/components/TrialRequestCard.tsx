@@ -45,12 +45,7 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
                   : "Назначить пробное"}
               </DropdownMenuItem>
               
-              {/* Опциональные пункты меню в зависимости от статуса */}
-              {request.status === TrialRequestStatus.TRIAL_ASSIGNED && (
-                <DropdownMenuItem>
-                  Отменить пробное
-                </DropdownMenuItem>
-              )}
+              {/* Удалена кнопка "Отменить пробное" по запросу клиента */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

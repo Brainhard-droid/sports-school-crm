@@ -20,6 +20,7 @@ import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
 import Settings from "@/pages/settings/index";
+import PrivacyPolicy from "@/pages/privacy-policy";
 
 // Loading Fallback Component
 const LoadingFallback = () => (
@@ -33,6 +34,7 @@ function Router() {
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
         <Route path="/trial-request" component={TrialRequest} />
+        <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/reset-password/:token" component={ResetPassword} />
         <ProtectedRoute path="/" component={Dashboard} />

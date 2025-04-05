@@ -6,7 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/utils/api";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ import { getNextLessonDates, formatDateTime } from "@/lib/utils/schedule";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { z } from "zod";
 
 export default function TrialRequestPage() {
   const { toast } = useToast();
@@ -24,8 +26,11 @@ export default function TrialRequestPage() {
   const [suggestedDates, setSuggestedDates] = useState<{date: Date, timeLabel: string}[]>([]);
   const [useCustomDate, setUseCustomDate] = useState(false);
   const [selectedDateValue, setSelectedDateValue] = useState<string | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [captchaResponse, setCaptchaResponse] = useState<string>("");
   const isProcessingDateSelection = useRef(false);
   const isInitialMount = useRef(true);
+  const captchaRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<InsertTrialRequest>({
     resolver: zodResolver(insertTrialRequestSchema),
@@ -466,10 +471,35 @@ export default function TrialRequestPage() {
                     </FormItem>
                   )}
                 />
+                {/* Чекбокс согласия на обработку персональных данных */}
+                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox 
+                    id="privacy-policy" 
+                    checked={privacyAccepted}
+                    onCheckedChange={(checked) => setPrivacyAccepted(checked === true)}
+                  />
+                  <Label htmlFor="privacy-policy" className="text-sm text-muted-foreground">
+                    Я даю согласие на обработку моих персональных данных в соответствии с{" "}
+                    <a href="/privacy-policy" target="_blank" className="text-primary underline">
+                      Политикой конфиденциальности
+                    </a>
+                  </Label>
+                </div>
+                
+                {/* Яндекс Капча */}
+                <div className="my-4">
+                  <div ref={captchaRef} id="captcha-container" className="flex justify-center"></div>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={createTrialRequestMutation.isPending || sectionsLoading || branchesLoading}
+                  disabled={
+                    createTrialRequestMutation.isPending || 
+                    sectionsLoading || 
+                    branchesLoading || 
+                    !privacyAccepted
+                  }
                 >
                   {createTrialRequestMutation.isPending ? (
                     <>

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/utils/api";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 
 export function useTrialRequests() {

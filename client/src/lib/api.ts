@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export async function apiRequest<T>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   endpoint: string,
   data?: unknown
 ): Promise<Response> {
