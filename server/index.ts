@@ -14,11 +14,97 @@ import {
   branches, 
   branchSections, 
   trialRequests,
-  TrialRequestStatus 
+  TrialRequestStatus,
+  students,
+  groups,
+  payments,
+  attendance
 } from "@shared/schema";
 
 // Временная замена пока все маршруты не будут реализованы
 const apiRoutes = Router();
+
+// Эндпоинты для студентов
+apiRoutes.get("/students", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const allStudents = await db.select().from(students);
+    res.json(allStudents);
+  } catch (error) {
+    console.error('Error getting students:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Эндпоинт для групп
+apiRoutes.get("/groups", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const allGroups = await db.select().from(groups);
+    res.json(allGroups);
+  } catch (error) {
+    console.error('Error getting groups:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Эндпоинт для платежей
+apiRoutes.get("/payments", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    // Фильтр по студенту, если указан
+    const studentId = req.query.studentId ? parseInt(req.query.studentId as string) : undefined;
+    
+    let result;
+    if (studentId) {
+      result = await db.select().from(payments).where(eq(payments.studentId, studentId));
+    } else {
+      result = await db.select().from(payments);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting payments:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Эндпоинт для посещаемости
+apiRoutes.get("/attendance", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    // Фильтры по группе и дате
+    const groupId = req.query.groupId ? parseInt(req.query.groupId as string) : undefined;
+    const date = req.query.date ? new Date(req.query.date as string) : undefined;
+    
+    let result;
+    if (groupId) {
+      result = await db.select().from(attendance).where(eq(attendance.groupId, groupId));
+    } else {
+      result = await db.select().from(attendance);
+    }
+    
+    // Временная заглушка для даты, так как не можем использовать операции сравнения дат напрямую
+    // TODO: реализовать фильтрацию по дате корректно
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting attendance:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
 // Маршруты для спортивных секций и филиалов
 apiRoutes.get("/sports-sections", async (_req, res) => {
