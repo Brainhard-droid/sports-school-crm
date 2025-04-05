@@ -11,13 +11,15 @@ import {
   insertStudentGroupSchema,
   insertDateCommentSchema,
   insertTrialRequestSchema,
+  insertBranchSchema,
+  insertSportsSectionSchema,
   AttendanceStatus,
   TrialRequestStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
 import { eq } from 'drizzle-orm';
-import { sportsSections, branches, branchSections } from "@shared/schema";
+import { sportsSections as sportsTable, branches as branchesTable, branchSections } from "@shared/schema";
 import { db } from './db';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -26,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Добавляем новые роуты для спортивных секций и филиалов
   app.get("/api/sports-sections", async (_req, res) => {
     try {
-      const sections = await db.select().from(sportsSections);
+      const sections = await db.select().from(sportsTable);
       res.json(sections);
     } catch (error) {
       console.error('Error getting sports sections:', error);
@@ -45,13 +47,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Получаем филиалы с расписанием для выбранной секции
       const branchesWithSchedule = await db
         .select({
-          id: branches.id,
-          name: branches.name,
-          address: branches.address,
+          id: branchesTable.id,
+          name: branchesTable.name,
+          address: branchesTable.address,
           schedule: branchSections.schedule
         })
         .from(branchSections)
-        .innerJoin(branches, eq(branches.id, branchSections.branchId))
+        .innerJoin(branchesTable, eq(branchesTable.id, branchSections.branchId))
         .where(eq(branchSections.sectionId, sectionId));
 
       res.json(branchesWithSchedule);
@@ -731,6 +733,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Branches API
+  app.get("/api/branches", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const branchesList = await db.select().from(branchesTable).where(eq(branchesTable.active, true));
+      res.json(branchesList);
+    } catch (error) {
+      console.error('Error getting branches:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/branches", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const parsed = insertBranchSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+      
+      const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
+      res.status(201).json(branch);
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/branches/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      const [branch] = await db.select().from(branchesTable).where(eq(branchesTable.id, id));
+      
+      if (!branch) {
+        return res.status(404).json({ error: "Branch not found" });
+      }
+      
+      res.json(branch);
+    } catch (error) {
+      console.error('Error getting branch:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/branches/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      const parsed = insertBranchSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+      
+      const [branch] = await db
+        .update(branchesTable)
+        .set(parsed.data)
+        .where(eq(branchesTable.id, id))
+        .returning();
+      
+      if (!branch) {
+        return res.status(404).json({ error: "Branch not found" });
+      }
+      
+      res.json(branch);
+    } catch (error) {
+      console.error('Error updating branch:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/branches/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      
+      // Soft delete - set active flag to false
+      const [branch] = await db
+        .update(branchesTable)
+        .set({ active: false })
+        .where(eq(branchesTable.id, id))
+        .returning();
+      
+      if (!branch) {
+        return res.status(404).json({ error: "Branch not found" });
+      }
+      
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting branch:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Sports Sections API
+  app.post("/api/sports-sections", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const parsed = insertSportsSectionSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+      
+      const [section] = await db.insert(sportsTable).values(parsed.data).returning();
+      res.status(201).json(section);
+    } catch (error) {
+      console.error('Error creating sports section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/sports-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      const [section] = await db.select().from(sportsTable).where(eq(sportsTable.id, id));
+      
+      if (!section) {
+        return res.status(404).json({ error: "Sports section not found" });
+      }
+      
+      res.json(section);
+    } catch (error) {
+      console.error('Error getting sports section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/sports-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      const parsed = insertSportsSectionSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+      
+      const [section] = await db
+        .update(sportsTable)
+        .set(parsed.data)
+        .where(eq(sportsTable.id, id))
+        .returning();
+      
+      if (!section) {
+        return res.status(404).json({ error: "Sports section not found" });
+      }
+      
+      res.json(section);
+    } catch (error) {
+      console.error('Error updating sports section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/sports-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      
+      // Soft delete - set active flag to false
+      const [section] = await db
+        .update(sportsTable)
+        .set({ active: false })
+        .where(eq(sportsTable.id, id))
+        .returning();
+      
+      if (!section) {
+        return res.status(404).json({ error: "Sports section not found" });
+      }
+      
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting sports section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
