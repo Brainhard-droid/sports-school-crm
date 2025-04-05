@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MoreHorizontal, Edit, Trash, Plus, Calendar } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Plus, Calendar, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +65,7 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
   useQuery({
     queryKey: ["/api/branch-sections"],
     queryFn: async () => {
+      console.log('Fetching branch-sections data');
       setIsLoading(true);
       try {
         // Загружаем только активные связи
@@ -73,6 +74,7 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
           throw new Error("Ошибка загрузки связей филиалов и секций");
         }
         const data = await response.json();
+        console.log('Received branch-sections data:', data);
         setBranchSections(data);
         return data;
       } catch (error) {
@@ -87,10 +89,12 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
         setIsLoading(false);
       }
     },
+    staleTime: 0, // Всегда получать свежие данные
   });
 
   // Проверка наличия связи между филиалом и секцией
   const hasConnection = (branchId: number, sectionId: number) => {
+    console.log('Checking connection', { branchId, sectionId, branchSections });
     return branchSections.some(
       (bs) => bs.branchId === branchId && bs.sectionId === sectionId && bs.active
     );
@@ -289,6 +293,13 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
                       });
                     } else {
                       // Создание новой связи
+                      console.log('Creating new branch-section connection', {
+                        branchId: selectedBranchSection.branchId,
+                        sectionId: selectedBranchSection.sectionId,
+                        schedule: selectedBranchSection.schedule || '',
+                        active: true
+                      });
+                      
                       const newLink = await apiRequest("POST", "/api/branch-sections", {
                         branchId: selectedBranchSection.branchId,
                         sectionId: selectedBranchSection.sectionId,
@@ -296,8 +307,15 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
                         active: true
                       }).then(res => res.json());
                       
+                      console.log('Received new link data', newLink);
+                      
                       // Добавляем в локальное состояние
-                      setBranchSections(prev => [...prev, newLink]);
+                      setBranchSections(prev => {
+                        console.log('Previous branchSections state', prev);
+                        const updated = [...prev, newLink];
+                        console.log('Updated branchSections state', updated);
+                        return updated;
+                      });
                       
                       toast({
                         title: "Связь создана",
@@ -562,6 +580,20 @@ export default function BranchesSettings() {
         <TabsContent value="branch-sections" className="mt-6">
           <div className="flex justify-between mb-4">
             <h3 className="text-lg font-medium">Связи филиалов и секций</h3>
+            <Button onClick={() => {
+              // Принудительное обновление всех данных
+              queryClient.invalidateQueries({ queryKey: ["/api/branches"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/sports-sections"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
+              
+              toast({
+                title: "Данные обновлены",
+                description: "Список связей филиалов и секций обновлен",
+              });
+            }}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Обновить данные
+            </Button>
           </div>
           
           {branchesLoading || sectionsLoading ? (
