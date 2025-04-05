@@ -19,7 +19,7 @@ import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
-import Settings from "@/pages/settings";
+import Settings from "@/pages/settings/index";
 
 // Loading Fallback Component
 const LoadingFallback = () => (
