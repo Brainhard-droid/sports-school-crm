@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
-import { ScheduleFormModal } from "./modals/ScheduleFormModal";
+// import { BranchSectionFormModal } from "./modals/BranchSectionFormModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,9 +86,6 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
         setIsLoading(false);
       }
     },
-    // Добавляем зависимость от branches и sections, чтобы запрос перезагружался
-    // при изменении филиалов или секций
-    enabled: branches.length > 0 && sections.length > 0,
   });
 
   // Проверка наличия связи между филиалом и секцией
@@ -176,8 +173,6 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
     }
   };
 
-  // Компонент модального окна расписания используется для управления расписанием
-
   return (
     <div className="space-y-6">
       <div className="border rounded-md overflow-hidden">
@@ -233,22 +228,101 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
         </div>
       </div>
       
-      {/* Используем новый компонент для расписания с улучшенным интерфейсом */}
+      {/* Здесь будет модальное окно для редактирования расписания */}
       {scheduleModalOpen && (
-        <ScheduleFormModal
-          open={scheduleModalOpen}
-          onOpenChange={setScheduleModalOpen}
-          branchName={selectedBranchSection.branchName}
-          sectionName={selectedBranchSection.sectionName}
-          branchId={selectedBranchSection.branchId}
-          sectionId={selectedBranchSection.sectionId}
-          existingSchedule={selectedBranchSection.schedule}
-          existingId={selectedBranchSection.id}
-          onSuccess={() => {
-            // Обновляем кэш запроса при успешном сохранении
-            queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
-          }}
-        />
+        <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedBranchSection.id ? "Редактирование расписания" : "Добавление секции в филиал"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="mb-4">
+                <strong>Филиал:</strong> {selectedBranchSection.branchName}<br />
+                <strong>Секция:</strong> {selectedBranchSection.sectionName}
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="schedule">Расписание занятий</Label>
+                  <Textarea
+                    id="schedule"
+                    placeholder="Например: Понедельник, Среда, Пятница - 18:00-19:30"
+                    className="mt-1"
+                    value={selectedBranchSection.schedule}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedBranchSection({
+                      ...selectedBranchSection,
+                      schedule: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setScheduleModalOpen(false)}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    if (selectedBranchSection.id) {
+                      // Обновление существующей связи
+                      await apiRequest("PATCH", `/api/branch-sections/${selectedBranchSection.id}`, {
+                        schedule: selectedBranchSection.schedule
+                      });
+                      
+                      // Обновляем локальное состояние
+                      setBranchSections(prev => 
+                        prev.map(bs => bs.id === selectedBranchSection.id 
+                          ? {...bs, schedule: selectedBranchSection.schedule || ''}
+                          : bs
+                        )
+                      );
+                      
+                      toast({
+                        title: "Расписание обновлено",
+                        description: "Расписание секции в филиале обновлено"
+                      });
+                    } else {
+                      // Создание новой связи
+                      const newLink = await apiRequest("POST", "/api/branch-sections", {
+                        branchId: selectedBranchSection.branchId,
+                        sectionId: selectedBranchSection.sectionId,
+                        schedule: selectedBranchSection.schedule || '',
+                        active: true
+                      }).then(res => res.json());
+                      
+                      // Добавляем в локальное состояние
+                      setBranchSections(prev => [...prev, newLink]);
+                      
+                      toast({
+                        title: "Связь создана",
+                        description: "Секция успешно добавлена в филиал"
+                      });
+                    }
+                    
+                    // Закрываем модальное окно
+                    setScheduleModalOpen(false);
+                    
+                    // Обновляем кэш запроса
+                    queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
+                  } catch (error) {
+                    toast({
+                      title: "Ошибка",
+                      description: "Не удалось сохранить данные",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
+                Сохранить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
@@ -309,9 +383,7 @@ export default function BranchesSettings() {
       await apiRequest("DELETE", `/api/sports-sections/${id}`);
     },
     onSuccess: () => {
-      // Обновляем обе коллекции данных - секции и связи филиалов с секциями
       queryClient.invalidateQueries({ queryKey: ["/api/sports-sections"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
       toast({
         title: "Секция удалена",
         description: "Спортивная секция была успешно удалена",
