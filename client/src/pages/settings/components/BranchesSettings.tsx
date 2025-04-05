@@ -4,6 +4,7 @@ import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
 // import { BranchSectionFormModal } from "./modals/BranchSectionFormModal";
 import { ScheduleModal } from "@/components/schedule/schedule-modal";
+import { ScheduleDisplay } from "@/components/schedule/schedule-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -271,15 +272,25 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
                             />
                           </div>
                           {connected && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditSchedule(branch.id!, section.id!)}
-                              className="text-xs flex items-center"
-                            >
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {schedule ? 'Изменить расписание' : 'Добавить расписание'}
-                            </Button>
+                            <div className="mt-2">
+                              {schedule ? (
+                                <ScheduleDisplay
+                                  schedule={schedule}
+                                  onClick={() => handleEditSchedule(branch.id!, section.id!)}
+                                  compact={true}
+                                />
+                              ) : (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleEditSchedule(branch.id!, section.id!)}
+                                  className="text-xs flex items-center"
+                                >
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  Добавить расписание
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
