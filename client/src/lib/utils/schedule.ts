@@ -52,7 +52,17 @@ export function getNextLessonDates(schedule: Record<string, string | string[]>, 
     // Обрабатываем разные форматы timeRange
     let times: string[] = [];
     if (typeof timeRange === 'string') {
-      times = timeRange.split(' - ');
+      // Проверяем формат "09:00 - 10:00" или просто время
+      if (timeRange.includes(' - ')) {
+        times = timeRange.split(' - ');
+      } else {
+        // Возможно, что это просто время, например "09:00", тогда предполагаем +1 час для конца
+        const startTime = timeRange.trim();
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const endHours = hours + 1;
+        const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        times = [startTime, endTime];
+      }
     } else if (Array.isArray(timeRange) && timeRange.length >= 2) {
       times = [timeRange[0], timeRange[1]];
     }

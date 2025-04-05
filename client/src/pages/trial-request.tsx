@@ -62,11 +62,38 @@ export default function TrialRequestPage() {
     (branch: { id: number }) => branch.id === Number(branchId)
   );
 
-  // Безопасно парсим JSON расписания, проверяя на null/undefined
+  // Безопасно парсим расписания, поддерживая разные форматы
   const schedule = (() => {
     try {
       if (!selectedBranch?.schedule) return null;
-      return JSON.parse(selectedBranch.schedule);
+      
+      // Пробуем парсить как JSON
+      try {
+        // Может быть уже JSON-объект или JSON-строка
+        if (typeof selectedBranch.schedule === 'object') {
+          return selectedBranch.schedule;
+        }
+        const parsed = JSON.parse(selectedBranch.schedule);
+        return parsed;
+      } catch (jsonError) {
+        console.log("Расписание не в JSON формате, парсим как текст:", selectedBranch.schedule);
+        
+        // Парсим текстовый формат "День: время - время"
+        const schedule: Record<string, string> = {};
+        const lines = selectedBranch.schedule.split('\n');
+        
+        lines.forEach(line => {
+          const parts = line.split(':');
+          if (parts.length >= 2) {
+            const day = parts[0].trim();
+            // Объединяем оставшуюся часть как время
+            const timeValue = parts.slice(1).join(':').trim();
+            schedule[day] = timeValue;
+          }
+        });
+        
+        return schedule;
+      }
     } catch (e) {
       console.error("Ошибка при парсинге расписания:", e);
       return null;
