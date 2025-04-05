@@ -1,11 +1,297 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { createServer } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import connectPgSimple from "connect-pg-simple";
+import { Router } from 'express';
+import { errorHandler } from "./middleware/error";
+import { db } from './db';
+import { eq, and } from 'drizzle-orm';
+import { 
+  sportsSections, 
+  branches, 
+  branchSections, 
+  trialRequests,
+  TrialRequestStatus 
+} from "@shared/schema";
+
+// Временная замена пока все маршруты не будут реализованы
+const apiRoutes = Router();
+
+// Маршруты для спортивных секций и филиалов
+apiRoutes.get("/sports-sections", async (_req, res) => {
+  try {
+    const sections = await db
+      .select()
+      .from(sportsSections)
+      .where(eq(sportsSections.active, true));
+    res.json(sections);
+  } catch (error) {
+    console.error('Error getting sports sections:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Маршрут для получения филиалов по секции
+apiRoutes.get("/branches-by-section", async (req, res) => {
+  try {
+    const sectionId = parseInt(req.query.sectionId as string);
+    if (!sectionId) {
+      return res.status(400).json({ error: "Missing sectionId parameter" });
+    }
+
+    const results = await db
+      .select({
+        id: branches.id,
+        name: branches.name,
+        address: branches.address,
+        phone: branches.phone,
+        active: branches.active,
+        branchSectionId: branchSections.id,
+        schedule: branchSections.schedule,
+      })
+      .from(branchSections)
+      .innerJoin(branches, eq(branches.id, branchSections.branchId))
+      .where(
+        and(
+          eq(branchSections.sectionId, sectionId),
+          eq(branches.active, true),
+          eq(branchSections.active, true)
+        )
+      );
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error getting branches by section:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Получение всех филиалов
+apiRoutes.get("/branches", async (_req, res) => {
+  try {
+    const allBranches = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.active, true));
+    res.json(allBranches);
+  } catch (error) {
+    console.error('Error getting branches:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Маршрут для обработки заявок на пробное занятие
+apiRoutes.post("/trial-requests", async (req, res) => {
+  try {
+    const {
+      childName,
+      childAge,
+      parentName,
+      parentPhone,
+      parentEmail,
+      sectionId,
+      branchId,
+      desiredDate,
+      notes,
+      consentToDataProcessing
+    } = req.body;
+
+    // Проверяем согласие на обработку данных
+    if (!consentToDataProcessing) {
+      return res.status(400).json({ error: 'Необходимо согласие на обработку персональных данных' });
+    }
+
+    // Создаем заявку в базе данных
+    const [newRequest] = await db
+      .insert(trialRequests)
+      .values({
+        childName,
+        childAge,
+        parentName,
+        parentPhone,
+        sectionId,
+        branchId,
+        desiredDate: new Date(desiredDate),
+        status: TrialRequestStatus.NEW,
+        notes,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+
+    // Дополняем информацией о секции и филиале
+    const [section] = await db
+      .select()
+      .from(sportsSections)
+      .where(eq(sportsSections.id, newRequest.sectionId));
+
+    const [branch] = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.id, newRequest.branchId));
+
+    const extendedRequest = {
+      ...newRequest,
+      section,
+      branch
+    };
+
+    res.status(201).json(extendedRequest);
+  } catch (error) {
+    console.error('Error creating trial request:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Получение всех заявок на пробное занятие (требует авторизации)
+apiRoutes.get("/trial-requests", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    console.log('Getting trial requests...');
+    const requests = await db.select().from(trialRequests);
+    console.log('Retrieved trial requests:', requests);
+
+    // Дополняем информацией о секциях и филиалах
+    const extendedRequests = await Promise.all(
+      requests.map(async (request) => {
+        const [section] = await db
+          .select()
+          .from(sportsSections)
+          .where(eq(sportsSections.id, request.sectionId));
+
+        const [branch] = await db
+          .select()
+          .from(branches)
+          .where(eq(branches.id, request.branchId));
+
+        return {
+          ...request,
+          section,
+          branch,
+        };
+      })
+    );
+
+    res.json(extendedRequests);
+  } catch (error) {
+    console.error('Error getting trial requests:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Обновление статуса заявки на пробное занятие (требует авторизации)
+apiRoutes.patch("/trial-requests/:id/status", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const id = parseInt(req.params.id);
+    const { status, scheduledDate } = req.body;
+
+    // Проверяем, что заявка существует
+    const [existingRequest] = await db
+      .select()
+      .from(trialRequests)
+      .where(eq(trialRequests.id, id));
+
+    if (!existingRequest) {
+      return res.status(404).json({ error: 'Заявка не найдена' });
+    }
+
+    // Обновляем статус заявки
+    const [updatedRequest] = await db
+      .update(trialRequests)
+      .set({
+        status,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : existingRequest.scheduledDate,
+        updatedAt: new Date()
+      })
+      .where(eq(trialRequests.id, id))
+      .returning();
+
+    // Получаем информацию о секции и филиале
+    const [section] = await db
+      .select()
+      .from(sportsSections)
+      .where(eq(sportsSections.id, updatedRequest.sectionId));
+
+    const [branch] = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.id, updatedRequest.branchId));
+
+    // Формируем расширенный ответ
+    const extendedRequest = {
+      ...updatedRequest,
+      section,
+      branch
+    };
+
+    res.json(extendedRequest);
+  } catch (error) {
+    console.error('Error updating trial request status:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Получение вариантов дат для пробного занятия из расписания
+apiRoutes.get("/trial-date-options", async (req, res) => {
+  try {
+    const branchSectionId = parseInt(req.query.branchSectionId as string);
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date();
+
+    if (!branchSectionId) {
+      return res.status(400).json({ error: "Missing branchSectionId parameter" });
+    }
+
+    // Получаем информацию о расписании для данной связки филиал-секция
+    const [branchSectionInfo] = await db
+      .select()
+      .from(branchSections)
+      .where(eq(branchSections.id, branchSectionId));
+
+    if (!branchSectionInfo) {
+      return res.status(404).json({ error: "Branch section not found" });
+    }
+
+    // Импортируем утилиты для работы с расписанием
+    const { parseScheduleFromAnyFormat, getNextLessonDates } = await import('./utils/schedule');
+
+    // Парсим расписание и получаем объект с расписанием по дням недели
+    const schedule = parseScheduleFromAnyFormat(branchSectionInfo.schedule);
+
+    // Генерируем ближайшие 5 дат на основе расписания
+    const dateOptions = getNextLessonDates(schedule, startDate, 5);
+
+    // Извлекаем текст расписания для отображения пользователю
+    let scheduleText = '';
+    if (typeof branchSectionInfo.schedule === 'string') {
+      scheduleText = branchSectionInfo.schedule;
+    } else if (branchSectionInfo.schedule && typeof branchSectionInfo.schedule === 'object') {
+      if ('text' in branchSectionInfo.schedule) {
+        // @ts-ignore
+        scheduleText = branchSectionInfo.schedule.text || '';
+      } else {
+        scheduleText = JSON.stringify(branchSectionInfo.schedule);
+      }
+    }
+
+    res.json({
+      scheduleText,
+      dateOptions
+    });
+  } catch (error) {
+    console.error('Error getting trial date options:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
 const app = express();
 
@@ -18,6 +304,7 @@ app.use(express.urlencoded({ extended: false }));
 app.set("trust proxy", 1);
 
 // Session configuration
+import connectPgSimple from "connect-pg-simple";
 const PostgresStore = connectPgSimple(session);
 
 app.use(session({
@@ -77,14 +364,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Регистрация API маршрутов
+  app.use('/api', apiRoutes);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('Error:', err);
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-  });
+  // Глобальный обработчик ошибок должен быть последним middleware
+  app.use(errorHandler);
+
+  // Создаем HTTP сервер
+  const server = createServer(app);
 
   if (app.get("env") === "development") {
     await setupVite(app, server);
