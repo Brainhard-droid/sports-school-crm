@@ -349,8 +349,22 @@ export default function StudentsPage() {
   if (error) {
     return (
       <Layout>
-        <div className="p-6 text-red-500">
-          <p>Ошибка загрузки данных: {error.message}</p>
+        <div className="p-6">
+          <div className="mb-6 flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Ученики</h1>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Добавить ученика
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">Произошла ошибка при загрузке данных. Попробуйте обновить страницу.</p>
+            <p className="text-sm text-red-500 mt-1">{error.message}</p>
+          </div>
         </div>
       </Layout>
     );
