@@ -13,6 +13,7 @@ import {
   insertTrialRequestSchema,
   insertBranchSchema,
   insertSportsSectionSchema,
+  insertBranchSectionSchema,
   AttendanceStatus,
   TrialRequestStatus,
 } from "@shared/schema";
@@ -908,6 +909,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendStatus(200);
     } catch (error) {
       console.error('Error deleting sports section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Branch-Sections management
+  app.get("/api/branch-sections", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      // Get all branch sections
+      const branchSectionsList = await db
+        .select()
+        .from(branchSections);
+      
+      res.json(branchSectionsList);
+    } catch (error) {
+      console.error('Error getting branch sections:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/branch-sections", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const parsed = insertBranchSectionSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+      
+      // Check if branch and section exist
+      const [branch] = await db
+        .select()
+        .from(branchesTable)
+        .where(eq(branchesTable.id, parsed.data.branchId));
+      
+      const [section] = await db
+        .select()
+        .from(sportsTable)
+        .where(eq(sportsTable.id, parsed.data.sectionId));
+      
+      if (!branch || !section) {
+        return res.status(400).json({ error: "Branch or section not found" });
+      }
+      
+      // Insert branch section
+      const [branchSection] = await db
+        .insert(branchSections)
+        .values(parsed.data)
+        .returning();
+      
+      res.status(201).json(branchSection);
+    } catch (error) {
+      console.error('Error creating branch section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/branch-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      
+      const [branchSection] = await db
+        .select()
+        .from(branchSections)
+        .where(eq(branchSections.id, id));
+      
+      if (!branchSection) {
+        return res.status(404).json({ error: "Branch section not found" });
+      }
+      
+      res.json(branchSection);
+    } catch (error) {
+      console.error('Error getting branch section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/branch-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      
+      // Check if branch section exists
+      const [existingBranchSection] = await db
+        .select()
+        .from(branchSections)
+        .where(eq(branchSections.id, id));
+      
+      if (!existingBranchSection) {
+        return res.status(404).json({ error: "Branch section not found" });
+      }
+      
+      // Update branch section
+      const [updatedBranchSection] = await db
+        .update(branchSections)
+        .set(req.body)
+        .where(eq(branchSections.id, id))
+        .returning();
+      
+      res.json(updatedBranchSection);
+    } catch (error) {
+      console.error('Error updating branch section:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/api/branch-sections/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      
+      const id = parseInt(req.params.id);
+      
+      // Soft delete - set active flag to false
+      const [branchSection] = await db
+        .update(branchSections)
+        .set({ active: false })
+        .where(eq(branchSections.id, id))
+        .returning();
+      
+      res.json(branchSection);
+    } catch (error) {
+      console.error('Error deleting branch section:', error);
       res.status(500).json({ error: (error as Error).message });
     }
   });

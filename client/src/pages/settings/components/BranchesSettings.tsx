@@ -2,10 +2,22 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
+// import { BranchSectionFormModal } from "./modals/BranchSectionFormModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoreHorizontal, Edit, Trash, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { MoreHorizontal, Edit, Trash, Plus, Calendar } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +27,306 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+
+// Интерфейс для данных о связи между филиалом и секцией
+interface BranchSection {
+  id?: number;
+  branchId: number;
+  sectionId: number;
+  schedule: string;
+  active?: boolean;
+}
+
+// Компонент матрицы связей между филиалами и секциями
+function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; sections: Section[] }) {
+  const queryClient = useQueryClient();
+  const [branchSections, setBranchSections] = useState<BranchSection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  // Интерфейс для выбранной связи, используется только в UI
+  interface SelectedBranchSection {
+    branchId: number;
+    sectionId: number;
+    branchName: string;
+    sectionName: string;
+    schedule: string;
+    id?: number;
+  }
+  
+  const [selectedBranchSection, setSelectedBranchSection] = useState<SelectedBranchSection>({
+    branchId: 0,
+    sectionId: 0,
+    branchName: '',
+    sectionName: '',
+    schedule: ''
+  });
+
+  // Загрузка данных о связях филиалов и секций
+  useQuery({
+    queryKey: ["/api/branch-sections"],
+    queryFn: async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/branch-sections");
+        if (!response.ok) {
+          throw new Error("Ошибка загрузки связей филиалов и секций");
+        }
+        const data = await response.json();
+        setBranchSections(data);
+        return data;
+      } catch (error) {
+        console.error("Ошибка при загрузке связей:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить связи филиалов и секций",
+          variant: "destructive",
+        });
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  // Проверка наличия связи между филиалом и секцией
+  const hasConnection = (branchId: number, sectionId: number) => {
+    return branchSections.some(
+      (bs) => bs.branchId === branchId && bs.sectionId === sectionId && bs.active
+    );
+  };
+
+  // Обработчик клика по чекбоксу
+  const handleConnectionToggle = async (branchId: number, sectionId: number, hasLink: boolean) => {
+    if (hasLink) {
+      // Найти существующую связь и деактивировать
+      const existingLink = branchSections.find(
+        (bs) => bs.branchId === branchId && bs.sectionId === sectionId
+      );
+      
+      if (existingLink?.id) {
+        try {
+          await apiRequest("PATCH", `/api/branch-sections/${existingLink.id}`, {
+            active: false
+          });
+          
+          toast({
+            title: "Связь удалена",
+            description: "Связь между филиалом и секцией успешно удалена"
+          });
+          
+          // Обновляем локальное состояние
+          setBranchSections(prev => 
+            prev.map(bs => bs.id === existingLink.id ? {...bs, active: false} : bs)
+          );
+        } catch (error) {
+          toast({
+            title: "Ошибка",
+            description: "Не удалось удалить связь",
+            variant: "destructive"
+          });
+        }
+      }
+    } else {
+      // Найти филиал и секцию для показа в модальном окне
+      const branch = branches.find(b => b.id === branchId);
+      const section = sections.find(s => s.id === sectionId);
+      
+      if (branch && section) {
+        setSelectedBranchSection({
+          branchId,
+          sectionId,
+          branchName: branch.name,
+          sectionName: section.name,
+          schedule: ''
+        });
+        setScheduleModalOpen(true);
+      }
+    }
+  };
+
+  // Получение расписания для связи
+  const getSchedule = (branchId: number, sectionId: number) => {
+    const link = branchSections.find(
+      (bs) => bs.branchId === branchId && bs.sectionId === sectionId && bs.active
+    );
+    return link?.schedule || '';
+  };
+
+  // Обработчик клика по кнопке редактирования расписания
+  const handleEditSchedule = (branchId: number, sectionId: number) => {
+    const branch = branches.find(b => b.id === branchId);
+    const section = sections.find(s => s.id === sectionId);
+    const existingLink = branchSections.find(
+      (bs) => bs.branchId === branchId && bs.sectionId === sectionId && bs.active
+    );
+    
+    if (branch && section) {
+      setSelectedBranchSection({
+        branchId,
+        sectionId,
+        branchName: branch.name,
+        sectionName: section.name,
+        schedule: existingLink?.schedule || '',
+        id: existingLink?.id
+      });
+      setScheduleModalOpen(true);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="border rounded-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full bg-background">
+            <thead>
+              <tr>
+                <th className="p-3 text-left font-medium border-b min-w-40">Филиалы / Секции</th>
+                {sections.map((section) => (
+                  <th key={section.id} className="p-3 text-center font-medium border-b min-w-40">
+                    {section.name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {branches.map((branch) => (
+                <tr key={branch.id} className="border-b last:border-b-0">
+                  <td className="p-3 font-medium">{branch.name}</td>
+                  {sections.map((section) => {
+                    const connected = hasConnection(branch.id!, section.id!);
+                    const schedule = getSchedule(branch.id!, section.id!);
+                    
+                    return (
+                      <td key={section.id} className="p-3 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="flex items-center">
+                            <Checkbox
+                              id={`connection-${branch.id}-${section.id}`}
+                              checked={connected}
+                              onCheckedChange={() => handleConnectionToggle(branch.id!, section.id!, connected)}
+                            />
+                          </div>
+                          {connected && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditSchedule(branch.id!, section.id!)}
+                              className="text-xs flex items-center"
+                            >
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {schedule ? 'Изменить расписание' : 'Добавить расписание'}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Здесь будет модальное окно для редактирования расписания */}
+      {scheduleModalOpen && (
+        <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedBranchSection.id ? "Редактирование расписания" : "Добавление секции в филиал"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="mb-4">
+                <strong>Филиал:</strong> {selectedBranchSection.branchName}<br />
+                <strong>Секция:</strong> {selectedBranchSection.sectionName}
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="schedule">Расписание занятий</Label>
+                  <Textarea
+                    id="schedule"
+                    placeholder="Например: Понедельник, Среда, Пятница - 18:00-19:30"
+                    className="mt-1"
+                    value={selectedBranchSection.schedule}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedBranchSection({
+                      ...selectedBranchSection,
+                      schedule: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setScheduleModalOpen(false)}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    if (selectedBranchSection.id) {
+                      // Обновление существующей связи
+                      await apiRequest("PATCH", `/api/branch-sections/${selectedBranchSection.id}`, {
+                        schedule: selectedBranchSection.schedule
+                      });
+                      
+                      // Обновляем локальное состояние
+                      setBranchSections(prev => 
+                        prev.map(bs => bs.id === selectedBranchSection.id 
+                          ? {...bs, schedule: selectedBranchSection.schedule || ''}
+                          : bs
+                        )
+                      );
+                      
+                      toast({
+                        title: "Расписание обновлено",
+                        description: "Расписание секции в филиале обновлено"
+                      });
+                    } else {
+                      // Создание новой связи
+                      const newLink = await apiRequest("POST", "/api/branch-sections", {
+                        branchId: selectedBranchSection.branchId,
+                        sectionId: selectedBranchSection.sectionId,
+                        schedule: selectedBranchSection.schedule || '',
+                        active: true
+                      }).then(res => res.json());
+                      
+                      // Добавляем в локальное состояние
+                      setBranchSections(prev => [...prev, newLink]);
+                      
+                      toast({
+                        title: "Связь создана",
+                        description: "Секция успешно добавлена в филиал"
+                      });
+                    }
+                    
+                    // Закрываем модальное окно
+                    setScheduleModalOpen(false);
+                    
+                    // Обновляем кэш запроса
+                    queryClient.invalidateQueries({ queryKey: ["/api/branch-sections"] });
+                  } catch (error) {
+                    toast({
+                      title: "Ошибка",
+                      description: "Не удалось сохранить данные",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
+                Сохранить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
 
 export default function BranchesSettings() {
   const [openBranchModal, setOpenBranchModal] = useState(false);
@@ -126,6 +438,7 @@ export default function BranchesSettings() {
         <TabsList>
           <TabsTrigger value="branches">Филиалы</TabsTrigger>
           <TabsTrigger value="sections">Спортивные секции</TabsTrigger>
+          <TabsTrigger value="branch-sections">Связи филиалов и секций</TabsTrigger>
         </TabsList>
         
         <TabsContent value="branches" className="mt-6">
@@ -241,6 +554,27 @@ export default function BranchesSettings() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="branch-sections" className="mt-6">
+          <div className="flex justify-between mb-4">
+            <h3 className="text-lg font-medium">Связи филиалов и секций</h3>
+          </div>
+          
+          {branchesLoading || sectionsLoading ? (
+            <div className="text-center p-6">Загрузка...</div>
+          ) : branches.length === 0 || sections.length === 0 ? (
+            <div className="text-center p-6 border rounded-md">
+              Необходимо добавить филиалы и секции перед настройкой связей между ними.
+            </div>
+          ) : (
+            <div className="grid gap-6">
+              <SectionBranchMatrix 
+                branches={branches} 
+                sections={sections} 
+              />
             </div>
           )}
         </TabsContent>

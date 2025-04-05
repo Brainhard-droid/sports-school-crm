@@ -187,6 +187,7 @@ export const insertDateCommentSchema = createInsertSchema(dateComments);
 
 export const insertBranchSchema = createInsertSchema(branches).omit({ id: true });
 export const insertSportsSectionSchema = createInsertSchema(sportsSections).omit({ id: true });
+export const insertBranchSectionSchema = createInsertSchema(branchSections).omit({ id: true });
 export const insertTrialRequestSchema = createInsertSchema(trialRequests)
   .omit({
     id: true,
@@ -223,4 +224,5 @@ export type InsertStudentGroup = z.infer<typeof insertStudentGroupSchema>;
 export type InsertDateComment = z.infer<typeof insertDateCommentSchema>;
 export type InsertBranch = z.infer<typeof insertBranchSchema>;
 export type InsertSportsSection = z.infer<typeof insertSportsSectionSchema>;
+export type InsertBranchSection = z.infer<typeof insertBranchSectionSchema>;
 export type InsertTrialRequest = z.infer<typeof insertTrialRequestSchema>;
