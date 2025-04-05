@@ -19,6 +19,7 @@ import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
+import Settings from "@/pages/settings";
 
 // Loading Fallback Component
 const LoadingFallback = () => (
@@ -41,6 +42,7 @@ function Router() {
         <ProtectedRoute path="/attendance" component={Attendance} />
         <ProtectedRoute path="/payments" component={Payments} />
         <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
+        <ProtectedRoute path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
