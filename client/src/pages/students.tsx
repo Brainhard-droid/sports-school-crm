@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStudents } from '@/hooks/use-students';
 import { 
   CreateStudentDialog, 
@@ -11,11 +11,9 @@ import { Grid, List, UserRoundPlus, Users } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { 
   Tabs, 
   TabsContent, 
@@ -24,22 +22,35 @@ import {
 } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
+/**
+ * Страница управления учениками
+ * Отображает список учеников с возможностью фильтрации и просмотра в виде сетки или списка
+ */
 export default function StudentsPage() {
-  const [filters, setFilters] = useState({
-    searchTerm: '',
-    showArchived: false,
-  });
-  
+  // Локальный стейт для фильтров и режима отображения
+  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [tabValue, setTabValue] = useState<'all' | 'active' | 'archived'>('all');
+  
+  // Определяем стратегию фильтрации на основе выбранной вкладки
+  const showArchived = useMemo(() => {
+    if (tabValue === 'all') return undefined; // показываем всех
+    if (tabValue === 'archived') return true; // только архивные
+    return false; // только активные
+  }, [tabValue]);
 
+  // Загружаем данные с сервера
   const { students, statistics, isLoading, error } = useStudents({
-    searchTerm: filters.searchTerm,
-    showArchived: filters.showArchived,
+    searchTerm,
+    showArchived,
   });
 
-  const handleFiltersChange = (newFilters: { searchTerm: string; showArchived: boolean }) => {
-    setFilters(newFilters);
-  };
+  // Фильтруем студентов на основе выбранной вкладки
+  const filteredStudents = useMemo(() => {
+    if (tabValue === 'all') return students;
+    if (tabValue === 'archived') return students.filter(s => !s.active);
+    return students.filter(s => s.active);
+  }, [students, tabValue]);
 
   return (
     <div className="container py-6">
@@ -53,6 +64,7 @@ export default function StudentsPage() {
         <CreateStudentDialog />
       </header>
 
+      {/* Статистические карточки */}
       <div className="grid md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -85,7 +97,11 @@ export default function StudentsPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="all">
+      {/* Вкладки и списки учеников */}
+      <Tabs 
+        value={tabValue} 
+        onValueChange={(value) => setTabValue(value as 'all' | 'active' | 'archived')}
+      >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <TabsList>
             <TabsTrigger value="all">Все ученики</TabsTrigger>
@@ -110,61 +126,56 @@ export default function StudentsPage() {
 
         <TabsContent value="all">
           <StudentFilters 
-            filters={filters} 
-            onFiltersChange={handleFiltersChange} 
+            filters={{ searchTerm, showArchived: false }} 
+            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {viewMode === 'grid' ? (
-            <StudentsGrid 
-              students={students} 
-              isLoading={isLoading} 
-              error={error} 
-            />
-          ) : (
-            <StudentsList 
-              students={students} 
-              isLoading={isLoading}
-            />
-          )}
+          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
         </TabsContent>
 
         <TabsContent value="active">
           <StudentFilters 
-            filters={{ ...filters, showArchived: false }} 
-            onFiltersChange={handleFiltersChange} 
+            filters={{ searchTerm, showArchived: false }} 
+            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {viewMode === 'grid' ? (
-            <StudentsGrid 
-              students={students.filter(s => s.active)} 
-              isLoading={isLoading} 
-              error={error} 
-            />
-          ) : (
-            <StudentsList 
-              students={students.filter(s => s.active)} 
-              isLoading={isLoading}
-            />
-          )}
+          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
         </TabsContent>
 
         <TabsContent value="archived">
           <StudentFilters 
-            filters={{ ...filters, showArchived: true }} 
-            onFiltersChange={handleFiltersChange} 
+            filters={{ searchTerm, showArchived: true }} 
+            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {viewMode === 'grid' ? (
-            <StudentsGrid 
-              students={students.filter(s => !s.active)} 
-              isLoading={isLoading} 
-              error={error} 
-            />
-          ) : (
-            <StudentsList 
-              students={students.filter(s => !s.active)} 
-              isLoading={isLoading}
-            />
-          )}
+          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+/**
+ * Вспомогательная функция для рендеринга списка студентов
+ * в зависимости от выбранного режима отображения
+ */
+function renderStudentList(
+  students: any[], 
+  viewMode: 'grid' | 'list', 
+  isLoading: boolean, 
+  error: Error | null
+) {
+  if (viewMode === 'grid') {
+    return (
+      <StudentsGrid 
+        students={students} 
+        isLoading={isLoading} 
+        error={error} 
+      />
+    );
+  }
+  
+  return (
+    <StudentsList 
+      students={students} 
+      isLoading={isLoading}
+    />
   );
 }

@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Search } from "lucide-react";
 
 interface StudentFiltersProps {
   filters: {
@@ -11,25 +11,15 @@ interface StudentFiltersProps {
 
 export function StudentFilters({ filters, onFiltersChange }: StudentFiltersProps) {
   return (
-    <div className="mb-6 flex gap-4 items-center">
-      <div className="flex-1">
+    <div className="mb-6">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Поиск по имени ученика или родителя..."
           value={filters.searchTerm}
           onChange={(e) => onFiltersChange({ ...filters, searchTerm: e.target.value })}
+          className="pl-10"
         />
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="showArchived"
-          checked={filters.showArchived}
-          onCheckedChange={(checked) =>
-            onFiltersChange({ ...filters, showArchived: checked as boolean })
-          }
-        />
-        <label htmlFor="showArchived" className="text-sm">
-          Показать архивные
-        </label>
       </div>
     </div>
   );
