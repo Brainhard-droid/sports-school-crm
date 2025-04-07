@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Settings,
   MessageCircle,
+  UserRound,
 } from "lucide-react";
 import { LanguageSwitcher } from "../language-switcher";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ import { useTranslation } from "react-i18next";
 const navigation = [
   { name: "navigation.dashboard", href: "/", icon: LayoutDashboard, protected: true },
   { name: "navigation.students", href: "/students", icon: Users, protected: true },
+  { name: "Ученики (новая)", href: "/students-new", icon: UserRound, protected: true },
   { name: "navigation.groups", href: "/groups", icon: Group, protected: true },
   { name: "navigation.attendance", href: "/attendance", icon: Calendar, protected: true },
   { name: "navigation.payments", href: "/payments", icon: CreditCard, protected: true },
