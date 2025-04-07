@@ -21,10 +21,25 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  // Установка мин/макс года для выбора
+  const [monthYear, setMonthYear] = React.useState<Date>(
+    props.defaultMonth || new Date()
+  );
+
+  // Переопределение метода onMonthChange, чтобы сохранять и отслеживать
+  // месяц и год внутри компонента
+  const handleMonthChange = (date: Date) => {
+    setMonthYear(date);
+    props.onMonthChange?.(date);
+  };
+
+  // Передаем кастомные значения для месяца и года нашему компоненту выбора
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      month={monthYear}
+      onMonthChange={handleMonthChange}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -62,7 +77,14 @@ function Calendar({
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        Caption: (captionProps) => <CustomCaption {...captionProps} onChange={props.onMonthChange} />,
+        Caption: ({ displayMonth }) => (
+          <CustomCaption 
+            displayMonth={displayMonth} 
+            onChange={handleMonthChange} 
+            minYear={2000} 
+            maxYear={new Date().getFullYear()}
+          />
+        ),
       }}
       locale={ru}
       {...props}
@@ -70,19 +92,21 @@ function Calendar({
   )
 }
 
-// Расширяем интерфейс для передачи функции обратного вызова
+// Расширяем интерфейс для передачи минимального и максимального года
 interface CustomCaptionProps extends CaptionProps {
-  onChange?: (date: Date) => void;
+  onChange: (date: Date) => void;
+  minYear: number;
+  maxYear: number;
 }
 
 /**
  * Компонент заголовка календаря с селекторами месяца и года
  */
-function CustomCaption({ displayMonth, onChange }: CustomCaptionProps) {
-  // Короткие названия месяцев для экономии места
+function CustomCaption({ displayMonth, onChange, minYear, maxYear }: CustomCaptionProps) {
+  // Полные названия месяцев
   const monthNames = React.useMemo(() => [
-    'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 
-    'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
   ], []);
 
   // Получаем текущий месяц и год
@@ -97,42 +121,38 @@ function CustomCaption({ displayMonth, onChange }: CustomCaptionProps) {
     }));
   }, [monthNames]);
   
-  // Создаем годы для выбора (10 лет назад и 10 лет вперед)
+  // Создаем годы для выбора в пределах minYear и maxYear
   const years = React.useMemo(() => {
-    const startYear = currentYear - 10;
-    return Array.from({ length: 21 }).map((_, i) => {
-      const year = startYear + i;
+    const yearsCount = maxYear - minYear + 1;
+    return Array.from({ length: yearsCount }).map((_, i) => {
+      const year = minYear + i;
       return {
         value: year.toString(),
         label: year.toString()
       };
     });
-  }, [currentYear]);
+  }, [minYear, maxYear]);
 
   // Обработчики изменения месяца и года
   const handleMonthChange = (month: string) => {
-    if (!onChange) return;
-    
     const newDate = new Date(displayMonth);
     newDate.setMonth(parseInt(month, 10));
     onChange(newDate);
   };
 
   const handleYearChange = (year: string) => {
-    if (!onChange) return;
-    
     const newDate = new Date(displayMonth);
     newDate.setFullYear(parseInt(year, 10));
     onChange(newDate);
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 px-10">
+    <div className="flex items-center justify-between gap-2 px-8">
       <Select
         value={currentMonth.toString()}
         onValueChange={handleMonthChange}
       >
-        <SelectTrigger className="h-8 w-[80px] text-sm">
+        <SelectTrigger className="h-7 min-w-[110px] max-w-[110px] text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -148,7 +168,7 @@ function CustomCaption({ displayMonth, onChange }: CustomCaptionProps) {
         value={currentYear.toString()}
         onValueChange={handleYearChange}
       >
-        <SelectTrigger className="h-8 w-[70px] text-sm">
+        <SelectTrigger className="h-7 min-w-[65px] max-w-[65px] text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

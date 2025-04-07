@@ -218,9 +218,6 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
                     }}
                     disabled={(date) => date > new Date()}
                     initialFocus
-                    captionLayout="dropdown" 
-                    fromYear={2000}
-                    toYear={new Date().getFullYear()}
                     defaultMonth={field.value ? new Date(field.value) : new Date()}
                   />
                 </PopoverContent>
