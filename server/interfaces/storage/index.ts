@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Главный файл экспорта интерфейсов хранилища
+ * 
+ * Этот файл экспортирует все интерфейсы хранилища данных.
+ */
+
+// Импорт отдельных интерфейсов
 import { IBaseStorage } from './IBaseStorage';
 import { IUserStorage } from './IUserStorage';
 import { IBranchStorage } from './IBranchStorage';
@@ -5,6 +12,8 @@ import { ISectionStorage } from './ISectionStorage';
 import { IBranchSectionStorage } from './IBranchSectionStorage';
 import { ITrialRequestStorage } from './ITrialRequestStorage';
 import { IStudentStorage } from './IStudentStorage';
+import { IGroupStorage } from './IGroupStorage';
+import { IStudentGroupStorage } from './IStudentGroupStorage';
 
 /**
  * Полный интерфейс хранилища данных
@@ -17,17 +26,19 @@ export interface IStorage extends
   ISectionStorage,
   IBranchSectionStorage,
   ITrialRequestStorage,
-  IStudentStorage {
+  IStudentStorage,
+  IGroupStorage,
+  IStudentGroupStorage {
   // Дополнительные методы, относящиеся к хранилищу в целом, можно добавить здесь
 }
 
-// Экспортируем все интерфейсы
-export {
-  IBaseStorage,
-  IUserStorage,
-  IBranchStorage,
-  ISectionStorage,
-  IBranchSectionStorage,
-  ITrialRequestStorage,
-  IStudentStorage
-};
+// Экспорт отдельных интерфейсов для использования в реализациях
+export * from './IBaseStorage';
+export * from './IUserStorage';
+export * from './IBranchStorage';
+export * from './ISectionStorage';
+export * from './IBranchSectionStorage';
+export * from './ITrialRequestStorage';
+export * from './IStudentStorage';
+export * from './IGroupStorage';
+export * from './IStudentGroupStorage';

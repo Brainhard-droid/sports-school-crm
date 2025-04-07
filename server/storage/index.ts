@@ -1,4 +1,4 @@
-import { IStorage } from '../interfaces/storage';
+//import { IStorage } from '../interfaces/storage';
 import { BaseStorage } from './BaseStorage';
 import { UserStorage } from './UserStorage';
 import { BranchStorage } from './BranchStorage';
@@ -6,14 +6,15 @@ import { SectionStorage } from './SectionStorage';
 import { BranchSectionStorage } from './BranchSectionStorage';
 import { TrialRequestStorage } from './TrialRequestStorage';
 import { StudentStorage } from './StudentStorage';
+import { GroupStorage } from './GroupStorage';
+import { StudentGroupStorage } from './StudentGroupStorage';
 
 /**
  * Класс для объединения всех хранилищ
  * Реализует полный интерфейс хранилища данных
  */
 export class PostgresStorage 
-  extends BaseStorage
-  implements IStorage {
+  extends BaseStorage {
   
   // Объявление методов, делегируемых соответствующим хранилищам
   // User Storage
@@ -60,6 +61,19 @@ export class PostgresStorage
   updateStudent: StudentStorage['updateStudent'];
   deleteStudent: StudentStorage['deleteStudent'];
   
+  // Group Storage
+  getGroups: GroupStorage['getGroups'];
+  getGroup: GroupStorage['getGroup'];
+  createGroup: GroupStorage['createGroup'];
+  getGroupStudentsWithDetails: GroupStorage['getGroupStudentsWithDetails'];
+  deleteGroup: GroupStorage['deleteGroup'];
+  
+  // Student Group Storage
+  getStudentGroups: StudentGroupStorage['getStudentGroups'];
+  getGroupStudents: StudentGroupStorage['getGroupStudents'];
+  addStudentToGroup: StudentGroupStorage['addStudentToGroup'];
+  removeStudentFromGroup: StudentGroupStorage['removeStudentFromGroup'];
+  
   // Приватные инстансы хранилищ
   private userStorage: UserStorage;
   private branchStorage: BranchStorage;
@@ -67,6 +81,8 @@ export class PostgresStorage
   private branchSectionStorage: BranchSectionStorage;
   private trialRequestStorage: TrialRequestStorage;
   private studentStorage: StudentStorage;
+  private groupStorage: GroupStorage;
+  private studentGroupStorage: StudentGroupStorage;
   
   constructor() {
     super();
@@ -78,6 +94,8 @@ export class PostgresStorage
     this.branchSectionStorage = new BranchSectionStorage();
     this.trialRequestStorage = new TrialRequestStorage();
     this.studentStorage = new StudentStorage();
+    this.groupStorage = new GroupStorage();
+    this.studentGroupStorage = new StudentGroupStorage();
     
     // Привязываем методы к соответствующим реализациям
     this.getUser = this.userStorage.getUser.bind(this.userStorage);
@@ -117,6 +135,17 @@ export class PostgresStorage
     this.createStudent = this.studentStorage.createStudent.bind(this.studentStorage);
     this.updateStudent = this.studentStorage.updateStudent.bind(this.studentStorage);
     this.deleteStudent = this.studentStorage.deleteStudent.bind(this.studentStorage);
+    
+    this.getGroups = this.groupStorage.getGroups.bind(this.groupStorage);
+    this.getGroup = this.groupStorage.getGroup.bind(this.groupStorage);
+    this.createGroup = this.groupStorage.createGroup.bind(this.groupStorage);
+    this.getGroupStudentsWithDetails = this.groupStorage.getGroupStudentsWithDetails.bind(this.groupStorage);
+    this.deleteGroup = this.groupStorage.deleteGroup.bind(this.groupStorage);
+    
+    this.getStudentGroups = this.studentGroupStorage.getStudentGroups.bind(this.studentGroupStorage);
+    this.getGroupStudents = this.studentGroupStorage.getGroupStudents.bind(this.studentGroupStorage);
+    this.addStudentToGroup = this.studentGroupStorage.addStudentToGroup.bind(this.studentGroupStorage);
+    this.removeStudentFromGroup = this.studentGroupStorage.removeStudentFromGroup.bind(this.studentGroupStorage);
   }
 }
 
