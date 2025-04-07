@@ -34,9 +34,60 @@ apiRoutes.get("/groups", async (req, res) => {
   
   try {
     const allGroups = await db.select().from(groups);
-    res.json(allGroups);
+    
+    // Получаем количество студентов для каждой группы
+    const enrichedGroups = await Promise.all(
+      allGroups.map(async (group) => {
+        const studentGroups = await storage.getGroupStudents(group.id);
+        // Подсчитываем только активных студентов в группе
+        const activeStudentGroups = studentGroups.filter(sg => sg.active);
+        return {
+          ...group,
+          currentStudents: activeStudentGroups.length
+        };
+      })
+    );
+    
+    res.json(enrichedGroups);
   } catch (error) {
     console.error('Error getting groups:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Эндпоинт для получения группы по ID
+apiRoutes.get("/groups/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid group ID' });
+    }
+    
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Группа не найдена' });
+    }
+    
+    // Получаем студентов в этой группе
+    const studentGroups = await storage.getGroupStudents(id);
+    const activeStudentGroups = studentGroups.filter(sg => sg.active);
+    
+    // Получаем детальную информацию о студентах
+    const students = await storage.getGroupStudentsWithDetails(id);
+    
+    // Возвращаем группу с дополнительными данными
+    res.json({
+      ...group,
+      currentStudents: activeStudentGroups.length,
+      students
+    });
+  } catch (error) {
+    console.error('Error getting group details:', error);
     res.status(500).json({ error: (error as Error).message });
   }
 });
