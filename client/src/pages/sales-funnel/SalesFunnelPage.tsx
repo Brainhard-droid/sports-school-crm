@@ -4,7 +4,6 @@ import { useTrialRequests } from "./hooks/useTrialRequests";
 import { Loader2 } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Layout } from "@/components/layout/navbar";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
@@ -88,75 +87,73 @@ export default function SalesFunnelPage() {
   }
 
   return (
-    <Layout>
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Воронка продаж</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-4 gap-4">
-                {statusColumns.map(column => (
-                  <div key={column.id} className="bg-muted/50 rounded-lg p-4">
-                    <h3 className="font-medium mb-4">{column.title}</h3>
-                    <Droppable droppableId={column.id}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className="space-y-2 min-h-[200px]"
-                        >
-                          {requestsByStatus[column.id].map((request, index) => (
-                            <Draggable
-                              key={request.id}
-                              draggableId={request.id.toString()}
-                              index={index}
-                            >
-                              {(provided) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                >
-                                  <TrialRequestCard
-                                    request={request}
-                                    onEdit={handleEdit}
-                                    onAssignTrial={handleAssignTrial}
-                                  />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
-                ))}
-              </div>
-            </DragDropContext>
-          </CardContent>
-        </Card>
+    <div className="container mx-auto py-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Воронка продаж</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-4 gap-4">
+              {statusColumns.map(column => (
+                <div key={column.id} className="bg-muted/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4">{column.title}</h3>
+                  <Droppable droppableId={column.id}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="space-y-2 min-h-[200px]"
+                      >
+                        {requestsByStatus[column.id].map((request, index) => (
+                          <Draggable
+                            key={request.id}
+                            draggableId={request.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <TrialRequestCard
+                                  request={request}
+                                  onEdit={handleEdit}
+                                  onAssignTrial={handleAssignTrial}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              ))}
+            </div>
+          </DragDropContext>
+        </CardContent>
+      </Card>
 
-        {selectedRequest && !showAssignTrialModal && (
-          <EditTrialRequestModal
-            request={selectedRequest}
-            isOpen={true}
-            onClose={handleModalClose}
-            onSuccess={handleSuccess}
-          />
-        )}
+      {selectedRequest && !showAssignTrialModal && (
+        <EditTrialRequestModal
+          request={selectedRequest}
+          isOpen={true}
+          onClose={handleModalClose}
+          onSuccess={handleSuccess}
+        />
+      )}
 
-        {selectedRequest && showAssignTrialModal && (
-          <AssignTrialModal
-            request={selectedRequest}
-            isOpen={showAssignTrialModal}
-            onClose={handleModalClose}
-            onSuccess={handleSuccess}
-          />
-        )}
-      </div>
-    </Layout>
+      {selectedRequest && showAssignTrialModal && (
+        <AssignTrialModal
+          request={selectedRequest}
+          isOpen={showAssignTrialModal}
+          onClose={handleModalClose}
+          onSuccess={handleSuccess}
+        />
+      )}
+    </div>
   );
 }

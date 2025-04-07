@@ -39,15 +39,17 @@ export function useTrialRequests() {
       const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
 
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
-        return old.map(request =>
-          request.id === variables.id
-            ? { 
-                ...request, 
-                status: variables.status, 
-                scheduledDate: variables.scheduledDate?.toISOString() || null
-              }
-            : request
-        );
+        return old.map(request => {
+          if (request.id === variables.id) {
+            const updatedRequest: ExtendedTrialRequest = {
+              ...request,
+              status: variables.status as string,
+              scheduledDate: variables.scheduledDate || null
+            };
+            return updatedRequest;
+          }
+          return request;
+        });
       });
 
       return { previousRequests };
