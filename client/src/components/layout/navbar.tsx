@@ -10,6 +10,7 @@ import {
   LogOut,
   ClipboardList,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 import { LanguageSwitcher } from "../language-switcher";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,7 @@ const navigation = [
   { name: "navigation.attendance", href: "/attendance", icon: Calendar, protected: true },
   { name: "navigation.payments", href: "/payments", icon: CreditCard, protected: true },
   { name: "Воронка продаж", href: "/sales-funnel", icon: ClipboardList, protected: true },
+  { name: "navigation.chat", href: "/chat", icon: MessageCircle, protected: true },
   { name: "navigation.trialRequest", href: "/trial-request", icon: ClipboardList, protected: false },
   { name: "navigation.settings", href: "/settings", icon: Settings, protected: true },
 ];

@@ -31,6 +31,7 @@
     "attendance": "Attendance",
     "payments": "Payments",
     "settings": "Settings",
+    "chat": "Chat",
     "signOut": "Sign out"
   },
   "dashboard": {
@@ -39,5 +40,16 @@
     "activeGroups": "Active Groups",
     "monthlyRevenue": "Monthly Revenue",
     "averageGroupSize": "Average Group Size"
+  },
+  "chat": {
+    "title": "Internal Chat",
+    "description": "Communicate with your colleagues in real-time",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "onlineUsers": "Online users",
+    "enterMessage": "Enter message...",
+    "send": "Send",
+    "connectionError": "Connection error",
+    "reconnecting": "Reconnecting..."
   }
 }

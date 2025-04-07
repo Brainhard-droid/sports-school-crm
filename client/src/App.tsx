@@ -21,6 +21,7 @@ import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
 import Settings from "@/pages/settings/index";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import ChatPage from "@/pages/chat-page";
 
 // Loading Fallback Component
 const LoadingFallback = () => (
@@ -44,6 +45,7 @@ function Router() {
         <ProtectedRoute path="/attendance" component={Attendance} />
         <ProtectedRoute path="/payments" component={Payments} />
         <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
+        <ProtectedRoute path="/chat" component={ChatPage} />
         <ProtectedRoute path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

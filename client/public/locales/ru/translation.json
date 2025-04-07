@@ -31,6 +31,7 @@
     "attendance": "Посещаемость",
     "payments": "Платежи",
     "settings": "Настройки",
+    "chat": "Чат",
     "signOut": "Выйти"
   },
   "dashboard": {
@@ -39,5 +40,16 @@
     "activeGroups": "Активные группы",
     "monthlyRevenue": "Доход за месяц",
     "averageGroupSize": "Средний размер группы"
+  },
+  "chat": {
+    "title": "Внутренний чат",
+    "description": "Общайтесь с коллегами в режиме реального времени",
+    "connected": "Подключено",
+    "disconnected": "Отключено",
+    "onlineUsers": "Пользователи онлайн",
+    "enterMessage": "Введите сообщение...",
+    "send": "Отправить",
+    "connectionError": "Ошибка подключения",
+    "reconnecting": "Переподключение..."
   }
 }

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { errorHandler } from "./middleware/error";
 import apiRoutes from "./routes/index";
-import { WebSocketServer } from "ws";
+import { initWebSocketService } from "./services/websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -18,20 +18,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
   const httpServer = createServer(app);
   
-  // Setup WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
-    
-    ws.on('message', (message) => {
-      console.log('Received message:', message.toString());
-    });
-    
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-    });
-  });
+  // Initialize WebSocket service
+  initWebSocketService(httpServer);
 
   return httpServer;
 }
