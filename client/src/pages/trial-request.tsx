@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useTrialRequest } from "@/hooks/use-trial-request";
 import { RequestFormFields } from "@/components/trial-request/request-form-fields";
-import { ScheduleDisplay } from "@/components/trial-request/schedule-display";
+import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-display";
 import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
 import { getNextSessions } from "@/lib/utils/schedule";
@@ -82,7 +82,7 @@ export default function TrialRequestPage() {
                 setPrivacyAccepted={setPrivacyAccepted}
               />
 
-              {schedule && <ScheduleDisplay schedule={schedule} />}
+              {schedule && <ScheduleInfoDisplay schedule={schedule} />}
 
               <DateSelection
                 form={form}

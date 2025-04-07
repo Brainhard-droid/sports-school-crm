@@ -8,13 +8,16 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 
-interface ScheduleDisplayProps {
+interface EditableScheduleDisplayProps {
   schedule: string;
   onClick: () => void;
   compact?: boolean;
 }
 
-export function ScheduleDisplay({ schedule, onClick, compact = false }: ScheduleDisplayProps) {
+/**
+ * Интерактивный компонент для отображения расписания с возможностью редактирования
+ */
+export function EditableScheduleDisplay({ schedule, onClick, compact = false }: EditableScheduleDisplayProps) {
   if (!schedule) {
     return (
       <Button 

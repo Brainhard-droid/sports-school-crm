@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { apiRequest as baseApiRequest } from "./api";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,31 +8,22 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * @deprecated Используйте импорт из @/lib/api вместо этого модуля
+ */
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
   options: RequestInit = {}
 ): Promise<Response> {
-  console.log(`Making ${method} request to ${url}`);
-  console.log('Request data:', data);
-  console.log('Request options:', options);
-
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-    ...options
-  });
-
-  console.log('Response status:', res.status);
-  console.log('Response headers:', Object.fromEntries(res.headers.entries()));
-
-  await throwIfResNotOk(res);
-  return res;
+  // Направляем вызов на новую реализацию
+  return baseApiRequest(
+    method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+    url,
+    data,
+    options
+  );
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

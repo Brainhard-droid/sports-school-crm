@@ -7,7 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/utils/api";
+import { apiRequest } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 

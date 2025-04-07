@@ -4,7 +4,7 @@ import { BranchFormModal, type Branch } from "./modals/BranchFormModal";
 import { SectionFormModal, type Section } from "./modals/SectionFormModal";
 // import { BranchSectionFormModal } from "./modals/BranchSectionFormModal";
 import { ScheduleModal } from "@/components/schedule/schedule-modal";
-import { ScheduleDisplay } from "@/components/schedule/schedule-display";
+import { EditableScheduleDisplay } from "@/components/schedule/editable-schedule-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -276,7 +276,7 @@ function SectionBranchMatrix({ branches, sections }: { branches: Branch[]; secti
                           {connected && (
                             <div className="mt-2">
                               {schedule ? (
-                                <ScheduleDisplay
+                                <EditableScheduleDisplay
                                   schedule={schedule}
                                   onClick={() => handleEditSchedule(branch.id!, section.id!)}
                                   compact={true}

@@ -1,10 +1,13 @@
 import React from 'react';
 
-type ScheduleDisplayProps = {
+type ScheduleInfoDisplayProps = {
   schedule: Record<string, string | string[]> | null;
 };
 
-export const ScheduleDisplay = ({ schedule }: ScheduleDisplayProps) => {
+/**
+ * Информационный компонент для отображения расписания без возможности редактирования
+ */
+export const ScheduleInfoDisplay = ({ schedule }: ScheduleInfoDisplayProps) => {
   if (!schedule) return null;
 
   return (
