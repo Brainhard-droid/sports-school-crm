@@ -6,3 +6,5 @@ export * from './student-filters';
 export * from './student-form';
 export * from './student-card';
 export * from './students-grid';
+export * from './students-list';
+export * from './student-list-item';

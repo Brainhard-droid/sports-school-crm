@@ -3,10 +3,11 @@ import { useStudents } from '@/hooks/use-students';
 import { 
   CreateStudentDialog, 
   StudentFilters, 
-  StudentsGrid 
+  StudentsGrid,
+  StudentsList
 } from '@/components/students';
 
-import { UserRoundPlus, Users } from 'lucide-react';
+import { Grid, List, UserRoundPlus, Users } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -21,12 +22,15 @@ import {
   TabsList, 
   TabsTrigger 
 } from '@/components/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function StudentsPage() {
   const [filters, setFilters] = useState({
     searchTerm: '',
     showArchived: false,
   });
+  
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { students, statistics, isLoading, error } = useStudents({
     searchTerm: filters.searchTerm,
@@ -88,6 +92,20 @@ export default function StudentsPage() {
             <TabsTrigger value="active">Активные</TabsTrigger>
             <TabsTrigger value="archived">Архивные</TabsTrigger>
           </TabsList>
+          
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}
+            className="justify-end"
+          >
+            <ToggleGroupItem value="grid" aria-label="Отображать сеткой">
+              <Grid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="Отображать списком">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <TabsContent value="all">
@@ -95,11 +113,18 @@ export default function StudentsPage() {
             filters={filters} 
             onFiltersChange={handleFiltersChange} 
           />
-          <StudentsGrid 
-            students={students} 
-            isLoading={isLoading} 
-            error={error} 
-          />
+          {viewMode === 'grid' ? (
+            <StudentsGrid 
+              students={students} 
+              isLoading={isLoading} 
+              error={error} 
+            />
+          ) : (
+            <StudentsList 
+              students={students} 
+              isLoading={isLoading}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="active">
@@ -107,11 +132,18 @@ export default function StudentsPage() {
             filters={{ ...filters, showArchived: false }} 
             onFiltersChange={handleFiltersChange} 
           />
-          <StudentsGrid 
-            students={students.filter(s => s.active)} 
-            isLoading={isLoading} 
-            error={error} 
-          />
+          {viewMode === 'grid' ? (
+            <StudentsGrid 
+              students={students.filter(s => s.active)} 
+              isLoading={isLoading} 
+              error={error} 
+            />
+          ) : (
+            <StudentsList 
+              students={students.filter(s => s.active)} 
+              isLoading={isLoading}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="archived">
@@ -119,11 +151,18 @@ export default function StudentsPage() {
             filters={{ ...filters, showArchived: true }} 
             onFiltersChange={handleFiltersChange} 
           />
-          <StudentsGrid 
-            students={students.filter(s => !s.active)} 
-            isLoading={isLoading} 
-            error={error} 
-          />
+          {viewMode === 'grid' ? (
+            <StudentsGrid 
+              students={students.filter(s => !s.active)} 
+              isLoading={isLoading} 
+              error={error} 
+            />
+          ) : (
+            <StudentsList 
+              students={students.filter(s => !s.active)} 
+              isLoading={isLoading}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
