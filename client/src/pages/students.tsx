@@ -1,11 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useStudents } from '@/hooks/use-students';
-import { 
-  CreateStudentDialog, 
-  StudentFilters, 
-  StudentsGrid,
-  StudentsList
-} from '@/components/students';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Student } from '@shared/schema';
+
+// Компоненты
+import { StudentsGrid } from '@/components/students/students-grid';
+import { StudentsList } from '@/components/students/students-list';
+import { StudentFilters } from '@/components/students/student-filters';
+import { CreateStudentDialog } from '@/components/students';
 
 import { Grid, List, UserRoundPlus, Users } from 'lucide-react';
 import { 
@@ -27,6 +31,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
  * Отображает список учеников с возможностью фильтрации и просмотра в виде сетки или списка
  */
 export default function StudentsPage() {
+  const { toast } = useToast();
+  
   // Локальный стейт для фильтров и режима отображения
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -45,12 +51,36 @@ export default function StudentsPage() {
     showArchived,
   });
 
-  // Фильтруем студентов на основе выбранной вкладки
-  const filteredStudents = useMemo(() => {
-    if (tabValue === 'all') return students;
-    if (tabValue === 'archived') return students.filter(s => !s.active);
-    return students.filter(s => s.active);
-  }, [students, tabValue]);
+  // Мутация для архивирования/восстановления студента
+  const archiveMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      const student = students.find(s => s.id === studentId);
+      if (!student) throw new Error('Студент не найден');
+      
+      const newStatus = !student.active;
+      const res = await apiRequest('PATCH', `/api/students/${studentId}/status`, { active: newStatus });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      toast({
+        title: 'Готово',
+        description: 'Статус студента успешно изменен',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Обработчик изменения статуса студента (архивация/восстановление)
+  const handleArchiveToggle = (studentId: number) => {
+    archiveMutation.mutate(studentId);
+  };
 
   return (
     <div className="container py-6">
@@ -126,26 +156,36 @@ export default function StudentsPage() {
 
         <TabsContent value="all">
           <StudentFilters 
-            filters={{ searchTerm, showArchived: false }} 
+            filters={{ searchTerm }} 
             onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
+          {renderStudentList(students, viewMode, isLoading, handleArchiveToggle)}
         </TabsContent>
 
         <TabsContent value="active">
           <StudentFilters 
-            filters={{ searchTerm, showArchived: false }} 
+            filters={{ searchTerm }} 
             onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
+          {renderStudentList(
+            students.filter(s => s.active),
+            viewMode, 
+            isLoading, 
+            handleArchiveToggle
+          )}
         </TabsContent>
 
         <TabsContent value="archived">
           <StudentFilters 
-            filters={{ searchTerm, showArchived: true }} 
+            filters={{ searchTerm }} 
             onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
           />
-          {renderStudentList(filteredStudents, viewMode, isLoading, error)}
+          {renderStudentList(
+            students.filter(s => !s.active),
+            viewMode, 
+            isLoading, 
+            handleArchiveToggle
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -157,17 +197,17 @@ export default function StudentsPage() {
  * в зависимости от выбранного режима отображения
  */
 function renderStudentList(
-  students: any[], 
+  students: Student[], 
   viewMode: 'grid' | 'list', 
   isLoading: boolean, 
-  error: Error | null
+  onArchive: (studentId: number) => void
 ) {
   if (viewMode === 'grid') {
     return (
       <StudentsGrid 
         students={students} 
         isLoading={isLoading} 
-        error={error} 
+        onArchive={onArchive}
       />
     );
   }
@@ -176,6 +216,7 @@ function renderStudentList(
     <StudentsList 
       students={students} 
       isLoading={isLoading}
+      onArchive={onArchive}
     />
   );
 }
