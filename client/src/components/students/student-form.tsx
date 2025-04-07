@@ -213,11 +213,15 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
                       if (date) {
                         field.onChange(format(date, 'yyyy-MM-dd'));
                         // Автоматически закрываем попап при выборе даты
-                        setTimeout(() => document.body.click(), 0);
+                        setTimeout(() => document.body.click(), 100);
                       }
                     }}
                     disabled={(date) => date > new Date()}
                     initialFocus
+                    captionLayout="dropdown" 
+                    fromYear={2000}
+                    toYear={new Date().getFullYear()}
+                    defaultMonth={field.value ? new Date(field.value) : new Date()}
                   />
                 </PopoverContent>
               </Popover>
