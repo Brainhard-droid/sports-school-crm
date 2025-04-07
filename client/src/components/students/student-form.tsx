@@ -197,7 +197,7 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
                       )}
                     >
                       {field.value ? (
-                        format(new Date(field.value), "PPP", { locale: ru })
+                        format(new Date(field.value), "d MMMM yyyy", { locale: ru })
                       ) : (
                         <span>Выберите дату</span>
                       )}
@@ -210,16 +210,14 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
                     mode="single"
                     selected={field.value ? new Date(field.value) : undefined}
                     onSelect={(date) => {
-                      field.onChange(date ? format(date, 'yyyy-MM-dd') : "");
-                      // Автоматически закрываем попап при выборе даты
-                      document.body.click();
+                      if (date) {
+                        field.onChange(format(date, 'yyyy-MM-dd'));
+                        // Автоматически закрываем попап при выборе даты
+                        setTimeout(() => document.body.click(), 0);
+                      }
                     }}
                     disabled={(date) => date > new Date()}
                     initialFocus
-                    locale={ru}
-                    captionLayout="dropdown-buttons"
-                    fromYear={1990}
-                    toYear={new Date().getFullYear()}
                   />
                 </PopoverContent>
               </Popover>

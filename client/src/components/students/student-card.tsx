@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Student } from '@shared/schema';
 import { MoreHorizontal, Calendar, User, Pencil, Trash2, Users, X, Archive } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
@@ -38,10 +37,7 @@ export function StudentCard({ student, onArchive }: StudentCardProps) {
   // Calculate age
   const age = birthDate ? calculateAge(birthDate) : null;
 
-  // Format when birthdate was
-  const birthDateFormatted = birthDate 
-    ? formatDistanceToNow(birthDate, { addSuffix: true, locale: ru }) 
-    : '';
+  // Возраст форматируется отдельно через calculateAge
 
   const handleArchive = () => {
     onArchive(student.id);
@@ -59,7 +55,7 @@ export function StudentCard({ student, onArchive }: StudentCardProps) {
               {birthDate && (
                 <CardDescription className="flex items-center mt-1">
                   <Calendar className="mr-1 h-3.5 w-3.5" />
-                  {birthDateFormatted} ({age} лет)
+                  {birthDate.toLocaleDateString('ru')} ({age} лет)
                 </CardDescription>
               )}
             </div>
