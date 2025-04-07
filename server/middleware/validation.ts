@@ -1,51 +1,92 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodSchema } from 'zod';
-import { ApiErrorClass } from './error';
+import { ZodError, ZodSchema } from 'zod';
 
 /**
- * Middleware для валидации тела запроса с помощью Zod
+ * Middleware для валидации тела запроса с использованием схемы Zod
+ * 
+ * @param schema Схема валидации
+ * @returns Middleware функция
  */
-export const validateBody = (schema: ZodSchema) => {
-  return (req: Request, _res: Response, next: NextFunction) => {
+export function validateBody<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = schema.parse(req.body);
-      // Заменяем req.body на валидированные данные
-      req.body = result;
+      const validated = schema.parse(req.body);
+      req.body = validated;
       next();
     } catch (error) {
+      if (error instanceof ZodError) {
+        const errors = error.errors.map(e => ({
+          path: e.path.join('.'),
+          message: e.message
+        }));
+        
+        return res.status(400).json({
+          error: 'Validation Error',
+          details: errors
+        });
+      }
+      
       next(error);
     }
   };
-};
+}
 
 /**
- * Middleware для валидации query-параметров с помощью Zod
+ * Middleware для валидации параметров запроса с использованием схемы Zod
+ * 
+ * @param schema Схема валидации
+ * @returns Middleware функция
  */
-export const validateQuery = (schema: ZodSchema) => {
-  return (req: Request, _res: Response, next: NextFunction) => {
+export function validateParams<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = schema.parse(req.query);
-      // Заменяем req.query на валидированные данные
-      req.query = result;
+      const validated = schema.parse(req.params);
+      req.params = validated as any;
       next();
     } catch (error) {
+      if (error instanceof ZodError) {
+        const errors = error.errors.map(e => ({
+          path: e.path.join('.'),
+          message: e.message
+        }));
+        
+        return res.status(400).json({
+          error: 'Validation Error',
+          details: errors
+        });
+      }
+      
       next(error);
     }
   };
-};
+}
 
 /**
- * Middleware для валидации параметров маршрута с помощью Zod
+ * Middleware для валидации query-параметров с использованием схемы Zod
+ * 
+ * @param schema Схема валидации
+ * @returns Middleware функция
  */
-export const validateParams = (schema: ZodSchema) => {
-  return (req: Request, _res: Response, next: NextFunction) => {
+export function validateQuery<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = schema.parse(req.params);
-      // Заменяем req.params на валидированные данные
-      req.params = result;
+      const validated = schema.parse(req.query);
+      req.query = validated as any;
       next();
     } catch (error) {
+      if (error instanceof ZodError) {
+        const errors = error.errors.map(e => ({
+          path: e.path.join('.'),
+          message: e.message
+        }));
+        
+        return res.status(400).json({
+          error: 'Validation Error',
+          details: errors
+        });
+      }
+      
       next(error);
     }
   };
-};
+}

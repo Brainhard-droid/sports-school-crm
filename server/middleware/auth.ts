@@ -1,45 +1,41 @@
 import { Request, Response, NextFunction } from 'express';
-import { ApiErrorClass } from './error';
 
 /**
- * Middleware для проверки аутентификации
+ * Middleware для проверки аутентификации пользователя
+ * 
+ * @param req Объект запроса
+ * @param res Объект ответа
+ * @param next Функция для перехода к следующему middleware
  */
-export const isAuthenticated = (req: Request, _res: Response, next: NextFunction) => {
-  // Здесь должна быть реализация проверки аутентификации
-  // Пока используем упрощенную проверку наличия пользователя в req.user
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    return next();
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  
-  // Проверяем наличие токена в режиме разработки
-  if (process.env.NODE_ENV === 'development') {
-    const devToken = req.headers['x-dev-token'];
-    if (devToken === process.env.DEV_TOKEN) {
-      return next();
-    }
-  }
-  
-  throw new ApiErrorClass('Требуется авторизация', 401);
-};
+  next();
+}
 
 /**
- * Middleware для проверки прав доступа
+ * Middleware для проверки роли пользователя
+ * 
+ * @param allowedRoles Массив разрешенных ролей
+ * @returns Middleware функция
  */
-export const hasRole = (requiredRole: string) => {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.user) {
-      throw new ApiErrorClass('Требуется авторизация', 401);
+export function requireRole(allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    // Здесь должна быть логика проверки роли пользователя
-    // Пока проверяем роль пользователя через req.user.role
-    // @ts-ignore
-    const userRole = req.user.role;
+    // @ts-ignore - предполагается, что у пользователя есть поле role
+    const userRole = req.user?.role;
     
-    if (userRole === requiredRole || userRole === 'admin') {
-      return next();
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: 'You do not have permission to access this resource' 
+      });
     }
     
-    throw new ApiErrorClass('Недостаточно прав для выполнения операции', 403);
+    next();
   };
-};
+}

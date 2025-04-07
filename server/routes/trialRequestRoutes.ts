@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { authRequired, validateRequest } from '../middleware/error';
-import * as trialRequestController from '../controllers/trialRequestController';
-import { insertTrialRequestSchema } from '@shared/schema';
-import { z } from 'zod';
+import { requireAuth } from '../middleware/auth';
+import { validateBody, validateParams } from '../middleware/validation';
+import { TrialRequestController } from '../controllers/trialRequestController';
 import { TrialRequestStatus } from '@shared/schema';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -20,37 +20,36 @@ const updateStatusSchema = z.object({
 });
 
 // Маршруты для работы с заявками на пробные занятия
-router.get('/', authRequired, trialRequestController.getAllTrialRequests);
-router.get('/:id', authRequired, trialRequestController.getTrialRequestById);
+router.get('/', requireAuth, TrialRequestController.getAllTrialRequests);
+router.get('/:id', requireAuth, TrialRequestController.getTrialRequestById);
 
 // Публичный маршрут для создания заявки (не требует авторизации)
 router.post('/', 
-  validateRequest(insertTrialRequestSchema.extend({ 
-    consentToDataProcessing: z.boolean().refine(val => val === true, {
-      message: 'Необходимо согласие на обработку персональных данных',
-    }),
-    parentEmail: z.string().email('Некорректный email')
-  })),
-  trialRequestController.createTrialRequest
+  validateBody(TrialRequestController.validationSchemas.create), 
+  TrialRequestController.createTrialRequest
 );
 
 // Обновление статуса заявки (требует авторизации)
 router.patch('/:id/status', 
-  authRequired,
-  validateRequest(updateStatusSchema),
-  trialRequestController.updateTrialRequestStatus
+  requireAuth,
+  validateParams(TrialRequestController.validationSchemas.params),
+  validateBody(updateStatusSchema),
+  TrialRequestController.updateTrialRequestStatus
 );
 
 // Полное обновление заявки (требует авторизации)
 router.put('/:id', 
-  authRequired,
-  trialRequestController.updateTrialRequest
+  requireAuth,
+  validateParams(TrialRequestController.validationSchemas.params),
+  validateBody(TrialRequestController.validationSchemas.update),
+  TrialRequestController.updateTrialRequest
 );
 
 // Удаление заявки (требует авторизации)
 router.delete('/:id', 
-  authRequired,
-  trialRequestController.deleteTrialRequest
+  requireAuth,
+  validateParams(TrialRequestController.validationSchemas.params),
+  TrialRequestController.deleteTrialRequest
 );
 
 export default router;
