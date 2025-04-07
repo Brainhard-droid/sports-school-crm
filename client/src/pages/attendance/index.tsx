@@ -180,72 +180,70 @@ export default function AttendancePage() {
   const isLoading = isLoadingSchedule || isLoadingAttendance || isLoadingComments;
 
   return (
-    <Layout>
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6">Посещаемость</h1>
-        <GroupsList
-          groups={groups || []}
-          selectedGroupId={selectedGroup || undefined}
-          onSelectGroup={setSelectedGroup}
-        />
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-6">Посещаемость</h1>
+      <GroupsList
+        groups={groups || []}
+        selectedGroupId={selectedGroup || undefined}
+        onSelectGroup={setSelectedGroup}
+      />
 
-        {selectedGroup && (
-          <Dialog open modal onOpenChange={() => setSelectedGroup(null)}>
-            <DialogContent className="max-w-[95vw] w-fit">
-              <DialogHeader>
-                <DialogTitle>
-                  {groups?.find(g => g.id === selectedGroup)?.name}
-                </DialogTitle>
-              </DialogHeader>
+      {selectedGroup && (
+        <Dialog open modal onOpenChange={() => setSelectedGroup(null)}>
+          <DialogContent className="max-w-[95vw] w-fit">
+            <DialogHeader>
+              <DialogTitle>
+                {groups?.find(g => g.id === selectedGroup)?.name}
+              </DialogTitle>
+            </DialogHeader>
 
-              {isLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <AttendanceControls
-                    selectedMonth={selectedMonth}
-                    setSelectedMonth={setSelectedMonth}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                  />
-                  <ExportAttendance handleExport={() => {}} />
-                  <AttendanceTable
-                    scheduleDates={scheduleDates}
-                    students={students || []}
-                    attendance={attendance}
-                    dateComments={dateComments}
-                    loadingCell={loadingCell}
-                    handleMarkAttendance={handleMarkAttendance}
-                    handleBulkAttendance={handleBulkAttendance}
-                    setCommentDialogData={handleCommentAction}
-                    getAttendanceStatus={getAttendanceStatus}
-                    getStudentStats={(studentId) => {
-                      const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
-                      const totalClasses = scheduleDates?.length || 0;
-                      const attended = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
-                      const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
-                      return { attended, totalClasses, percentage };
-                    }}
-                  />
-                </>
-              )}
-
-              {commentDialogData.isOpen && commentDialogData.date && !commentDialogData.comment?.action && (
-                <CommentDialog
-                  isOpen={commentDialogData.isOpen}
-                  onClose={() => setCommentDialogData({ isOpen: false, date: null })}
-                  date={commentDialogData.date}
-                  groupId={selectedGroup}
-                  existingComment={commentDialogData.comment}
-                  onSave={handleSaveComment}
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <>
+                <AttendanceControls
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
                 />
-              )}
+                <ExportAttendance handleExport={() => {}} />
+                <AttendanceTable
+                  scheduleDates={scheduleDates}
+                  students={students || []}
+                  attendance={attendance}
+                  dateComments={dateComments}
+                  loadingCell={loadingCell}
+                  handleMarkAttendance={handleMarkAttendance}
+                  handleBulkAttendance={handleBulkAttendance}
+                  setCommentDialogData={handleCommentAction}
+                  getAttendanceStatus={getAttendanceStatus}
+                  getStudentStats={(studentId) => {
+                    const studentAttendance = attendance?.filter(a => a.studentId === studentId) || [];
+                    const totalClasses = scheduleDates?.length || 0;
+                    const attended = studentAttendance.filter(a => a.status === AttendanceStatus.PRESENT).length;
+                    const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
+                    return { attended, totalClasses, percentage };
+                  }}
+                />
+              </>
+            )}
+
+            {commentDialogData.isOpen && commentDialogData.date && !commentDialogData.comment?.action && (
+              <CommentDialog
+                isOpen={commentDialogData.isOpen}
+                onClose={() => setCommentDialogData({ isOpen: false, date: null })}
+                date={commentDialogData.date}
+                groupId={selectedGroup}
+                existingComment={commentDialogData.comment}
+                onSave={handleSaveComment}
+              />
+            )}
             </DialogContent>
           </Dialog>
         )}
       </div>
-    </Layout>
-  );
+    );
 }

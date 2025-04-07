@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Layout } from "@/components/layout/navbar";
 import { Student, Payment, InsertPayment, insertPaymentSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,123 +78,121 @@ export default function Payments() {
   });
 
   return (
-    <Layout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Payments</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <DollarSign className="mr-2 h-4 w-4" />
-                Record Payment
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Record New Payment</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit((data) => createPaymentMutation.mutate(data))}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={form.control}
-                    name="studentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Student</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Student" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {students?.map((student) => (
-                              <SelectItem
-                                key={student.id}
-                                value={student.id.toString()}
-                              >
-                                {student.firstName} {student.lastName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Payments</h1>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <DollarSign className="mr-2 h-4 w-4" />
+              Record Payment
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record New Payment</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit((data) => createPaymentMutation.mutate(data))}
+                className="space-y-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="studentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Student</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value.toString()}
+                      >
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Student" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full">
-                    Record Payment
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Student</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments?.map((payment) => {
-                const student = students?.find((s) => s.id === payment.studentId);
-                return (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      {format(new Date(payment.date), "PP")}
-                    </TableCell>
-                    <TableCell>
-                      {student
-                        ? `${student.firstName} ${student.lastName}`
-                        : "Unknown"}
-                    </TableCell>
-                    <TableCell>${payment.amount}</TableCell>
-                    <TableCell>{payment.description}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                        <SelectContent>
+                          {students?.map((student) => (
+                            <SelectItem
+                              key={student.id}
+                              value={student.id.toString()}
+                            >
+                              {student.firstName} {student.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full">
+                  Record Payment
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
-    </Layout>
+
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Description</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {payments?.map((payment) => {
+              const student = students?.find((s) => s.id === payment.studentId);
+              return (
+                <TableRow key={payment.id}>
+                  <TableCell>
+                    {format(new Date(payment.date), "PP")}
+                  </TableCell>
+                  <TableCell>
+                    {student
+                      ? `${student.firstName} ${student.lastName}`
+                      : "Unknown"}
+                  </TableCell>
+                  <TableCell>${payment.amount}</TableCell>
+                  <TableCell>{payment.description}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }

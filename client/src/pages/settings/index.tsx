@@ -12,52 +12,50 @@ export default function SettingsPage() {
   const { t } = useTranslation();
   
   return (
-    <Layout>
-      <div className="container mx-auto py-6 px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <SettingsIcon className="h-6 w-6 mr-2" />
-            <h1 className="text-2xl font-bold">Настройки</h1>
-          </div>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <SettingsIcon className="h-6 w-6 mr-2" />
+          <h1 className="text-2xl font-bold">Настройки</h1>
         </div>
-
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="general" className="flex items-center">
-              <SettingsIcon className="h-4 w-4 mr-2" />
-              Общие
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center">
-              <User className="h-4 w-4 mr-2" />
-              Профиль
-            </TabsTrigger>
-            <TabsTrigger value="branches" className="flex items-center">
-              <Building className="h-4 w-4 mr-2" />
-              Филиалы и секции
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center">
-              <Bell className="h-4 w-4 mr-2" />
-              Уведомления
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="general">
-            <GeneralSettings />
-          </TabsContent>
-
-          <TabsContent value="profile">
-            <ProfileSettings />
-          </TabsContent>
-
-          <TabsContent value="branches">
-            <BranchesSettings />
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <NotificationsSettings />
-          </TabsContent>
-        </Tabs>
       </div>
-    </Layout>
+
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="general" className="flex items-center">
+            <SettingsIcon className="h-4 w-4 mr-2" />
+            Общие
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center">
+            <User className="h-4 w-4 mr-2" />
+            Профиль
+          </TabsTrigger>
+          <TabsTrigger value="branches" className="flex items-center">
+            <Building className="h-4 w-4 mr-2" />
+            Филиалы и секции
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center">
+            <Bell className="h-4 w-4 mr-2" />
+            Уведомления
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general">
+          <GeneralSettings />
+        </TabsContent>
+
+        <TabsContent value="profile">
+          <ProfileSettings />
+        </TabsContent>
+
+        <TabsContent value="branches">
+          <BranchesSettings />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationsSettings />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
