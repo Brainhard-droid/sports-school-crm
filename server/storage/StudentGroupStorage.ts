@@ -3,10 +3,17 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../db';
 import { IStudentGroupStorage } from "../interfaces/storage/IStudentGroupStorage";
 
+// Расширяем интерфейс для новых методов
+export interface IExtendedStudentGroupStorage extends IStudentGroupStorage {
+  getStudentGroupByIds(studentId: number, groupId: number): Promise<StudentGroup | undefined>;
+  createStudentGroup(data: InsertStudentGroup): Promise<StudentGroup>;
+  updateStudentGroup(id: number, data: Partial<InsertStudentGroup>): Promise<StudentGroup>;
+}
+
 /**
  * Реализация хранилища связей студентов и групп
  */
-export class StudentGroupStorage implements IStudentGroupStorage {
+export class StudentGroupStorage implements IExtendedStudentGroupStorage {
   /**
    * Получает все связи студент-группа для конкретного студента
    * 
@@ -81,6 +88,78 @@ export class StudentGroupStorage implements IStudentGroupStorage {
         );
     } catch (error) {
       console.error('Error removing student from group:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Получает связь студент-группа по ID студента и группы
+   * 
+   * @param studentId ID студента
+   * @param groupId ID группы
+   * @returns Связь студент-группа или undefined, если не найдена
+   */
+  async getStudentGroupByIds(studentId: number, groupId: number): Promise<StudentGroup | undefined> {
+    try {
+      const [studentGroup] = await db
+        .select()
+        .from(studentGroups)
+        .where(
+          and(
+            eq(studentGroups.studentId, studentId),
+            eq(studentGroups.groupId, groupId)
+          )
+        );
+      
+      return studentGroup;
+    } catch (error) {
+      console.error('Error getting student-group by IDs:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Создает новую связь студент-группа
+   * 
+   * @param data Данные для создания связи
+   * @returns Созданная связь
+   */
+  async createStudentGroup(data: InsertStudentGroup): Promise<StudentGroup> {
+    try {
+      const [newStudentGroup] = await db
+        .insert(studentGroups)
+        .values(data)
+        .returning();
+      
+      return newStudentGroup;
+    } catch (error) {
+      console.error('Error creating student-group:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Обновляет связь студент-группа
+   * 
+   * @param id ID связи студент-группа
+   * @param data Данные для обновления
+   * @returns Обновленная связь
+   */
+  async updateStudentGroup(id: number, data: Partial<InsertStudentGroup>): Promise<StudentGroup> {
+    try {
+      const [updatedStudentGroup] = await db
+        .update(studentGroups)
+        .set(data)
+        .where(eq(studentGroups.id, id))
+        .returning();
+      
+      if (!updatedStudentGroup) {
+        throw new Error(`StudentGroup with id ${id} not found`);
+      }
+      
+      return updatedStudentGroup;
+    } catch (error) {
+      console.error('Error updating student-group:', error);
       throw error;
     }
   }

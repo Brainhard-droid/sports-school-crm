@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { storage } from '../storage';
 import { asyncHandler, ApiErrorClass } from '../middleware/error';
-import { insertStudentSchema } from '@shared/schema';
+import { insertStudentSchema, insertStudentGroupSchema } from '@shared/schema';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -126,6 +126,72 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   }
   
   res.status(200).json({ success: true });
+}));
+
+// Изменение статуса студента (активный/архивный)
+router.patch('/:id/status', asyncHandler(async (req: Request, res: Response) => {
+  const idSchema = z.object({
+    id: z.string().transform((val) => parseInt(val, 10))
+  });
+  
+  const bodySchema = z.object({
+    active: z.boolean()
+  });
+  
+  const { id } = idSchema.parse(req.params);
+  const { active } = bodySchema.parse(req.body);
+  
+  const student = await storage.getStudentById(id);
+  
+  if (!student) {
+    throw new ApiErrorClass('Студент не найден', 404);
+  }
+  
+  const updatedStudent = await storage.updateStudent(id, { active });
+  
+  if (!updatedStudent) {
+    throw new ApiErrorClass('Не удалось обновить статус студента', 500);
+  }
+  
+  res.json(updatedStudent);
+}));
+
+// Добавление студента в группу
+router.post('/student-groups', asyncHandler(async (req: Request, res: Response) => {
+  const data = insertStudentGroupSchema.parse(req.body);
+  
+  // Проверяем существование студента
+  const student = await storage.getStudentById(data.studentId);
+  if (!student) {
+    throw new ApiErrorClass('Студент не найден', 404);
+  }
+  
+  // Проверяем существование группы
+  const group = await storage.getGroup(data.groupId);
+  if (!group) {
+    throw new ApiErrorClass('Группа не найдена', 404);
+  }
+  
+  // Проверяем, возможно студент уже в этой группе
+  const existingStudentGroup = await storage.getStudentGroupByIds(data.studentId, data.groupId);
+  
+  if (existingStudentGroup) {
+    // Если связь существует, но не активна - активируем её
+    if (!existingStudentGroup.active) {
+      const updatedStudentGroup = await storage.updateStudentGroup(
+        existingStudentGroup.id, 
+        { active: true }
+      );
+      return res.json(updatedStudentGroup);
+    }
+    
+    // Если связь уже активна, возвращаем ошибку
+    throw new ApiErrorClass('Студент уже добавлен в эту группу', 400);
+  }
+  
+  // Создаем новую связь
+  const newStudentGroup = await storage.createStudentGroup(data);
+  res.status(201).json(newStudentGroup);
 }));
 
 export default router;

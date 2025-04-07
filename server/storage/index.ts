@@ -73,6 +73,9 @@ export class PostgresStorage
   getGroupStudents: StudentGroupStorage['getGroupStudents'];
   addStudentToGroup: StudentGroupStorage['addStudentToGroup'];
   removeStudentFromGroup: StudentGroupStorage['removeStudentFromGroup'];
+  getStudentGroupByIds: StudentGroupStorage['getStudentGroupByIds'];
+  createStudentGroup: StudentGroupStorage['createStudentGroup'];
+  updateStudentGroup: StudentGroupStorage['updateStudentGroup'];
   
   // Приватные инстансы хранилищ
   private userStorage: UserStorage;
@@ -146,6 +149,9 @@ export class PostgresStorage
     this.getGroupStudents = this.studentGroupStorage.getGroupStudents.bind(this.studentGroupStorage);
     this.addStudentToGroup = this.studentGroupStorage.addStudentToGroup.bind(this.studentGroupStorage);
     this.removeStudentFromGroup = this.studentGroupStorage.removeStudentFromGroup.bind(this.studentGroupStorage);
+    this.getStudentGroupByIds = this.studentGroupStorage.getStudentGroupByIds.bind(this.studentGroupStorage);
+    this.createStudentGroup = this.studentGroupStorage.createStudentGroup.bind(this.studentGroupStorage);
+    this.updateStudentGroup = this.studentGroupStorage.updateStudentGroup.bind(this.studentGroupStorage);
   }
 }
 
