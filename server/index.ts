@@ -92,6 +92,34 @@ apiRoutes.get("/groups/:id", async (req, res) => {
   }
 });
 
+// Эндпоинт для получения расписания (всех или конкретной группы)
+apiRoutes.get("/schedules", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const groupId = req.query.groupId ? parseInt(req.query.groupId as string) : undefined;
+    
+    let result;
+    if (groupId) {
+      // Если указан ID группы, возвращаем только расписание этой группы
+      result = await db
+        .select()
+        .from(schedules)
+        .where(eq(schedules.groupId, groupId));
+    } else {
+      // Иначе возвращаем все расписания
+      result = await db.select().from(schedules);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting schedules:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 // Эндпоинт для платежей
 apiRoutes.get("/payments", async (req, res) => {
   if (!req.isAuthenticated()) {
