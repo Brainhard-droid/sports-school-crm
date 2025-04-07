@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-import StudentsPage from "@/pages/students";
+import StudentsPage from "@/pages/students-refactored";
 import StudentsNewPage from "@/pages/students-new";
 import Groups from "@/pages/groups";
 import GroupDetails from "@/pages/group-details";

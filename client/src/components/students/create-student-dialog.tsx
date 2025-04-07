@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +12,23 @@ import { StudentForm } from "./student-form";
 
 interface CreateStudentDialogProps {
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: Dispatch<SetStateAction<boolean>>;
+  triggerButton?: boolean;
 }
 
-export function CreateStudentDialog({ onSuccess }: CreateStudentDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateStudentDialog({ 
+  onSuccess, 
+  open: controlledOpen, 
+  onOpenChange: setControlledOpen,
+  triggerButton = true 
+}: CreateStudentDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  
+  // Determine if we're in controlled or uncontrolled mode
+  const isControlled = controlledOpen !== undefined && setControlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? setControlledOpen : setUncontrolledOpen;
 
   const handleSuccess = () => {
     setOpen(false);
@@ -24,12 +37,14 @@ export function CreateStudentDialog({ onSuccess }: CreateStudentDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Добавить ученика
-        </Button>
-      </DialogTrigger>
+      {triggerButton && (
+        <DialogTrigger asChild>
+          <Button>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Добавить ученика
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Добавить нового ученика</DialogTitle>
