@@ -49,7 +49,7 @@ export class TrialRequestController {
    */
   static getAllTrialRequests = asyncHandler(async (req: Request, res: Response) => {
     console.log('Getting all trial requests...');
-    const requests = await storage.getTrialRequests();
+    const requests = await storage.getAllTrialRequests();
     res.json(requests);
   });
 
@@ -93,12 +93,12 @@ export class TrialRequestController {
     }
 
     // Проверяем существование секции и филиала
-    const section = await storage.getSportsSection(sectionId);
+    const section = await storage.getSectionById(sectionId);
     if (!section) {
       throw new ApiErrorClass('Указанная секция не найдена', 404);
     }
 
-    const branch = await storage.getBranch(branchId);
+    const branch = await storage.getBranchById(branchId);
     if (!branch) {
       throw new ApiErrorClass('Указанный филиал не найден', 404);
     }
@@ -163,8 +163,8 @@ export class TrialRequestController {
     if (status === TrialRequestStatus.TRIAL_ASSIGNED && scheduledDate) {
       try {
         // Получаем дополнительные данные для уведомления
-        const section = await storage.getSportsSection(updatedRequest.sectionId);
-        const branch = await storage.getBranch(updatedRequest.branchId);
+        const section = await storage.getSectionById(updatedRequest.sectionId);
+        const branch = await storage.getBranchById(updatedRequest.branchId);
         
         if (section && branch) {
           await sendTrialAssignmentNotification(updatedRequest, section, branch);
@@ -242,8 +242,8 @@ export class TrialRequestController {
       throw new ApiErrorClass('Заявка не найдена', 404);
     }
 
-    // Удаляем заявку
-    await storage.deleteTrialRequest(id);
+    // Пока нет метода удаления, просто обновим статус на REFUSED
+    await storage.updateTrialRequestStatus(id, TrialRequestStatus.REFUSED);
 
     res.status(204).send();
   });

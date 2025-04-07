@@ -1,9 +1,10 @@
 import { 
-  TrialRequest, InsertTrialRequest, trialRequests, TrialRequestStatus
+  TrialRequest, InsertTrialRequest, trialRequests, TrialRequestStatus,
+  sportsSections, branches
 } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
-import { ITrialRequestStorage } from "../interfaces/storage";
+import { ITrialRequestStorage } from "../interfaces/storage/ITrialRequestStorage";
 
 /**
  * Реализация хранилища заявок на пробное занятие
