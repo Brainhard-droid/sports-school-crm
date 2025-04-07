@@ -157,20 +157,21 @@ export default function StudentsPage() {
         <TabsContent value="all">
           <StudentFilters 
             filters={{ searchTerm }} 
-            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
+            onFiltersChange={({ searchTerm }) => setSearchTerm(searchTerm)} 
           />
-          {renderStudentList(students, viewMode, isLoading, handleArchiveToggle)}
+          {renderStudentList(students, viewMode, isLoading, error, handleArchiveToggle)}
         </TabsContent>
 
         <TabsContent value="active">
           <StudentFilters 
             filters={{ searchTerm }} 
-            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
+            onFiltersChange={({ searchTerm }) => setSearchTerm(searchTerm)} 
           />
           {renderStudentList(
             students.filter(s => s.active),
             viewMode, 
-            isLoading, 
+            isLoading,
+            error, 
             handleArchiveToggle
           )}
         </TabsContent>
@@ -178,12 +179,13 @@ export default function StudentsPage() {
         <TabsContent value="archived">
           <StudentFilters 
             filters={{ searchTerm }} 
-            onFiltersChange={(filters) => setSearchTerm(filters.searchTerm)} 
+            onFiltersChange={({ searchTerm }) => setSearchTerm(searchTerm)} 
           />
           {renderStudentList(
             students.filter(s => !s.active),
             viewMode, 
-            isLoading, 
+            isLoading,
+            error, 
             handleArchiveToggle
           )}
         </TabsContent>
@@ -199,14 +201,16 @@ export default function StudentsPage() {
 function renderStudentList(
   students: Student[], 
   viewMode: 'grid' | 'list', 
-  isLoading: boolean, 
+  isLoading: boolean,
+  error: Error | null, 
   onArchive: (studentId: number) => void
 ) {
   if (viewMode === 'grid') {
     return (
       <StudentsGrid 
         students={students} 
-        isLoading={isLoading} 
+        isLoading={isLoading}
+        error={error}
         onArchive={onArchive}
       />
     );
@@ -216,6 +220,7 @@ function renderStudentList(
     <StudentsList 
       students={students} 
       isLoading={isLoading}
+      error={error}
       onArchive={onArchive}
     />
   );

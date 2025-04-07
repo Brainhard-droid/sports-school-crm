@@ -4,9 +4,8 @@ import { Search } from "lucide-react";
 interface StudentFiltersProps {
   filters: {
     searchTerm: string;
-    showArchived: boolean;
   };
-  onFiltersChange: (filters: { searchTerm: string; showArchived: boolean }) => void;
+  onFiltersChange: (filters: { searchTerm: string }) => void;
 }
 
 export function StudentFilters({ filters, onFiltersChange }: StudentFiltersProps) {

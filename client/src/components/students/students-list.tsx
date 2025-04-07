@@ -1,40 +1,43 @@
-import React from 'react';
-import { StudentListItem } from './student-list-item';
 import { Student } from '@shared/schema';
+import { StudentListItem } from './student-list-item';
 import { Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 interface StudentsListProps {
   students: Student[];
   isLoading: boolean;
+  error?: Error | null;
   onArchive: (studentId: number) => void;
 }
 
-export const StudentsList: React.FC<StudentsListProps> = ({ 
-  students, 
-  isLoading, 
-  onArchive
-}) => {
-  const { t } = useTranslation();
-
+export function StudentsList({ students, isLoading, error, onArchive }: StudentsListProps) {
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20 text-destructive">
+        <p>Произошла ошибка при загрузке списка учеников.</p>
+        <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
       </div>
     );
   }
 
   if (students.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">{t('students.noStudentsFound')}</p>
+      <div className="text-center py-20 text-muted-foreground">
+        <p className="text-lg">Ученики не найдены</p>
+        <p className="text-sm mt-2">Попробуйте изменить параметры поиска или добавьте нового ученика</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-md shadow-sm">
+    <div className="border rounded-md">
       {students.map((student) => (
         <StudentListItem 
           key={student.id} 
@@ -44,4 +47,4 @@ export const StudentsList: React.FC<StudentsListProps> = ({
       ))}
     </div>
   );
-};
+}

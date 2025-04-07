@@ -1,8 +1,11 @@
-import React from 'react';
 import { Student } from '@shared/schema';
-import { MoreHorizontal, Archive, UserRoundPlus } from 'lucide-react';
+import { Calendar, MoreHorizontal, User, Pencil, Trash2, Users, X, Archive } from 'lucide-react';
+import { useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { ru } from 'date-fns/locale';
+
 import { Button } from '@/components/ui/button';
-import { calculateAge } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,102 +13,133 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTranslation } from 'react-i18next';
-import { Link } from 'wouter';
+
+import { EditStudentDialog } from './edit-student-dialog';
+import { DeleteStudentDialog } from './delete-student-dialog';
+import { AddToGroupDialog } from './add-to-group-dialog';
+import { calculateAge } from '@/lib/utils';
 
 interface StudentListItemProps {
   student: Student;
   onArchive: (studentId: number) => void;
 }
 
-export const StudentListItem: React.FC<StudentListItemProps> = ({ student, onArchive }) => {
-  const { t } = useTranslation();
+export function StudentListItem({ student, onArchive }: StudentListItemProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addToGroupDialogOpen, setAddToGroupDialogOpen] = useState(false);
+
+  // Format birthdate
+  const birthDate = student.birthDate 
+    ? new Date(student.birthDate)
+    : null;
   
-  const age = student.birthDate ? calculateAge(new Date(student.birthDate)) : null;
-  
+  // Calculate age
+  const age = birthDate ? calculateAge(birthDate) : null;
+
+  // Format when birthdate was
+  const birthDateFormatted = birthDate 
+    ? formatDistanceToNow(birthDate, { addSuffix: true, locale: ru }) 
+    : '';
+
+  const handleArchive = () => {
+    onArchive(student.id);
+  };
+
   return (
-    <div className="flex items-center justify-between p-4 border-b">
-      <div className="flex-1">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <div className="font-medium">
-              <Link href={`/students/${student.id}`}>
+    <>
+      <div className={`flex items-center justify-between p-4 border-b hover:bg-muted/30 ${!student.active ? 'bg-muted/50 border-dashed' : ''}`}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center">
+            <div className="flex-1">
+              <h3 className="text-base font-medium truncate">
                 {student.firstName} {student.lastName}
-              </Link>
-            </div>
-            {age !== null && (
-              <div className="text-sm text-muted-foreground">{t('students.age', { age })}</div>
-            )}
-          </div>
-          
-          <div className="flex flex-col sm:items-end">
-            {student.phoneNumber && (
-              <a 
-                href={`tel:${student.phoneNumber}`} 
-                className="text-sm hover:underline"
-              >
-                {student.phoneNumber}
-              </a>
-            )}
-            {student.parentName && student.parentPhone && (
-              <div className="text-sm text-muted-foreground">
-                {student.parentName} • {student.parentPhone}
+              </h3>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {student.groups && student.groups.map(group => (
+                  <Badge key={group.id} variant="outline" className="text-xs">
+                    {group.name}
+                  </Badge>
+                ))}
+                {!student.active && (
+                  <Badge variant="secondary" className="border-dashed text-xs">
+                    <X className="mr-1 h-3 w-3" /> Архив
+                  </Badge>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
-        
-        {student.groups && student.groups.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {student.groups.map((group) => (
-              <div 
-                key={group.id} 
-                className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs"
-              >
-                {group.name}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="ml-2">
-            <MoreHorizontal className="h-5 w-5" />
-            <span className="sr-only">Действия</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/students/${student.id}`} className="cursor-pointer">
-              {t('students.viewProfile')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={`/students/${student.id}/edit`} className="cursor-pointer">
-              {t('students.edit')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {student.active ? (
-            <DropdownMenuItem 
-              className="text-destructive focus:text-destructive"
-              onClick={() => onArchive(student.id)}
-            >
-              <Archive className="mr-2 h-4 w-4" />
-              {t('students.archive')}
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem 
-              onClick={() => onArchive(student.id)}
-            >
-              <UserRoundPlus className="mr-2 h-4 w-4" />
-              {t('students.restore')}
-            </DropdownMenuItem>
+
+        <div className="flex-shrink-0 flex items-center gap-4 ml-4">
+          {birthDate && (
+            <div className="hidden md:flex items-center text-sm text-muted-foreground">
+              <Calendar className="mr-1 h-3.5 w-3.5" />
+              <span>{birthDateFormatted} ({age} лет)</span>
+            </div>
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+
+          {student.phoneNumber && (
+            <div className="hidden md:flex items-center text-sm text-muted-foreground">
+              <User className="mr-1 h-3.5 w-3.5" />
+              <span>{student.phoneNumber}</span>
+            </div>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Редактировать
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAddToGroupDialogOpen(true)}>
+                <Users className="mr-2 h-4 w-4" />
+                Добавить в группу
+              </DropdownMenuItem>
+              {student.active ? (
+                <DropdownMenuItem onClick={handleArchive}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Архивировать
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={handleArchive}>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Восстановить
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setDeleteDialogOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      <EditStudentDialog 
+        student={student} 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+      />
+      <DeleteStudentDialog 
+        student={student} 
+        open={deleteDialogOpen} 
+        onOpenChange={setDeleteDialogOpen} 
+      />
+      <AddToGroupDialog 
+        student={student} 
+        open={addToGroupDialogOpen} 
+        onOpenChange={setAddToGroupDialogOpen} 
+      />
+    </>
   );
-};
+}

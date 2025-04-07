@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Student } from '@shared/schema';
-import { MoreHorizontal, Calendar, User, Pencil, Trash2, Users, X } from 'lucide-react';
+import { MoreHorizontal, Calendar, User, Pencil, Trash2, Users, X, Archive } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -18,12 +18,14 @@ import {
 import { EditStudentDialog } from './edit-student-dialog';
 import { DeleteStudentDialog } from './delete-student-dialog';
 import { AddToGroupDialog } from './add-to-group-dialog';
+import { calculateAge } from '@/lib/utils';
 
 interface StudentCardProps {
   student: Student;
+  onArchive: (studentId: number) => void;
 }
 
-export function StudentCard({ student }: StudentCardProps) {
+export function StudentCard({ student, onArchive }: StudentCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addToGroupDialogOpen, setAddToGroupDialogOpen] = useState(false);
@@ -34,14 +36,16 @@ export function StudentCard({ student }: StudentCardProps) {
     : null;
   
   // Calculate age
-  const age = birthDate 
-    ? Math.floor((new Date().getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) 
-    : null;
+  const age = birthDate ? calculateAge(birthDate) : null;
 
   // Format when birthdate was
   const birthDateFormatted = birthDate 
     ? formatDistanceToNow(birthDate, { addSuffix: true, locale: ru }) 
     : '';
+
+  const handleArchive = () => {
+    onArchive(student.id);
+  };
 
   return (
     <>
@@ -74,6 +78,17 @@ export function StudentCard({ student }: StudentCardProps) {
                   <Users className="mr-2 h-4 w-4" />
                   Добавить в группу
                 </DropdownMenuItem>
+                {student.active ? (
+                  <DropdownMenuItem onClick={handleArchive}>
+                    <Archive className="mr-2 h-4 w-4" />
+                    Архивировать
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={handleArchive}>
+                    <Archive className="mr-2 h-4 w-4" />
+                    Восстановить
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeleteDialogOpen(true)}

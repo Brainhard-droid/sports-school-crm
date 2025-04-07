@@ -5,10 +5,11 @@ import { Loader2 } from 'lucide-react';
 interface StudentsGridProps {
   students: Student[];
   isLoading: boolean;
-  error: Error | null;
+  error?: Error | null;
+  onArchive: (studentId: number) => void;
 }
 
-export function StudentsGrid({ students, isLoading, error }: StudentsGridProps) {
+export function StudentsGrid({ students, isLoading, error, onArchive }: StudentsGridProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -38,7 +39,11 @@ export function StudentsGrid({ students, isLoading, error }: StudentsGridProps) 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {students.map((student) => (
-        <StudentCard key={student.id} student={student} />
+        <StudentCard 
+          key={student.id} 
+          student={student} 
+          onArchive={onArchive}
+        />
       ))}
     </div>
   );
