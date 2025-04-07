@@ -1,32 +1,63 @@
 import { Router } from 'express';
-import { authRequired, validateRequest } from '../middleware/error';
-import * as branchController from '../controllers/branchController';
-import * as sectionController from '../controllers/sectionController';
-import { insertBranchSchema } from '@shared/schema';
+import { BranchController } from '../controllers/branchController';
+import { isAuthenticated } from '../middleware/auth';
+import { validateBody, validateParams } from '../middleware/validation';
 
 const router = Router();
 
-// Публичные маршруты (не требуют авторизации)
-router.get('/', branchController.getAllBranches);
-router.get('/by-section', sectionController.getBranchesBySection);
+/**
+ * @route GET /api/branches
+ * @desc Получить все филиалы
+ * @access Public
+ */
+router.get('/', BranchController.getAllBranches);
 
-// Защищенные маршруты (требуют авторизации)
-router.get('/:id', authRequired, branchController.getBranchById);
-
-router.post('/', 
-  authRequired,
-  validateRequest(insertBranchSchema),
-  branchController.createBranch
+/**
+ * @route GET /api/branches/:id
+ * @desc Получить филиал по ID
+ * @access Public
+ */
+router.get(
+  '/:id', 
+  validateParams(BranchController.validationSchemas.params), 
+  BranchController.getBranchById
 );
 
-router.put('/:id', 
-  authRequired,
-  branchController.updateBranch
+/**
+ * @route POST /api/branches
+ * @desc Создать новый филиал
+ * @access Private
+ */
+router.post(
+  '/', 
+  isAuthenticated,
+  validateBody(BranchController.validationSchemas.create), 
+  BranchController.createBranch
 );
 
-router.delete('/:id', 
-  authRequired,
-  branchController.deleteBranch
+/**
+ * @route PATCH /api/branches/:id
+ * @desc Обновить филиал
+ * @access Private
+ */
+router.patch(
+  '/:id', 
+  isAuthenticated,
+  validateParams(BranchController.validationSchemas.params),
+  validateBody(BranchController.validationSchemas.update), 
+  BranchController.updateBranch
+);
+
+/**
+ * @route DELETE /api/branches/:id
+ * @desc Удалить филиал (мягкое удаление)
+ * @access Private
+ */
+router.delete(
+  '/:id', 
+  isAuthenticated,
+  validateParams(BranchController.validationSchemas.params), 
+  BranchController.deleteBranch
 );
 
 export default router;

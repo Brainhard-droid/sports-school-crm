@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { errorHandler } from "./middleware/error";
 import {
   insertStudentSchema,
   insertGroupSchema,
@@ -11,20 +12,21 @@ import {
   insertStudentGroupSchema,
   insertDateCommentSchema,
   insertTrialRequestSchema,
-  insertBranchSchema,
-  insertSportsSectionSchema,
-  insertBranchSectionSchema,
   AttendanceStatus,
   TrialRequestStatus,
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sendPasswordResetEmail } from "./services/email";
-import { eq, and } from 'drizzle-orm';
-import { sportsSections as sportsTable, branches as branchesTable, branchSections } from "@shared/schema";
-import { db } from './db';
+import apiRoutes from "./routes/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+  
+  // Регистрация модульных маршрутов
+  app.use('/api', apiRoutes);
+  
+  // Глобальный обработчик ошибок должен быть последним middleware
+  app.use(errorHandler);
 
   // Добавляем новые роуты для спортивных секций и филиалов
   app.get("/api/sports-sections", async (_req, res) => {
@@ -1095,6 +1097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Создаем HTTP сервер
   const httpServer = createServer(app);
   return httpServer;
 }

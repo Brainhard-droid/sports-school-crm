@@ -5,11 +5,11 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { Router } from 'express';
 import { errorHandler } from "./middleware/error";
-import { db } from './db';
-import { eq, and } from 'drizzle-orm';
 import { registerRoutes } from "./routes";
+import apiRoutes from "./routes/index";
+
+import { db } from './db';
 import { 
   sportsSections, 
   branches, 
@@ -21,10 +21,9 @@ import {
   payments,
   attendance
 } from "@shared/schema";
+import { eq, and } from 'drizzle-orm';
 
-// Временная замена пока все маршруты не будут реализованы
-const apiRoutes = Router();
-
+// Временные маршруты, которые будут перемещены в соответствующие модули
 // Эндпоинты для студентов
 apiRoutes.get("/students", async (req, res) => {
   if (!req.isAuthenticated()) {
@@ -349,13 +348,13 @@ apiRoutes.get("/trial-date-options", async (req, res) => {
     }
 
     // Импортируем утилиты для работы с расписанием
-    const { parseScheduleFromAnyFormat, getNextLessonDates } = await import('./utils/schedule');
+    const { normalizeSchedule, getNextLessonDates } = await import('./utils/scheduleUtils');
 
     // Парсим расписание и получаем объект с расписанием по дням недели
-    const schedule = parseScheduleFromAnyFormat(branchSectionInfo.schedule);
+    const schedule = normalizeSchedule(branchSectionInfo.schedule);
 
     // Генерируем ближайшие 5 дат на основе расписания
-    const dateOptions = getNextLessonDates(schedule, startDate, 5);
+    const dateOptions = getNextLessonDates(schedule, 5);
 
     // Извлекаем текст расписания для отображения пользователю
     let scheduleText = '';

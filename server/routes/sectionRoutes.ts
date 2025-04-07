@@ -1,38 +1,63 @@
 import { Router } from 'express';
-import { authRequired, validateRequest } from '../middleware/error';
-import * as sectionController from '../controllers/sectionController';
-import { insertSportsSectionSchema, insertBranchSectionSchema } from '@shared/schema';
+import { SectionController } from '../controllers/sectionController';
+import { isAuthenticated } from '../middleware/auth';
+import { validateBody, validateParams } from '../middleware/validation';
 
 const router = Router();
 
-// Публичные маршруты (не требуют авторизации)
-router.get('/', sectionController.getAllSportsSections);
-router.get('/by-branch', sectionController.getSectionsByBranch);
+/**
+ * @route GET /api/sections
+ * @desc Получить все спортивные секции
+ * @access Public
+ */
+router.get('/', SectionController.getAllSections);
 
-// Защищенные маршруты (требуют авторизации)
-router.get('/:id', authRequired, sectionController.getSportsSectionById);
-
-router.post('/', 
-  authRequired,
-  validateRequest(insertSportsSectionSchema),
-  sectionController.createSportsSection
+/**
+ * @route GET /api/sections/:id
+ * @desc Получить спортивную секцию по ID
+ * @access Public
+ */
+router.get(
+  '/:id', 
+  validateParams(SectionController.validationSchemas.params), 
+  SectionController.getSectionById
 );
 
-router.put('/:id', 
-  authRequired,
-  sectionController.updateSportsSection
+/**
+ * @route POST /api/sections
+ * @desc Создать новую спортивную секцию
+ * @access Private
+ */
+router.post(
+  '/', 
+  isAuthenticated,
+  validateBody(SectionController.validationSchemas.create), 
+  SectionController.createSection
 );
 
-router.delete('/:id', 
-  authRequired,
-  sectionController.deleteSportsSection
+/**
+ * @route PATCH /api/sections/:id
+ * @desc Обновить спортивную секцию
+ * @access Private
+ */
+router.patch(
+  '/:id', 
+  isAuthenticated,
+  validateParams(SectionController.validationSchemas.params),
+  validateBody(SectionController.validationSchemas.update), 
+  SectionController.updateSection
 );
 
-// Маршруты для связей между секциями и филиалами
-router.post('/branch-connection', 
-  authRequired,
-  validateRequest(insertBranchSectionSchema),
-  sectionController.createBranchSection
+/**
+ * @route DELETE /api/sections/:id
+ * @desc Удалить спортивную секцию (мягкое удаление)
+ * @access Private
+ */
+router.delete(
+  '/:id', 
+  isAuthenticated,
+  validateParams(SectionController.validationSchemas.params), 
+  SectionController.deleteSection
 );
 
 export default router;
