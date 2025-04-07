@@ -41,7 +41,7 @@ export function AddToGroupDialog({
 
   const addToGroupMutation = useMutation({
     mutationFn: async (data: InsertStudentGroup) => {
-      const res = await fetch(`/api/student-groups`, {
+      const res = await fetch(`/api/students/student-groups`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -51,13 +51,14 @@ export function AddToGroupDialog({
       });
 
       if (!res.ok) {
-        throw new Error("Failed to add student to group");
+        const errorData = await res.json().catch(() => ({ message: "Failed to add student to group" }));
+        throw new Error(errorData.message || "Failed to add student to group");
       }
 
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/student-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
       onOpenChange(false);
       setSelectedGroupId("");
