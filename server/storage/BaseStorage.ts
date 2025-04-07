@@ -1,8 +1,6 @@
 import { IStorage } from '../interfaces/storage';
 import { 
-  messages,
-  users,
-  sessions
+  users
 } from '@shared/schema';
 import session from 'express-session';
 import { eq } from 'drizzle-orm';
@@ -26,70 +24,19 @@ export class BaseStorage implements Partial<IStorage> {
     });
   }
   
-  // Методы для работы с сообщениями чата
+  // Базовые методы для работы с WebSocket сообщениями будут добавлены позже
+  // Пока это заглушки
   async getMessages() {
-    try {
-      return await db
-        .select()
-        .from(messages)
-        .orderBy(messages.createdAt);
-    } catch (error) {
-      console.error('Error getting messages:', error);
-      throw error;
-    }
+    return [];
   }
   
   async getMessagesBySessionId(sessionId: string) {
-    try {
-      return await db
-        .select()
-        .from(messages)
-        .where(eq(messages.sessionId, sessionId))
-        .orderBy(messages.createdAt);
-    } catch (error) {
-      console.error('Error getting messages by session ID:', error);
-      throw error;
-    }
+    return [];
   }
   
   async createMessage(data: any) {
-    try {
-      const [message] = await db
-        .insert(messages)
-        .values(data)
-        .returning();
-      
-      return message;
-    } catch (error) {
-      console.error('Error creating message:', error);
-      throw error;
-    }
-  }
-  
-  // Методы для работы с сессиями
-  async getSessions() {
-    try {
-      return await db
-        .select()
-        .from(sessions);
-    } catch (error) {
-      console.error('Error getting sessions:', error);
-      throw error;
-    }
-  }
-  
-  async getSessionById(id: string) {
-    try {
-      const [session] = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, id));
-      
-      return session;
-    } catch (error) {
-      console.error('Error getting session by ID:', error);
-      throw error;
-    }
+    console.log('Creating message (stub)', data);
+    return { id: 0, ...data, createdAt: new Date() };
   }
   
   // Другие общие методы
