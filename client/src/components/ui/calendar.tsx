@@ -5,7 +5,13 @@ import { ru } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -56,7 +62,7 @@ function Calendar({
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        Caption: (props) => <CustomCaption {...props} />,
+        Caption: (captionProps) => <CustomCaption {...captionProps} onChange={props.onMonthChange} />,
       }}
       locale={ru}
       {...props}
@@ -64,61 +70,69 @@ function Calendar({
   )
 }
 
+// Расширяем интерфейс для передачи функции обратного вызова
+interface CustomCaptionProps extends CaptionProps {
+  onChange?: (date: Date) => void;
+}
+
 /**
  * Компонент заголовка календаря с селекторами месяца и года
  */
-function CustomCaption(props: CaptionProps) {
-  // Получаем текущий месяц и функции для переключения месяца/года
-  const { displayMonth } = props;
+function CustomCaption({ displayMonth, onChange }: CustomCaptionProps) {
+  // Короткие названия месяцев для экономии места
+  const monthNames = React.useMemo(() => [
+    'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 
+    'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
+  ], []);
 
-  // Создаем массив месяцев с короткими названиями для экономии места
+  // Получаем текущий месяц и год
+  const currentMonth = displayMonth.getMonth();
+  const currentYear = displayMonth.getFullYear();
+  
+  // Создаем массив месяцев для селектора
   const months = React.useMemo(() => {
-    const monthNames = [
-      'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 
-      'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
-    ];
-    return Array.from({ length: 12 }).map((_, i) => {
-      return {
-        value: i.toString(),
-        label: monthNames[i] || ''
-      };
-    });
-  }, []);
+    return monthNames.map((name, index) => ({
+      value: index.toString(),
+      label: name
+    }));
+  }, [monthNames]);
   
   // Создаем годы для выбора (10 лет назад и 10 лет вперед)
   const years = React.useMemo(() => {
-    const currentYear = displayMonth.getFullYear();
+    const startYear = currentYear - 10;
     return Array.from({ length: 21 }).map((_, i) => {
-      const year = currentYear - 10 + i;
+      const year = startYear + i;
       return {
         value: year.toString(),
         label: year.toString()
       };
     });
-  }, [displayMonth]);
+  }, [currentYear]);
 
   // Обработчики изменения месяца и года
   const handleMonthChange = (month: string) => {
+    if (!onChange) return;
+    
     const newDate = new Date(displayMonth);
     newDate.setMonth(parseInt(month, 10));
-    // Используем свойство DayPicker
-    (props as any).onMonthChange?.(newDate);
+    onChange(newDate);
   };
 
   const handleYearChange = (year: string) => {
+    if (!onChange) return;
+    
     const newDate = new Date(displayMonth);
     newDate.setFullYear(parseInt(year, 10));
-    // Используем свойство DayPicker
-    (props as any).onMonthChange?.(newDate);
+    onChange(newDate);
   };
 
   return (
     <div className="flex items-center justify-between gap-2 px-10">
       <Select
-        value={displayMonth.getMonth().toString()}
+        value={currentMonth.toString()}
         onValueChange={handleMonthChange}
       >
-        <SelectTrigger className="h-8 w-[130px] text-sm">
+        <SelectTrigger className="h-8 w-[80px] text-sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -131,10 +145,10 @@ function CustomCaption(props: CaptionProps) {
       </Select>
       
       <Select
-        value={displayMonth.getFullYear().toString()}
+        value={currentYear.toString()}
         onValueChange={handleYearChange}
       >
-        <SelectTrigger className="h-8 w-[90px] text-sm">
+        <SelectTrigger className="h-8 w-[70px] text-sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
