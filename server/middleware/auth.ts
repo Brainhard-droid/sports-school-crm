@@ -15,6 +15,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
+ * Alias для requireAuth для совместимости с другими файлами
+ */
+export const isAuthenticated = requireAuth;
+
+/**
  * Middleware для проверки роли пользователя
  * 
  * @param allowedRoles Массив разрешенных ролей

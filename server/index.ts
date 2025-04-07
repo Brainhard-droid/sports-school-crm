@@ -24,20 +24,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 
 // Временные маршруты, которые будут перемещены в соответствующие модули
-// Эндпоинты для студентов
-apiRoutes.get("/students", async (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  try {
-    const allStudents = await db.select().from(students);
-    res.json(allStudents);
-  } catch (error) {
-    console.error('Error getting students:', error);
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
+// Примечание: эндпоинты для студентов теперь обрабатываются через Router (/api/students)
 
 // Эндпоинт для групп
 apiRoutes.get("/groups", async (req, res) => {

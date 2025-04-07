@@ -11,8 +11,7 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
-import StudentsPage from "@/pages/students-refactored";
-import StudentsNewPage from "@/pages/students-new";
+import StudentsPage from "@/pages/students";
 import Groups from "@/pages/groups";
 import GroupDetails from "@/pages/group-details";
 import Attendance from "@/pages/attendance";
@@ -41,7 +40,6 @@ function Router() {
         <Route path="/reset-password/:token" component={ResetPassword} />
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/students" component={StudentsPage} />
-        <ProtectedRoute path="/students-new" component={StudentsNewPage} />
         <ProtectedRoute path="/groups" component={Groups} />
         <ProtectedRoute path="/groups/:id" component={GroupDetails} />
         <ProtectedRoute path="/attendance" component={Attendance} />
