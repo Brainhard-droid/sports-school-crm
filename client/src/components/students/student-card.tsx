@@ -102,17 +102,18 @@ export function StudentCard({ student, onArchive }: StudentCardProps) {
           </div>
         </CardHeader>
         <CardContent className="pb-2">
-          {student.phoneNumber && (
-            <p className="text-sm flex items-center mb-1">
-              <User className="mr-2 h-3.5 w-3.5 opacity-70" />
-              {student.phoneNumber}
-            </p>
-          )}
           {student.parentName && (
             <p className="text-sm flex items-center mb-1">
               <User className="mr-2 h-3.5 w-3.5 opacity-70" />
               {student.parentName} (родитель)
               {student.parentPhone && ` • ${student.parentPhone}`}
+            </p>
+          )}
+          {student.secondParentName && (
+            <p className="text-sm flex items-center mb-1">
+              <User className="mr-2 h-3.5 w-3.5 opacity-70" />
+              {student.secondParentName} (родитель)
+              {student.secondParentPhone && ` • ${student.secondParentPhone}`}
             </p>
           )}
         </CardContent>

@@ -18,9 +18,10 @@ export const students = pgTable("students", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   birthDate: date("birth_date").notNull(),
-  phoneNumber: text("phone_number"),
   parentName: text("parent_name"),
   parentPhone: text("parent_phone"),
+  secondParentName: text("second_parent_name"),
+  secondParentPhone: text("second_parent_phone"),
   active: boolean("active").notNull().default(true),
 });
 

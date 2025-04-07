@@ -47,7 +47,6 @@ const formSchema = insertStudentSchema.extend({
   firstName: z.string().min(1, "Имя обязательно"),
   lastName: z.string().min(1, "Фамилия обязательна"),
   birthDate: z.string().min(1, "Дата рождения обязательна"),
-  phoneNumber: z.string().optional(),
 });
 
 export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
@@ -60,9 +59,10 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
       firstName: student?.firstName || "",
       lastName: student?.lastName || "",
       birthDate: student?.birthDate ? format(new Date(student.birthDate), 'yyyy-MM-dd') : "",
-      phoneNumber: student?.phoneNumber || "",
       parentName: student?.parentName || "",
       parentPhone: student?.parentPhone || "",
+      secondParentName: student?.secondParentName || "",
+      secondParentPhone: student?.secondParentPhone || "",
       active: student?.active !== undefined ? student.active : true,
     },
   });
@@ -209,27 +209,20 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
                   <Calendar
                     mode="single"
                     selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : "")}
+                    onSelect={(date) => {
+                      field.onChange(date ? format(date, 'yyyy-MM-dd') : "");
+                      // Автоматически закрываем попап при выборе даты
+                      document.body.click();
+                    }}
                     disabled={(date) => date > new Date()}
                     initialFocus
                     locale={ru}
+                    captionLayout="dropdown-buttons"
+                    fromYear={1990}
+                    toYear={new Date().getFullYear()}
                   />
                 </PopoverContent>
               </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="phoneNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Телефон ученика</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="+7 (999) 123-45-67" />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -255,6 +248,34 @@ export function StudentForm({ student, mode, onSuccess }: StudentFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Телефон родителя</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="+7 (999) 123-45-67" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="secondParentName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Имя второго родителя</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Имя второго родителя" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="secondParentPhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Телефон второго родителя</FormLabel>
               <FormControl>
                 <Input {...field} placeholder="+7 (999) 123-45-67" />
               </FormControl>

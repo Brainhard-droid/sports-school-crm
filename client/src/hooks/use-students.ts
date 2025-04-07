@@ -59,9 +59,14 @@ export function useStudents({ searchTerm = '', showArchived }: UseStudentsProps 
 
       // Поиск по телефонам
       if (
-        (student.phoneNumber && student.phoneNumber.includes(searchTerm)) ||
-        (student.parentPhone && student.parentPhone.includes(searchTerm))
+        (student.parentPhone && student.parentPhone.includes(searchTerm)) ||
+        (student.secondParentPhone && student.secondParentPhone.includes(searchTerm))
       ) {
+        return true;
+      }
+      
+      // Поиск по второму родителю
+      if (student.secondParentName && student.secondParentName.toLowerCase().includes(searchTermLower)) {
         return true;
       }
 
