@@ -18,6 +18,7 @@ import {
   TrialRequestStatus,
   students,
   groups,
+  schedules,
   payments,
   attendance
 } from "@shared/schema";
@@ -104,18 +105,75 @@ apiRoutes.get("/schedules", async (req, res) => {
     let result;
     if (groupId) {
       // Если указан ID группы, возвращаем только расписание этой группы
+      console.log(`Getting schedules for group ID: ${groupId}`);
       result = await db
         .select()
         .from(schedules)
         .where(eq(schedules.groupId, groupId));
+      console.log(`Found ${result.length} schedule entries`);
     } else {
       // Иначе возвращаем все расписания
+      console.log('Getting all schedules');
       result = await db.select().from(schedules);
+      console.log(`Found ${result.length} total schedule entries`);
     }
     
     res.json(result);
   } catch (error) {
     console.error('Error getting schedules:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Эндпоинт для создания расписания занятий
+apiRoutes.post("/schedules", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const { groupId, dayOfWeek, startTime, endTime } = req.body;
+    
+    console.log('Creating schedule entry:', { groupId, dayOfWeek, startTime, endTime });
+    
+    // Проверяем, существует ли уже такое расписание
+    const existingSchedule = await db
+      .select()
+      .from(schedules)
+      .where(
+        and(
+          eq(schedules.groupId, groupId),
+          eq(schedules.dayOfWeek, dayOfWeek)
+        )
+      );
+    
+    if (existingSchedule.length > 0) {
+      // Если уже существует, обновляем
+      const [updated] = await db
+        .update(schedules)
+        .set({ startTime, endTime })
+        .where(
+          and(
+            eq(schedules.groupId, groupId),
+            eq(schedules.dayOfWeek, dayOfWeek)
+          )
+        )
+        .returning();
+        
+      console.log('Updated existing schedule:', updated);
+      return res.json(updated);
+    }
+    
+    // Иначе создаем новое
+    const [newSchedule] = await db
+      .insert(schedules)
+      .values({ groupId, dayOfWeek, startTime, endTime })
+      .returning();
+      
+    console.log('Created new schedule:', newSchedule);
+    return res.status(201).json(newSchedule);
+  } catch (error) {
+    console.error('Error creating schedule:', error);
     res.status(500).json({ error: (error as Error).message });
   }
 });

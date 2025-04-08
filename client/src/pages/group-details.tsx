@@ -15,16 +15,16 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ru } from "date-fns/locale";
 
+// Интерфейс для расширенной группы с количеством студентов и списком студентов
+interface GroupWithStudents extends Group {
+  currentStudents: number;
+  students: Student[];
+}
+
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [_, navigate] = useLocation();
-
-  // Интерфейс для расширенной группы с количеством студентов и списком студентов
-  interface GroupWithStudents extends Group {
-    currentStudents: number;
-    students: Student[];
-  }
 
   // Получение информации о группе (теперь включает и студентов)
   const { data: group, isLoading: isLoadingGroup } = useQuery<GroupWithStudents>({
@@ -55,15 +55,7 @@ export default function GroupDetails() {
     },
     enabled: !!id && !!selectedDate
   });
-
-  if (isLoadingGroup) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
+  
   // Получение расписания группы
   const { data: schedules } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules", id],
@@ -72,12 +64,20 @@ export default function GroupDetails() {
         credentials: 'include'
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch schedules');
+        return []; // Возвращаем пустой массив вместо ошибки
       }
       return response.json();
     },
     enabled: !!id
   });
+
+  if (isLoadingGroup) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   if (!group) {
     return (
