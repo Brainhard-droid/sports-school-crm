@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { BranchController } from '../controllers/branchController';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
 
 const router = Router();
@@ -30,7 +30,7 @@ router.get(
  */
 router.post(
   '/', 
-  requireAuth,
+  isAuthenticated,
   validateBody(BranchController.validationSchemas.create), 
   BranchController.createBranch
 );
@@ -42,7 +42,7 @@ router.post(
  */
 router.patch(
   '/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(BranchController.validationSchemas.params),
   validateBody(BranchController.validationSchemas.update), 
   BranchController.updateBranch
@@ -55,7 +55,7 @@ router.patch(
  */
 router.delete(
   '/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(BranchController.validationSchemas.params), 
   BranchController.deleteBranch
 );

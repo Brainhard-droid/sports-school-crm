@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { SectionController } from '../controllers/sectionController';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
 
 const router = Router();
@@ -30,7 +30,7 @@ router.get(
  */
 router.post(
   '/', 
-  requireAuth,
+  isAuthenticated,
   validateBody(SectionController.validationSchemas.create), 
   SectionController.createSection
 );
@@ -42,7 +42,7 @@ router.post(
  */
 router.patch(
   '/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(SectionController.validationSchemas.params),
   validateBody(SectionController.validationSchemas.update), 
   SectionController.updateSection
@@ -55,7 +55,7 @@ router.patch(
  */
 router.delete(
   '/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(SectionController.validationSchemas.params), 
   SectionController.deleteSection
 );

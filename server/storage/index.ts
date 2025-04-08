@@ -8,6 +8,7 @@ import { TrialRequestStorage } from './TrialRequestStorage';
 import { StudentStorage } from './StudentStorage';
 import { GroupStorage } from './GroupStorage';
 import { StudentGroupStorage } from './StudentGroupStorage';
+import { AttendanceStorage } from './AttendanceStorage';
 
 /**
  * Класс для объединения всех хранилищ
@@ -77,6 +78,11 @@ export class PostgresStorage
   createStudentGroup: StudentGroupStorage['createStudentGroup'];
   updateStudentGroup: StudentGroupStorage['updateStudentGroup'];
   
+  // Attendance Storage
+  getAttendance: AttendanceStorage['getAttendance'];
+  createAttendance: AttendanceStorage['createAttendance'];
+  getAttendanceByMonth: AttendanceStorage['getAttendanceByMonth'];
+  
   // Приватные инстансы хранилищ
   private userStorage: UserStorage;
   private branchStorage: BranchStorage;
@@ -86,6 +92,7 @@ export class PostgresStorage
   private studentStorage: StudentStorage;
   private groupStorage: GroupStorage;
   private studentGroupStorage: StudentGroupStorage;
+  private attendanceStorage: AttendanceStorage;
   
   constructor() {
     super();
@@ -99,6 +106,7 @@ export class PostgresStorage
     this.studentStorage = new StudentStorage();
     this.groupStorage = new GroupStorage();
     this.studentGroupStorage = new StudentGroupStorage();
+    this.attendanceStorage = new AttendanceStorage();
     
     // Привязываем методы к соответствующим реализациям
     this.getUser = this.userStorage.getUser.bind(this.userStorage);
@@ -152,6 +160,11 @@ export class PostgresStorage
     this.getStudentGroupByIds = this.studentGroupStorage.getStudentGroupByIds.bind(this.studentGroupStorage);
     this.createStudentGroup = this.studentGroupStorage.createStudentGroup.bind(this.studentGroupStorage);
     this.updateStudentGroup = this.studentGroupStorage.updateStudentGroup.bind(this.studentGroupStorage);
+    
+    // Привязываем методы хранилища посещаемости
+    this.getAttendance = this.attendanceStorage.getAttendance.bind(this.attendanceStorage);
+    this.createAttendance = this.attendanceStorage.createAttendance.bind(this.attendanceStorage);
+    this.getAttendanceByMonth = this.attendanceStorage.getAttendanceByMonth.bind(this.attendanceStorage);
   }
 }
 

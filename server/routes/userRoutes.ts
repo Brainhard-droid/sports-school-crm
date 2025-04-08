@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
 import { UserController } from '../controllers/userController';
 import passport from 'passport';
@@ -20,7 +20,7 @@ router.post('/register',
   UserController.register
 );
 
-router.post('/logout', requireAuth, UserController.logout);
+router.post('/logout', isAuthenticated, UserController.logout);
 
 router.post('/request-reset', 
   validateBody(UserController.validationSchemas.resetRequest),
@@ -33,13 +33,13 @@ router.post('/reset-password',
 );
 
 router.put('/profile', 
-  requireAuth,
+  isAuthenticated,
   validateBody(UserController.validationSchemas.updateProfile),
   UserController.updateProfile
 );
 
 router.put('/change-password', 
-  requireAuth,
+  isAuthenticated,
   validateBody(UserController.validationSchemas.changePassword),
   UserController.changePassword
 );

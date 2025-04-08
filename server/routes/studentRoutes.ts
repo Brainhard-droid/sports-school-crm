@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { storage } from '../storage';
 import { asyncHandler, ApiErrorClass } from '../middleware/error';
 import { insertStudentSchema, insertStudentGroupSchema } from '@shared/schema';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = Router();
 
 // Использовать middleware аутентификации для всех маршрутов
-router.use(requireAuth);
+router.use(isAuthenticated);
 
 // Получение всех студентов
 router.get('/', asyncHandler(async (req: Request, res: Response) => {

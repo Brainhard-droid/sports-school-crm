@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
 import { TrialRequestController } from '../controllers/trialRequestController';
 import { TrialRequestStatus } from '@shared/schema';
@@ -20,8 +20,8 @@ const updateStatusSchema = z.object({
 });
 
 // Маршруты для работы с заявками на пробные занятия
-router.get('/', requireAuth, TrialRequestController.getAllTrialRequests);
-router.get('/:id', requireAuth, TrialRequestController.getTrialRequestById);
+router.get('/', isAuthenticated, TrialRequestController.getAllTrialRequests);
+router.get('/:id', isAuthenticated, TrialRequestController.getTrialRequestById);
 
 // Публичный маршрут для создания заявки (не требует авторизации)
 router.post('/', 
@@ -31,7 +31,7 @@ router.post('/',
 
 // Обновление статуса заявки (требует авторизации)
 router.patch('/:id/status', 
-  requireAuth,
+  isAuthenticated,
   validateParams(TrialRequestController.validationSchemas.params),
   validateBody(updateStatusSchema),
   TrialRequestController.updateTrialRequestStatus
@@ -39,7 +39,7 @@ router.patch('/:id/status',
 
 // Полное обновление заявки (требует авторизации)
 router.put('/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(TrialRequestController.validationSchemas.params),
   validateBody(TrialRequestController.validationSchemas.update),
   TrialRequestController.updateTrialRequest
@@ -47,7 +47,7 @@ router.put('/:id',
 
 // Удаление заявки (требует авторизации)
 router.delete('/:id', 
-  requireAuth,
+  isAuthenticated,
   validateParams(TrialRequestController.validationSchemas.params),
   TrialRequestController.deleteTrialRequest
 );
