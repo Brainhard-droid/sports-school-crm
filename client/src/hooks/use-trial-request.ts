@@ -4,12 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertTrialRequest, insertTrialRequestSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
 import { z } from "zod";
 
 /**
  * Расширенная схема валидации для формы пробного занятия
- * Добавляет обязательные поля для серверной валидации
+ * Соответствует принципу Single Responsibility - отвечает только за валидацию
  */
 const extendedTrialRequestSchema = insertTrialRequestSchema.extend({
   consentToDataProcessing: z.boolean().refine(val => val === true, {
@@ -24,6 +24,7 @@ export type ExtendedTrialRequestForm = z.infer<typeof extendedTrialRequestSchema
 
 /**
  * Хук для управления формой пробного занятия
+ * Следует принципу Single Responsibility - отвечает только за логику формы
  */
 export function useTrialRequest() {
   const { toast } = useToast();
@@ -48,12 +49,12 @@ export function useTrialRequest() {
     },
   });
 
-  // Fetch sections
+  // Получаем все секции
   const { data: sections, isLoading: sectionsLoading } = useQuery({
     queryKey: ["/api/sections"],
   });
 
-  // Fetch branches with schedule based on selected section
+  // Получаем филиалы с расписанием для выбранной секции
   const sectionId = form.watch("sectionId");
   const { data: branchesForSection = [], isLoading: branchesLoading } = useQuery({
     queryKey: ["/api/branches-by-section", sectionId],
@@ -61,17 +62,14 @@ export function useTrialRequest() {
     queryFn: async () => {
       if (!sectionId) return [];
       const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
-      return res.json();
+      return await res.json();
     },
   });
 
   // Мутация для отправки заявки на пробное занятие
   const createTrialRequestMutation = useMutation({
     mutationFn: async (data: ExtendedTrialRequestForm) => {
-      console.log('Submitting data:', data);
-      
-      // Устанавливаем флаг отправки
-      setIsSubmitting(true);
+      console.log('Отправка данных формы:', data);
       
       try {
         const res = await apiRequest("POST", "/api/trial-requests", {
@@ -83,19 +81,19 @@ export function useTrialRequest() {
         
         return await res.json();
       } catch (error) {
-        setIsSubmitting(false);
+        console.error('Ошибка при отправке данных:', error);
         throw error;
       }
     },
     onSuccess: () => {
-      console.log('Мутация успешно выполнена');
+      console.log('Заявка успешно отправлена');
       setShowSuccessModal(true);
       form.reset();
       setPrivacyAccepted(false);
       setIsSubmitting(false);
     },
     onError: (error: Error) => {
-      console.error('Form submission error:', error);
+      console.error('Ошибка при отправке заявки:', error);
       toast({
         title: "Ошибка при отправке заявки",
         description: error.message,
@@ -117,6 +115,9 @@ export function useTrialRequest() {
       return;
     }
     
+    // Устанавливаем флаг отправки
+    setIsSubmitting(true);
+    
     // Устанавливаем согласие на обработку данных
     data.consentToDataProcessing = privacyAccepted;
     console.log('Согласие на обработку данных:', privacyAccepted);
@@ -128,12 +129,18 @@ export function useTrialRequest() {
         description: "Для отправки заявки необходимо согласие на обработку персональных данных",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
     
     console.log('Вызываем мутацию с данными:', data);
-    createTrialRequestMutation.mutate(data);
-    console.log('Мутация вызвана');
+    try {
+      createTrialRequestMutation.mutate(data);
+      console.log('Мутация вызвана');
+    } catch (error) {
+      console.error('Ошибка при вызове мутации:', error);
+      setIsSubmitting(false);
+    }
   });
 
   /**

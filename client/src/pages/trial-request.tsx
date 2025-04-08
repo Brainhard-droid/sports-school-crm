@@ -87,7 +87,7 @@ export default function TrialRequestPage() {
     e.preventDefault(); // Предотвращаем стандартное поведение формы
     if (!isSubmitting) {
       console.log('Вызываем handleSubmit');
-      handleSubmit(e);
+      handleSubmit();
     } else {
       console.log('Форма уже отправляется, игнорируем повторное нажатие');
     }
@@ -134,7 +134,6 @@ export default function TrialRequestPage() {
                 type="submit"
                 className="w-full"
                 disabled={isSubmitting || !privacyAccepted}
-                onClick={() => console.log('Button clicked')}
               >
                 {isSubmitting || createTrialRequestMutation.isPending ? (
                   <>
