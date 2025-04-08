@@ -35,30 +35,36 @@ export class ScheduleService {
   parseSchedule(scheduleString: string | undefined | null): Schedule | null {
     if (!scheduleString) return null;
     
-    // Сначала пробуем распарсить строку как JSON
-    try {
-      const schedule = JSON.parse(scheduleString);
-      // Дополнительная проверка на валидность структуры расписания
-      if (typeof schedule !== 'object' || schedule === null) {
-        console.error('Parsed schedule is not an object');
-        // Не возвращаем null, а пробуем другой формат
-      } else if (Object.keys(schedule).length === 0) {
-        console.error('Schedule has no days');
-        // Не возвращаем null, а пробуем другой формат
-      } else {
-        return schedule;
+    // Проверяем, если scheduleString уже выглядит как текстовый формат
+    // (Начинается с названия дня недели и содержит двоеточие)
+    const startsWithDayName = /^[а-яА-ЯёЁ]+:/.test(scheduleString);
+    
+    if (!startsWithDayName) {
+      // Пробуем распарсить строку как JSON
+      try {
+        const schedule = JSON.parse(scheduleString);
+        // Дополнительная проверка на валидность структуры расписания
+        if (typeof schedule !== 'object' || schedule === null) {
+          console.error('Parsed schedule is not an object');
+        } else if (Object.keys(schedule).length === 0) {
+          console.error('Schedule has no days');
+        } else {
+          return schedule;
+        }
+      } catch (error) {
+        // Продолжаем и пробуем текстовый формат
       }
-    } catch (error) {
-      console.log('Error parsing schedule as JSON, trying text format:', error);
-      // Продолжаем и пробуем другой формат
     }
     
-    // Если не удалось распарсить как JSON, пробуем как текстовый формат
+    // Обрабатываем текстовый формат
     try {
       const lines = scheduleString.split('\n');
       const schedule: Schedule = {};
       
       for (const line of lines) {
+        // Пропускаем пустые строки
+        if (!line.trim()) continue;
+        
         // Формат: "Понедельник: 09:00 - 10:00"
         const match = line.match(/([^:]+):\s*(.+)/);
         if (match) {
@@ -80,13 +86,12 @@ export class ScheduleService {
       }
       
       if (Object.keys(schedule).length === 0) {
-        console.error('No valid schedule entries found in text format');
         return null;
       }
       
       return schedule;
     } catch (error) {
-      console.error('Error parsing schedule in text format:', error);
+      console.error('Error parsing schedule:', error);
       return null;
     }
   }

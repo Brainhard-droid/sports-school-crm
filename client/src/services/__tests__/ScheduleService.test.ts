@@ -29,6 +29,14 @@ describe('ScheduleService', () => {
       expect(result).toEqual(expected);
     });
 
+    test('should correctly identify and parse text format that starts with day name', () => {
+      const scheduleString = 'Вторник: 14:00 - 15:30';
+      const expected: Schedule = { 'Вторник': '14:00 - 15:30' };
+      
+      const result = service.parseSchedule(scheduleString);
+      expect(result).toEqual(expected);
+    });
+
     test('should return null for undefined schedule', () => {
       const result = service.parseSchedule(undefined);
       expect(result).toBeNull();
@@ -39,11 +47,6 @@ describe('ScheduleService', () => {
       expect(result).toBeNull();
     });
 
-    test('should handle invalid JSON by trying text format as fallback', () => {
-      const result = service.parseSchedule('Вторник: 14:00 - 15:30');
-      expect(result).toEqual({ 'Вторник': '14:00 - 15:30' });
-    });
-
     test('should return null if schedule is not an object in JSON and has no valid text format', () => {
       const result = service.parseSchedule('"string"');
       expect(result).toBeNull();
@@ -51,6 +54,22 @@ describe('ScheduleService', () => {
 
     test('should return null if both JSON and text formats fail', () => {
       const result = service.parseSchedule('no valid schedule format');
+      expect(result).toBeNull();
+    });
+
+    test('should handle empty lines in text format', () => {
+      const scheduleString = 'Понедельник: 10:00 - 11:00\n\nСреда: 15:00 - 16:00';
+      const expected: Schedule = {
+        'Понедельник': '10:00 - 11:00',
+        'Среда': '15:00 - 16:00'
+      };
+      
+      const result = service.parseSchedule(scheduleString);
+      expect(result).toEqual(expected);
+    });
+
+    test('should return null for empty schedule after processing', () => {
+      const result = service.parseSchedule('   ');
       expect(result).toBeNull();
     });
   });
