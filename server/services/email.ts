@@ -132,7 +132,7 @@ export async function sendTrialAssignmentNotification(request: TrialRequest,
     ? formatDate(scheduledDate) 
     : 'Дата не назначена';
 
-  // Используем parentPhone как основной контакт, если parentEmail не указан
+  // Используем parentPhone как основной контакт
   const contactInfo = request.parentPhone;
   
   return sendEmail({

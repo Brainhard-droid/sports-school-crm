@@ -109,7 +109,7 @@ export class TrialRequestController {
       parentPhone,
       sectionId,
       branchId,
-      desiredDate: new Date(desiredDate),
+      desiredDate,
       notes
     });
 
@@ -213,7 +213,7 @@ export class TrialRequestController {
     if (parentPhone) updateData.parentPhone = parentPhone;
     if (sectionId) updateData.sectionId = sectionId;
     if (branchId) updateData.branchId = branchId;
-    if (desiredDate) updateData.desiredDate = new Date(desiredDate);
+    if (desiredDate) updateData.desiredDate = desiredDate;
     if (notes !== undefined) updateData.notes = notes;
 
     // Обновляем заявку
