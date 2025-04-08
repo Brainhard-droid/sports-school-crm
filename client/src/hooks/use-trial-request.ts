@@ -121,19 +121,22 @@ export function useTrialRequest() {
     setIsSubmitting(true);
     
     try {
-
       const formData = {
         ...data,
         consentToDataProcessing: privacyAccepted,
         childAge: Number(data.childAge),
         sectionId: Number(data.sectionId),
-        branchId: Number(data.branchId)
+        branchId: Number(data.branchId),
+        desiredDate: new Date(data.desiredDate).toISOString()
       };
 
-      await createTrialRequestMutation.mutateAsync(formData);
+      console.log('Sending form data:', formData);
+      const result = await createTrialRequestMutation.mutateAsync(formData);
+      console.log('Response:', result);
       
       setShowSuccessModal(true);
       form.reset();
+      setPrivacyAccepted(false);
       
     } catch (error) {
       console.error('Error submitting form:', error);
