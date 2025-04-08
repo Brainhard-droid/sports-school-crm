@@ -122,9 +122,14 @@ export const RequestFormFields = ({
             <FormLabel>Секция</FormLabel>
             <Select
               onValueChange={(value) => {
-                field.onChange(value ? parseInt(value) : undefined);
-                // Clear branchId with null instead of undefined to avoid type errors
-                form.setValue("branchId", null as any);
+                // Безопасное преобразование в число
+                try {
+                  field.onChange(value ? parseInt(value) : undefined);
+                  // Clear branchId with null instead of undefined to avoid type errors
+                  form.setValue("branchId", null as any);
+                } catch (error) {
+                  console.error("Error converting section ID:", error);
+                }
               }}
               value={field.value?.toString() || ''}
             >
@@ -157,7 +162,13 @@ export const RequestFormFields = ({
             <FormItem>
               <FormLabel>Отделение</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                onValueChange={(value) => {
+                  try {
+                    field.onChange(value ? parseInt(value) : undefined);
+                  } catch (error) {
+                    console.error("Error converting branch ID:", error);
+                  }
+                }}
                 value={field.value?.toString() || ''}
               >
                 <FormControl>
@@ -196,7 +207,7 @@ export const RequestFormFields = ({
             Принимаю условия обработки персональных данных
           </label>
           <p className="text-xs text-muted-foreground">
-            Нажимая на кнопку, вы даете согласие на обработку персональных данных и соглашаетесь с политикой конфиденциальности
+            Нажимая на кнопку, вы даете согласие на обработку персональных данных и соглашаетесь с <a href="/privacy-policy" target="_blank" className="text-primary hover:underline">политикой конфиденциальности</a>
           </p>
         </div>
       </div>

@@ -37,7 +37,16 @@ export default function TrialRequestPage() {
   const selectedBranch = branchesForSection?.find(
     (branch: { id: number }) => branch.id === Number(branchId)
   );
-  const schedule = selectedBranch ? JSON.parse(selectedBranch.schedule) : null;
+  
+  // Безопасный парсинг JSON с проверкой на корректность
+  let schedule = null;
+  if (selectedBranch && selectedBranch.schedule) {
+    try {
+      schedule = JSON.parse(selectedBranch.schedule);
+    } catch (error) {
+      console.error("Error parsing schedule JSON:", error);
+    }
+  }
 
   // Generate suggested dates when schedule is available
   useEffect(() => {
