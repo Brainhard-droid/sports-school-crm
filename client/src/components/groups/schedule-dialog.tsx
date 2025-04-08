@@ -37,6 +37,16 @@ export function ScheduleDialog({ group, open, onOpenChange }: ScheduleDialogProp
 
   const createScheduleMutation = useMutation({
     mutationFn: async (data: { groupId: number; schedules: InsertSchedule[] }) => {
+      // Сначала получаем текущее расписание группы
+      const response = await fetch(`/api/schedules?groupId=${data.groupId}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Не удалось получить текущее расписание');
+      }
+      
+      // Затем отправляем новые значения
       const promises = data.schedules.map(schedule =>
         apiRequest("POST", "/api/schedules", schedule)
       );

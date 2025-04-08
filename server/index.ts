@@ -136,8 +136,8 @@ apiRoutes.post("/schedules", async (req, res) => {
     
     console.log('Creating schedule entry:', { groupId, dayOfWeek, startTime, endTime });
     
-    // Проверяем, существует ли уже такое расписание
-    const existingSchedule = await db
+    // Получаем все текущие расписания для данной группы и дня недели
+    const existingSchedules = await db
       .select()
       .from(schedules)
       .where(
@@ -147,8 +147,8 @@ apiRoutes.post("/schedules", async (req, res) => {
         )
       );
     
-    if (existingSchedule.length > 0) {
-      // Если уже существует, обновляем
+    if (existingSchedules.length > 0) {
+      // Обновляем существующую запись вместо создания новой
       const [updated] = await db
         .update(schedules)
         .set({ startTime, endTime })
@@ -164,7 +164,7 @@ apiRoutes.post("/schedules", async (req, res) => {
       return res.json(updated);
     }
     
-    // Иначе создаем новое
+    // Создаем новое расписание
     const [newSchedule] = await db
       .insert(schedules)
       .values({ groupId, dayOfWeek, startTime, endTime })

@@ -1,5 +1,5 @@
 import { Group, InsertGroup, Student, groups } from "@shared/schema";
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../db';
 import { IGroupStorage } from "../interfaces/storage/IGroupStorage";
 
@@ -69,9 +69,47 @@ export class GroupStorage implements IGroupStorage {
    */
   async getGroupStudentsWithDetails(groupId: number): Promise<Student[]> {
     try {
-      // TODO: Реализовать получение студентов группы с их подробными данными
-      // Этот метод требует SQL-запроса с JOIN
-      return [];
+      const { students, studentGroups } = await import('@shared/schema');
+      
+      // Делаем JOIN между таблицами students и student_groups
+      const result = await db
+        .select({
+          id: students.id,
+          firstName: students.firstName,
+          lastName: students.lastName,
+          birthDate: students.birthDate,
+          parentName: students.parentName,
+          parentPhone: students.parentPhone,
+          secondParentName: students.secondParentName,
+          secondParentPhone: students.secondParentPhone,
+          active: students.active,
+          studentGroupId: studentGroups.id,
+          joinDate: studentGroups.joinDate,
+          groupActive: studentGroups.active,
+        })
+        .from(studentGroups)
+        .innerJoin(students, eq(studentGroups.studentId, students.id))
+        .where(
+          and(
+            eq(studentGroups.groupId, groupId),
+            eq(studentGroups.active, true),
+            eq(students.active, true)
+          )
+        );
+      
+      console.log(`Found ${result.length} students in group ${groupId}`);
+      
+      return result.map(row => ({
+        id: row.id,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        birthDate: row.birthDate,
+        parentName: row.parentName,
+        parentPhone: row.parentPhone,
+        secondParentName: row.secondParentName,
+        secondParentPhone: row.secondParentPhone,
+        active: row.active,
+      }));
     } catch (error) {
       console.error('Error getting group students with details:', error);
       throw error;
