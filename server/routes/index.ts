@@ -6,6 +6,7 @@ import userRoutes from './userRoutes';
 import trialRequestRoutes from './trialRequestRoutes';
 import studentRoutes from './studentRoutes';
 import attendanceRoutes from './attendanceRoutes';
+import dateCommentRoutes from './dateCommentRoutes';
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use('/users', userRoutes);
 router.use('/trial-requests', trialRequestRoutes);
 router.use('/students', studentRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/date-comments', dateCommentRoutes);
 
 export default router;

@@ -9,6 +9,7 @@ import { StudentStorage } from './StudentStorage';
 import { GroupStorage } from './GroupStorage';
 import { StudentGroupStorage } from './StudentGroupStorage';
 import { AttendanceStorage } from './AttendanceStorage';
+import { DateCommentStorage } from './DateCommentStorage';
 
 /**
  * Класс для объединения всех хранилищ
@@ -82,6 +83,16 @@ export class PostgresStorage
   getAttendance: AttendanceStorage['getAttendance'];
   createAttendance: AttendanceStorage['createAttendance'];
   getAttendanceByMonth: AttendanceStorage['getAttendanceByMonth'];
+  getAttendanceById: AttendanceStorage['getAttendanceById'];
+  updateAttendance: AttendanceStorage['updateAttendance'];
+  
+  // Date Comment Storage
+  getDateComments: DateCommentStorage['getDateComments'];
+  createDateComment: DateCommentStorage['createDateComment'];
+  getDateCommentById: DateCommentStorage['getDateCommentById'];
+  getDateComment: DateCommentStorage['getDateComment'];
+  updateDateComment: DateCommentStorage['updateDateComment'];
+  deleteDateComment: DateCommentStorage['deleteDateComment'];
   
   // Приватные инстансы хранилищ
   private userStorage: UserStorage;
@@ -93,6 +104,7 @@ export class PostgresStorage
   private groupStorage: GroupStorage;
   private studentGroupStorage: StudentGroupStorage;
   private attendanceStorage: AttendanceStorage;
+  private dateCommentStorage: DateCommentStorage;
   
   constructor() {
     super();
@@ -107,6 +119,7 @@ export class PostgresStorage
     this.groupStorage = new GroupStorage();
     this.studentGroupStorage = new StudentGroupStorage();
     this.attendanceStorage = new AttendanceStorage();
+    this.dateCommentStorage = new DateCommentStorage();
     
     // Привязываем методы к соответствующим реализациям
     this.getUser = this.userStorage.getUser.bind(this.userStorage);
@@ -165,6 +178,16 @@ export class PostgresStorage
     this.getAttendance = this.attendanceStorage.getAttendance.bind(this.attendanceStorage);
     this.createAttendance = this.attendanceStorage.createAttendance.bind(this.attendanceStorage);
     this.getAttendanceByMonth = this.attendanceStorage.getAttendanceByMonth.bind(this.attendanceStorage);
+    this.getAttendanceById = this.attendanceStorage.getAttendanceById.bind(this.attendanceStorage);
+    this.updateAttendance = this.attendanceStorage.updateAttendance.bind(this.attendanceStorage);
+    
+    // Привязываем методы хранилища комментариев к датам
+    this.getDateComments = this.dateCommentStorage.getDateComments.bind(this.dateCommentStorage);
+    this.createDateComment = this.dateCommentStorage.createDateComment.bind(this.dateCommentStorage);
+    this.getDateCommentById = this.dateCommentStorage.getDateCommentById.bind(this.dateCommentStorage);
+    this.getDateComment = this.dateCommentStorage.getDateComment.bind(this.dateCommentStorage);
+    this.updateDateComment = this.dateCommentStorage.updateDateComment.bind(this.dateCommentStorage);
+    this.deleteDateComment = this.dateCommentStorage.deleteDateComment.bind(this.dateCommentStorage);
   }
 }
 

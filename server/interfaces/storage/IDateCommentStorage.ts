@@ -23,6 +23,14 @@ export interface IDateCommentStorage {
   createDateComment(comment: InsertDateComment): Promise<DateComment>;
   
   /**
+   * Получает комментарий к дате по ID
+   * 
+   * @param id ID комментария
+   * @returns Комментарий к дате или undefined, если комментарий не найден
+   */
+  getDateCommentById(id: number): Promise<DateComment | undefined>;
+  
+  /**
    * Получает комментарий к дате для группы
    * 
    * @param groupId ID группы
@@ -30,4 +38,21 @@ export interface IDateCommentStorage {
    * @returns Комментарий или undefined, если не найден
    */
   getDateComment(groupId: number, date: Date): Promise<DateComment | undefined>;
+  
+  /**
+   * Обновляет существующий комментарий к дате
+   * 
+   * @param id ID комментария
+   * @param comment Новый текст комментария
+   * @returns Обновленный комментарий
+   */
+  updateDateComment(id: number, comment: string): Promise<DateComment>;
+  
+  /**
+   * Удаляет комментарий к дате
+   * 
+   * @param id ID комментария
+   * @returns true, если удаление прошло успешно
+   */
+  deleteDateComment(id: number): Promise<boolean>;
 }

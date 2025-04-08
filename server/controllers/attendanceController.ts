@@ -55,6 +55,8 @@ export const createAttendance = asyncHandler(async (req: Request, res: Response)
   // Форматируем дату только до дня (без времени)
   const formattedDate = format(parsedDate, 'yyyy-MM-dd');
   
+  console.log(`Creating attendance record: { studentId: ${studentId}, groupId: ${groupId}, date: '${formattedDate}', status: ${status} }`);
+  
   // Создаём запись о посещаемости
   const attendance = await storage.createAttendance({
     studentId,
@@ -64,6 +66,31 @@ export const createAttendance = asyncHandler(async (req: Request, res: Response)
   });
   
   res.status(201).json(attendance);
+});
+
+// Обновление существующей записи о посещаемости
+export const updateAttendance = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    throw new ApiErrorClass('Некорректный ID записи', 400);
+  }
+  
+  // Проверяем, что запись существует
+  const attendanceRecord = await storage.getAttendanceById(id);
+  if (!attendanceRecord) {
+    throw new ApiErrorClass('Запись о посещаемости не найдена', 404);
+  }
+  
+  // Проверяем переданный статус
+  const { status } = req.body;
+  if (!status || !(status in AttendanceStatus)) {
+    throw new ApiErrorClass('Некорректный статус посещаемости', 400);
+  }
+  
+  // Обновляем запись
+  const updatedAttendance = await storage.updateAttendance(id, { status });
+  
+  res.json(updatedAttendance);
 });
 
 // Массовое обновление посещаемости для всех студентов группы на определенную дату

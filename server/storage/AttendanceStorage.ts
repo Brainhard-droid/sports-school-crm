@@ -1,12 +1,13 @@
-import { attendance, AttendanceStatus, type Attendance, type InsertAttendance } from '@shared/schema';
+import { attendance, AttendanceStatus, type Attendance, type InsertAttendance, type AttendanceStatusType } from '@shared/schema';
 import { db } from '../db';
 import { and, eq } from 'drizzle-orm';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { IAttendanceStorage } from '../interfaces/storage/IAttendanceStorage';
 
 /**
  * Класс для работы с посещаемостью
  */
-export class AttendanceStorage {
+export class AttendanceStorage implements IAttendanceStorage {
   /**
    * Получает записи о посещаемости для группы на определенную дату
    * 
@@ -25,6 +26,40 @@ export class AttendanceStorage {
           eq(attendance.date, formattedDate)
         )
       );
+  }
+  
+  /**
+   * Получает запись о посещаемости по ID
+   * 
+   * @param id ID записи
+   * @returns Запись о посещаемости или undefined, если запись не найдена
+   */
+  async getAttendanceById(id: number): Promise<Attendance | undefined> {
+    const [record] = await db.select()
+      .from(attendance)
+      .where(eq(attendance.id, id));
+    
+    return record;
+  }
+  
+  /**
+   * Обновляет существующую запись о посещаемости
+   * 
+   * @param id ID записи
+   * @param data Данные для обновления
+   * @returns Обновленная запись
+   */
+  async updateAttendance(id: number, data: { status: AttendanceStatusType }): Promise<Attendance> {
+    const [updated] = await db.update(attendance)
+      .set({ status: data.status })
+      .where(eq(attendance.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error(`Запись о посещаемости с ID ${id} не найдена`);
+    }
+    
+    return updated;
   }
   
   /**

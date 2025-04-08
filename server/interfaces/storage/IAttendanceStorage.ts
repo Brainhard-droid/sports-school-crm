@@ -1,4 +1,4 @@
-import { Attendance, InsertAttendance } from "@shared/schema";
+import { Attendance, InsertAttendance, AttendanceStatusType } from "@shared/schema";
 
 /**
  * Интерфейс для хранилища посещаемости
@@ -30,4 +30,21 @@ export interface IAttendanceStorage {
    * @returns Массив записей о посещаемости
    */
   getAttendanceByMonth(groupId: number, month: number, year: number): Promise<Attendance[]>;
+  
+  /**
+   * Получает запись о посещаемости по ID
+   * 
+   * @param id ID записи
+   * @returns Запись о посещаемости или undefined, если запись не найдена
+   */
+  getAttendanceById(id: number): Promise<Attendance | undefined>;
+  
+  /**
+   * Обновляет существующую запись о посещаемости
+   * 
+   * @param id ID записи
+   * @param data Данные для обновления
+   * @returns Обновленная запись
+   */
+  updateAttendance(id: number, data: { status: AttendanceStatusType }): Promise<Attendance>;
 }
