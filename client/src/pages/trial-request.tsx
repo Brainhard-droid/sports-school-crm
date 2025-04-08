@@ -9,7 +9,15 @@ import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-di
 import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
 import { scheduleService, SessionInfo } from "@/services/ScheduleService";
+import { webSocketService } from "@/services/WebSocketService";
 
+/**
+ * Страница запроса на пробное занятие.
+ * Соответствует принципам SOLID:
+ * - Single Responsibility: отвечает только за отображение формы
+ * - Open/Closed: расширяемая через компоненты
+ * - Dependency Inversion: зависит от абстракций (хуки, сервисы), а не конкретных реализаций
+ */
 export default function TrialRequestPage() {
   const {
     form,
@@ -29,6 +37,7 @@ export default function TrialRequestPage() {
     handleSubmit,
     handleDateSelection,
     handleCustomDateChange,
+    isSubmitting,
   } = useTrialRequest();
 
   const [suggestedDates, setSuggestedDates] = useState<SessionInfo[]>([]);
@@ -37,6 +46,17 @@ export default function TrialRequestPage() {
   const selectedBranch = branchesForSection?.find(
     (branch: { id: number }) => branch.id === Number(branchId)
   );
+  
+  // Подключаемся к WebSocket при загрузке страницы
+  useEffect(() => {
+    webSocketService.connect();
+    
+    // Отключаемся при размонтировании компонента
+    return () => {
+      // Не отключаемся полностью, так как сервис может использоваться в других местах
+      // webSocketService.disconnect();
+    }
+  }, []);
   
   // Используем ScheduleService для парсинга расписания
   const schedule = selectedBranch?.schedule 
@@ -61,6 +81,18 @@ export default function TrialRequestPage() {
     );
   }
 
+  // Обработчик нажатия на кнопку отправки - с защитой от двойного клика
+  const handleFormSubmit = (e: React.FormEvent) => {
+    console.log('Нажата кнопка отправки формы');
+    e.preventDefault(); // Предотвращаем стандартное поведение формы
+    if (!isSubmitting) {
+      console.log('Вызываем handleSubmit');
+      handleSubmit(e);
+    } else {
+      console.log('Форма уже отправляется, игнорируем повторное нажатие');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
@@ -73,10 +105,7 @@ export default function TrialRequestPage() {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={(e) => {
-                console.log('Form submitted');
-                handleSubmit(e);
-              }}
+              onSubmit={handleFormSubmit}
               className="space-y-4"
             >
               <RequestFormFields 
@@ -104,9 +133,10 @@ export default function TrialRequestPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={createTrialRequestMutation.isPending || !privacyAccepted}
+                disabled={isSubmitting || !privacyAccepted}
+                onClick={() => console.log('Button clicked')}
               >
-                {createTrialRequestMutation.isPending ? (
+                {isSubmitting || createTrialRequestMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Отправка...
