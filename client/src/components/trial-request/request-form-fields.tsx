@@ -119,23 +119,7 @@ export const RequestFormFields = ({
         )}
       />
       
-      <FormField
-        control={form.control}
-        name="parentEmail"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Email родителя</FormLabel>
-            <FormControl>
-              <Input
-                type="email"
-                placeholder="example@mail.ru"
-                {...field}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+
       
       <FormField
         control={form.control}

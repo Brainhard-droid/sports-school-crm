@@ -24,8 +24,7 @@ const updateStatusSchema = z.object({
 const createSchema = insertTrialRequestSchema.extend({ 
   consentToDataProcessing: z.boolean().refine(val => val === true, {
     message: 'Необходимо согласие на обработку персональных данных',
-  }),
-  parentEmail: z.string().email('Некорректный email')
+  })
 });
 
 const updateSchema = insertTrialRequestSchema.partial();
@@ -79,7 +78,6 @@ export class TrialRequestController {
       childAge,
       parentName,
       parentPhone,
-      parentEmail,
       sectionId,
       branchId,
       desiredDate,
@@ -109,7 +107,6 @@ export class TrialRequestController {
       childAge,
       parentName,
       parentPhone,
-      parentEmail,
       sectionId,
       branchId,
       desiredDate: new Date(desiredDate),
@@ -201,7 +198,6 @@ export class TrialRequestController {
       childAge,
       parentName,
       parentPhone,
-      parentEmail,
       sectionId,
       branchId,
       desiredDate,
@@ -215,7 +211,6 @@ export class TrialRequestController {
     if (childAge) updateData.childAge = childAge;
     if (parentName) updateData.parentName = parentName;
     if (parentPhone) updateData.parentPhone = parentPhone;
-    if (parentEmail) updateData.parentEmail = parentEmail;
     if (sectionId) updateData.sectionId = sectionId;
     if (branchId) updateData.branchId = branchId;
     if (desiredDate) updateData.desiredDate = new Date(desiredDate);

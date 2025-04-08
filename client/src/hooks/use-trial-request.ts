@@ -12,7 +12,6 @@ import { z } from "zod";
  * Добавляет обязательные поля для серверной валидации
  */
 const extendedTrialRequestSchema = insertTrialRequestSchema.extend({
-  parentEmail: z.string().email("Некорректный формат email").default(""),
   consentToDataProcessing: z.boolean().refine(val => val === true, {
     message: 'Необходимо согласие на обработку персональных данных',
   }),
@@ -42,7 +41,6 @@ export function useTrialRequest() {
       childAge: undefined,
       parentName: "",
       parentPhone: "+7",
-      parentEmail: "",
       sectionId: undefined,
       branchId: undefined,
       desiredDate: `${new Date().toISOString().split('T')[0]}T17:30:00.000Z`,
