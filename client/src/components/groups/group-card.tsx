@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Group, InsertGroup } from "@shared/schema";
+import { Group, InsertGroup, Schedule } from "@shared/schema";
 import { Calendar, Archive, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,8 +20,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Функция для получения названия дня недели по его номеру
+function getDayName(dayOfWeek: number): string {
+  const days = [
+    "Воскресенье",
+    "Понедельник",
+    "Вторник",
+    "Среда",
+    "Четверг",
+    "Пятница",
+    "Суббота",
+    "Воскресенье" // Повторяем для правильной индексации (1-7)
+  ];
+  return days[dayOfWeek] || "Неизвестный день";
+}
+
 interface GroupCardProps {
-  group: Group;
+  group: Group & { 
+    currentStudents?: number;
+    trainerName?: string;
+    schedule?: Schedule[];
+  };
   onScheduleClick: (group: Group) => void;
   onEditClick: (group: Group) => void;
   onDeleteClick: (group: Group) => void;
@@ -91,14 +110,14 @@ export function GroupCard({
           <CardDescription>{group.description}</CardDescription>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <Button variant="ghost" size="icon">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 onScheduleClick(group);
               }}
@@ -107,7 +126,7 @@ export function GroupCard({
               Добавить расписание
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 handleToggleStatus();
               }}
@@ -116,7 +135,7 @@ export function GroupCard({
               {group.active ? 'Архивировать' : 'Активировать'}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 onEditClick(group);
               }}
@@ -125,7 +144,7 @@ export function GroupCard({
               Редактировать
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 onDeleteClick(group);
               }}
@@ -141,6 +160,18 @@ export function GroupCard({
           <p>Учеников: {group.currentStudents || 0} / {group.maxStudents}</p>
           <p>Тренер: {group.trainerName || 'Не назначен'}</p>
           <p>Статус: {group.active ? 'Активна' : 'Архив'}</p>
+          {group.schedule && group.schedule.length > 0 && (
+            <div className="mt-2 border-t pt-2">
+              <p className="font-medium mb-1">Расписание:</p>
+              <div className="space-y-1">
+                {group.schedule.map((item, index) => (
+                  <p key={index} className="text-xs">
+                    {getDayName(item.dayOfWeek)}: {item.startTime} - {item.endTime}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

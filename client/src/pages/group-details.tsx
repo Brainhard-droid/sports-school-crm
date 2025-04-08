@@ -151,52 +151,32 @@ export default function GroupDetails() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Ученики и посещаемость</h2>
+        <h2 className="text-xl font-semibold mb-4">Ученики в группе</h2>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>ФИО</TableHead>
               <TableHead>Родитель</TableHead>
               <TableHead>Телефон</TableHead>
-              <TableHead>Статус посещения</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!group.students?.length ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-4">
+                <TableCell colSpan={3} className="text-center py-4">
                   В группе нет учеников
                 </TableCell>
               </TableRow>
             ) : (
-              group.students.map((student) => {
-                const studentAttendance = attendance?.find(
-                  (a) => a.studentId === student.id
-                );
-
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      {student.firstName} {student.lastName}
-                    </TableCell>
-                    <TableCell>{student.parentName}</TableCell>
-                    <TableCell>{student.parentPhone}</TableCell>
-                    <TableCell>
-                      {studentAttendance ? (
-                        studentAttendance.status === "PRESENT" ? (
-                          <span className="text-green-600">Присутствовал</span>
-                        ) : studentAttendance.status === "ABSENT" ? (
-                          <span className="text-red-600">Отсутствовал</span>
-                        ) : (
-                          <span className="text-muted-foreground">Не отмечен</span>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">Не отмечен</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              group.students.map((student) => (
+                <TableRow key={student.id}>
+                  <TableCell>
+                    {student.firstName} {student.lastName}
+                  </TableCell>
+                  <TableCell>{student.parentName}</TableCell>
+                  <TableCell>{student.parentPhone}</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

@@ -23,6 +23,7 @@ import {
   attendance
 } from "@shared/schema";
 import { eq, and } from 'drizzle-orm';
+import { generateScheduleDates } from './utils/schedule';
 
 // Временные маршруты, которые будут перемещены в соответствующие модули
 // Примечание: эндпоинты для студентов теперь обрабатываются через Router (/api/students)
@@ -125,6 +126,31 @@ apiRoutes.get("/schedules", async (req, res) => {
   }
 });
 
+// Эндпоинт для удаления всех расписаний группы
+apiRoutes.delete("/schedules/group/:groupId", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const groupId = parseInt(req.params.groupId);
+    
+    console.log(`Deleting all schedules for group ID: ${groupId}`);
+    
+    // Удаляем все расписания для данной группы
+    const result = await db
+      .delete(schedules)
+      .where(eq(schedules.groupId, groupId))
+      .returning();
+    
+    console.log(`Deleted ${result.length} schedule entries`);
+    res.json({ message: `Deleted ${result.length} schedule entries` });
+  } catch (error) {
+    console.error('Error deleting schedules:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 // Эндпоинт для создания расписания занятий
 apiRoutes.post("/schedules", async (req, res) => {
   if (!req.isAuthenticated()) {
@@ -136,40 +162,12 @@ apiRoutes.post("/schedules", async (req, res) => {
     
     console.log('Creating schedule entry:', { groupId, dayOfWeek, startTime, endTime });
     
-    // Получаем все текущие расписания для данной группы и дня недели
-    const existingSchedules = await db
-      .select()
-      .from(schedules)
-      .where(
-        and(
-          eq(schedules.groupId, groupId),
-          eq(schedules.dayOfWeek, dayOfWeek)
-        )
-      );
-    
-    if (existingSchedules.length > 0) {
-      // Обновляем существующую запись вместо создания новой
-      const [updated] = await db
-        .update(schedules)
-        .set({ startTime, endTime })
-        .where(
-          and(
-            eq(schedules.groupId, groupId),
-            eq(schedules.dayOfWeek, dayOfWeek)
-          )
-        )
-        .returning();
-        
-      console.log('Updated existing schedule:', updated);
-      return res.json(updated);
-    }
-    
-    // Создаем новое расписание
+    // Создаем новое расписание (без проверки на существующие записи)
     const [newSchedule] = await db
       .insert(schedules)
       .values({ groupId, dayOfWeek, startTime, endTime })
       .returning();
-      
+    
     console.log('Created new schedule:', newSchedule);
     return res.status(201).json(newSchedule);
   } catch (error) {

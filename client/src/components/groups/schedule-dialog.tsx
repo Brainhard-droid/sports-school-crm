@@ -37,13 +37,11 @@ export function ScheduleDialog({ group, open, onOpenChange }: ScheduleDialogProp
 
   const createScheduleMutation = useMutation({
     mutationFn: async (data: { groupId: number; schedules: InsertSchedule[] }) => {
-      // Сначала получаем текущее расписание группы
-      const response = await fetch(`/api/schedules?groupId=${data.groupId}`, {
-        credentials: 'include'
-      });
+      // Удаляем все текущие расписания для этой группы
+      const deleteResponse = await apiRequest("DELETE", `/api/schedules/group/${data.groupId}`);
       
-      if (!response.ok) {
-        throw new Error('Не удалось получить текущее расписание');
+      if (!deleteResponse.ok) {
+        throw new Error('Не удалось удалить старое расписание');
       }
       
       // Затем отправляем новые значения
