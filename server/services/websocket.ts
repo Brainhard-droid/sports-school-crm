@@ -20,12 +20,21 @@ export class WebSocketService {
   private clients: Map<string, Client> = new Map();
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ 
-      server, 
-      path: '/ws',
-      verifyClient: this.verifyClient.bind(this)
-    });
-    this.setupEvents();
+    try {
+      this.wss = new WebSocketServer({ 
+        server,
+        path: '/ws',
+        verifyClient: this.verifyClient.bind(this)
+      });
+      console.log('WebSocket сервер успешно создан');
+      this.setupEvents();
+      
+      this.wss.on('error', (error) => {
+        console.error('WebSocket server error:', error);
+      });
+    } catch (error) {
+      console.error('Ошибка при создании WebSocket сервера:', error);
+    }
   }
 
   private verifyClient(info: { origin: string; secure: boolean; req: any }) {

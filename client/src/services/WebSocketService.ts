@@ -31,7 +31,8 @@ export class WebSocketService {
 
     this.isConnecting = true;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host.includes('localhost') ? '0.0.0.0:5000' : window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
 
     console.log(`Подключение к WebSocket: ${wsUrl}`);
 
