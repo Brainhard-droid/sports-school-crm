@@ -7,8 +7,19 @@ describe('ScheduleService', () => {
   const service = new ScheduleService();
 
   describe('parseSchedule', () => {
-    test('should parse a valid schedule string', () => {
+    test('should parse a valid schedule JSON string', () => {
       const scheduleString = '{"Понедельник":"10:00 - 11:00","Среда":["15:00 - 16:00","18:00 - 19:00"]}';
+      const expected: Schedule = {
+        'Понедельник': '10:00 - 11:00',
+        'Среда': ['15:00 - 16:00', '18:00 - 19:00']
+      };
+      
+      const result = service.parseSchedule(scheduleString);
+      expect(result).toEqual(expected);
+    });
+
+    test('should parse a valid schedule text format', () => {
+      const scheduleString = 'Понедельник: 10:00 - 11:00\nСреда: 15:00 - 16:00\nСреда: 18:00 - 19:00';
       const expected: Schedule = {
         'Понедельник': '10:00 - 11:00',
         'Среда': ['15:00 - 16:00', '18:00 - 19:00']
@@ -28,18 +39,18 @@ describe('ScheduleService', () => {
       expect(result).toBeNull();
     });
 
-    test('should return null for invalid JSON', () => {
-      const result = service.parseSchedule('{invalid json}');
-      expect(result).toBeNull();
+    test('should handle invalid JSON by trying text format as fallback', () => {
+      const result = service.parseSchedule('Вторник: 14:00 - 15:30');
+      expect(result).toEqual({ 'Вторник': '14:00 - 15:30' });
     });
 
-    test('should return null if schedule is not an object', () => {
+    test('should return null if schedule is not an object in JSON and has no valid text format', () => {
       const result = service.parseSchedule('"string"');
       expect(result).toBeNull();
     });
 
-    test('should return null if schedule is empty', () => {
-      const result = service.parseSchedule('{}');
+    test('should return null if both JSON and text formats fail', () => {
+      const result = service.parseSchedule('no valid schedule format');
       expect(result).toBeNull();
     });
   });

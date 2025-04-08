@@ -29,29 +29,64 @@ const dayMapping: Record<string, number> = {
 export class ScheduleService {
   /**
    * Парсит строку расписания в объект расписания
-   * @param scheduleString Строка расписания в JSON формате
+   * @param scheduleString Строка расписания в JSON формате или в текстовом формате строк "День: время"
    * @returns Объект расписания или null, если парсинг не удался
    */
   parseSchedule(scheduleString: string | undefined | null): Schedule | null {
     if (!scheduleString) return null;
     
+    // Сначала пробуем распарсить строку как JSON
     try {
       const schedule = JSON.parse(scheduleString);
       // Дополнительная проверка на валидность структуры расписания
       if (typeof schedule !== 'object' || schedule === null) {
         console.error('Parsed schedule is not an object');
-        return null;
+        // Не возвращаем null, а пробуем другой формат
+      } else if (Object.keys(schedule).length === 0) {
+        console.error('Schedule has no days');
+        // Не возвращаем null, а пробуем другой формат
+      } else {
+        return schedule;
+      }
+    } catch (error) {
+      console.log('Error parsing schedule as JSON, trying text format:', error);
+      // Продолжаем и пробуем другой формат
+    }
+    
+    // Если не удалось распарсить как JSON, пробуем как текстовый формат
+    try {
+      const lines = scheduleString.split('\n');
+      const schedule: Schedule = {};
+      
+      for (const line of lines) {
+        // Формат: "Понедельник: 09:00 - 10:00"
+        const match = line.match(/([^:]+):\s*(.+)/);
+        if (match) {
+          const [_, dayName, timeInfo] = match;
+          const day = dayName.trim();
+          const timeStr = timeInfo.trim();
+          
+          // Если день уже есть, добавляем как массив времен
+          if (schedule[day]) {
+            if (Array.isArray(schedule[day])) {
+              (schedule[day] as string[]).push(timeStr);
+            } else {
+              schedule[day] = [schedule[day] as string, timeStr];
+            }
+          } else {
+            schedule[day] = timeStr;
+          }
+        }
       }
       
-      // Проверка наличия хотя бы одного дня в расписании
       if (Object.keys(schedule).length === 0) {
-        console.error('Schedule has no days');
+        console.error('No valid schedule entries found in text format');
         return null;
       }
       
       return schedule;
     } catch (error) {
-      console.error('Error parsing schedule JSON:', error);
+      console.error('Error parsing schedule in text format:', error);
       return null;
     }
   }

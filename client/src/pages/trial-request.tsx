@@ -8,7 +8,7 @@ import { RequestFormFields } from "@/components/trial-request/request-form-field
 import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-display";
 import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
-import { getNextSessions } from "@/lib/utils/schedule";
+import { scheduleService, SessionInfo } from "@/services/ScheduleService";
 
 export default function TrialRequestPage() {
   const {
@@ -31,27 +31,22 @@ export default function TrialRequestPage() {
     handleCustomDateChange,
   } = useTrialRequest();
 
-  const [suggestedDates, setSuggestedDates] = useState<{ date: Date; timeLabel: string }[]>([]);
+  const [suggestedDates, setSuggestedDates] = useState<SessionInfo[]>([]);
   const sectionId = form.watch("sectionId");
   const branchId = form.watch("branchId");
   const selectedBranch = branchesForSection?.find(
     (branch: { id: number }) => branch.id === Number(branchId)
   );
   
-  // Безопасный парсинг JSON с проверкой на корректность
-  let schedule = null;
-  if (selectedBranch && selectedBranch.schedule) {
-    try {
-      schedule = JSON.parse(selectedBranch.schedule);
-    } catch (error) {
-      console.error("Error parsing schedule JSON:", error);
-    }
-  }
+  // Используем ScheduleService для парсинга расписания
+  const schedule = selectedBranch?.schedule 
+    ? scheduleService.parseSchedule(selectedBranch.schedule)
+    : null;
 
-  // Generate suggested dates when schedule is available
+  // Генерируем предложенные даты когда расписание доступно
   useEffect(() => {
     if (schedule) {
-      const nextSessions = getNextSessions(schedule, 5);
+      const nextSessions = scheduleService.getNextSessions(schedule, 5);
       setSuggestedDates(nextSessions);
     } else {
       setSuggestedDates([]);
