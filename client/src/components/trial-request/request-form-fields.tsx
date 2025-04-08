@@ -170,13 +170,10 @@ export const RequestFormFields = ({
               <FormLabel>Отделение</FormLabel>
               <Select
                 onValueChange={(value) => {
-                  try {
-                    field.onChange(value ? parseInt(value) : undefined);
-                  } catch (error) {
-                    console.error("Error converting branch ID:", error);
-                  }
+                  field.onChange(value ? Number(value) : undefined);
                 }}
                 value={field.value?.toString() || ''}
+                disabled={!sectionId}
               >
                 <FormControl>
                   <SelectTrigger>

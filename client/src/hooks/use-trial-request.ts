@@ -106,28 +106,46 @@ export function useTrialRequest() {
   /**
    * Обработчик отправки формы с защитой от двойной отправки
    */
-  const handleSubmit = form.handleSubmit((data) => {
-    if (isSubmitting) {
-      return;
-    }
-    
-    // Устанавливаем флаг отправки
-    setIsSubmitting(true);
-    
-    // Устанавливаем согласие на обработку данных
-    data.consentToDataProcessing = privacyAccepted;
-    
-    if (!data.consentToDataProcessing) {
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      if (isSubmitting) {
+        return;
+      }
+      
+      setIsSubmitting(true);
+      
+      if (!privacyAccepted) {
+        toast({
+          title: "Необходимо согласие",
+          description: "Для отправки заявки необходимо согласие на обработку персональных данных",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formData = {
+        ...data,
+        consentToDataProcessing: privacyAccepted,
+        childAge: Number(data.childAge),
+        sectionId: Number(data.sectionId),
+        branchId: Number(data.branchId)
+      };
+
+      await createTrialRequestMutation.mutateAsync(formData);
+      
+      setShowSuccessModal(true);
+      form.reset();
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
       toast({
-        title: "Необходимо согласие",
-        description: "Для отправки заявки необходимо согласие на обработку персональных данных",
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : "Произошла ошибка при отправке формы",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-    
-    createTrialRequestMutation.mutate(data);
   });
 
   /**
