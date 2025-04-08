@@ -107,12 +107,19 @@ export function useTrialRequest() {
    * Обработчик отправки формы с защитой от двойной отправки
    */
   const handleSubmit = form.handleSubmit(async (data) => {
-    if (isSubmitting || !privacyAccepted) {
+    if (!privacyAccepted) {
       toast({
         title: "Ошибка отправки",
-        description: !privacyAccepted 
-          ? "Для отправки заявки необходимо согласие на обработку персональных данных"
-          : "Форма уже отправляется",
+        description: "Для отправки заявки необходимо согласие на обработку персональных данных",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data.sectionId || !data.branchId) {
+      toast({
+        title: "Ошибка отправки",
+        description: "Выберите секцию и филиал",
         variant: "destructive",
       });
       return;
@@ -121,18 +128,28 @@ export function useTrialRequest() {
     setIsSubmitting(true);
     
     try {
+      // Форматируем дату в UTC
+      const desiredDate = new Date(data.desiredDate);
+      const utcDate = new Date(Date.UTC(
+        desiredDate.getFullYear(),
+        desiredDate.getMonth(),
+        desiredDate.getDate(),
+        desiredDate.getHours(),
+        desiredDate.getMinutes()
+      ));
+
       const formData = {
         ...data,
         consentToDataProcessing: privacyAccepted,
         childAge: Number(data.childAge),
         sectionId: Number(data.sectionId),
         branchId: Number(data.branchId),
-        desiredDate: new Date(data.desiredDate).toISOString()
+        desiredDate: utcDate.toISOString()
       };
 
-      console.log('Sending form data:', formData);
+      console.log('Отправка данных:', formData);
       const result = await createTrialRequestMutation.mutateAsync(formData);
-      console.log('Response:', result);
+      console.log('Ответ сервера:', result);
       
       setShowSuccessModal(true);
       form.reset();
