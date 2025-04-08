@@ -11,8 +11,9 @@
 export class WebSocketService {
   private socket: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectTimeout = 3000; // ms
+  private maxReconnectAttempts = 3; // Уменьшаем количество попыток
+  private reconnectTimeout = 5000; // Увеличиваем таймаут
+  private exponentialFactor = 1.5; // Фактор экспоненциального увеличения
   private listeners: Record<string, ((...args: any[]) => void)[]> = {};
   private isConnecting = false;
   private wasConnectedBefore = false;
@@ -31,12 +32,12 @@ export class WebSocketService {
     this.isConnecting = true;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
+
     console.log(`Подключение к WebSocket: ${wsUrl}`);
-    
+
     try {
       this.socket = new WebSocket(wsUrl);
-      
+
       this.socket.onopen = this.handleOpen.bind(this);
       this.socket.onmessage = this.handleMessage.bind(this);
       this.socket.onclose = this.handleClose.bind(this);
@@ -124,7 +125,7 @@ export class WebSocketService {
       const data = JSON.parse(event.data);
       console.log('Получено сообщение WebSocket:', data);
       this.emit('message', data);
-      
+
       // Также эмитим событие по типу сообщения, если он есть
       if (data?.type) {
         this.emit(data.type, data);
@@ -139,7 +140,7 @@ export class WebSocketService {
     this.socket = null;
     this.isConnecting = false;
     this.emit('disconnect', event);
-    
+
     // Попытка переподключения только если ранее было успешное соединение
     if (this.wasConnectedBefore) {
       this.attemptReconnect();
@@ -159,12 +160,13 @@ export class WebSocketService {
     }
 
     this.reconnectAttempts++;
-    console.log(`Попытка переподключения ${this.reconnectAttempts}/${this.maxReconnectAttempts} через ${this.reconnectTimeout}ms`);
-    
+    const timeout = this.reconnectTimeout * Math.pow(this.exponentialFactor, this.reconnectAttempts -1);
+    console.log(`Попытка переподключения ${this.reconnectAttempts}/${this.maxReconnectAttempts} через ${timeout}ms`);
+
     setTimeout(() => {
       this.connect();
       this.emit('reconnect_attempt', this.reconnectAttempts);
-    }, this.reconnectTimeout);
+    }, timeout);
   }
 }
 

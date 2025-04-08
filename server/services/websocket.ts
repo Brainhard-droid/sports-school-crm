@@ -20,8 +20,26 @@ export class WebSocketService {
   private clients: Map<string, Client> = new Map();
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ server, path: '/ws' });
+    this.wss = new WebSocketServer({ 
+      server, 
+      path: '/ws',
+      verifyClient: this.verifyClient.bind(this)
+    });
     this.setupEvents();
+  }
+
+  private verifyClient(info: { origin: string; secure: boolean; req: any }) {
+    try {
+      const token = info.req.headers.cookie?.split('token=')[1]?.split(';')[0];
+      if (!token) {
+        console.log('WebSocket: Отказано в подключении - нет токена');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('WebSocket: Ошибка верификации:', error);
+      return false;
+    }
   }
 
   private setupEvents() {
