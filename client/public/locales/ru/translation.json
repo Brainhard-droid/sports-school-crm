@@ -32,6 +32,8 @@
     "payments": "Платежи",
     "settings": "Настройки",
     "chat": "Чат",
+    "salesFunnel": "Воронка продаж",
+    "trialRequest": "Запрос на пробное занятие",
     "signOut": "Выйти"
   },
   "dashboard": {
@@ -51,5 +53,19 @@
     "send": "Отправить",
     "connectionError": "Ошибка подключения",
     "reconnecting": "Переподключение..."
+  },
+  "attendance": {
+    "title": "Посещаемость",
+    "exportButton": "Экспорт",
+    "searchPlaceholder": "Поиск по ученикам...",
+    "present": "Присутствовал",
+    "absent": "Отсутствовал",
+    "student": "Ученик",
+    "addComment": "Добавить комментарий",
+    "editComment": "Редактировать комментарий",
+    "deleteComment": "Удалить комментарий",
+    "commentPlaceholder": "Введите комментарий...",
+    "save": "Сохранить",
+    "cancel": "Отмена"
   }
 }

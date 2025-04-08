@@ -32,6 +32,8 @@
     "payments": "Payments",
     "settings": "Settings",
     "chat": "Chat",
+    "salesFunnel": "Sales Funnel",
+    "trialRequest": "Trial Request",
     "signOut": "Sign out"
   },
   "dashboard": {
@@ -51,5 +53,19 @@
     "send": "Send",
     "connectionError": "Connection error",
     "reconnecting": "Reconnecting..."
+  },
+  "attendance": {
+    "title": "Attendance",
+    "exportButton": "Export",
+    "searchPlaceholder": "Search students...",
+    "present": "Present",
+    "absent": "Absent",
+    "student": "Student",
+    "addComment": "Add comment",
+    "editComment": "Edit comment",
+    "deleteComment": "Delete comment",
+    "commentPlaceholder": "Enter comment...",
+    "save": "Save",
+    "cancel": "Cancel"
   }
 }
