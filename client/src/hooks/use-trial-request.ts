@@ -73,6 +73,7 @@ export function useTrialRequest() {
       // Устанавливаем согласие на обработку данных
       data.consentToDataProcessing = privacyAccepted;
       
+      console.log('Отправляем данные на сервер', JSON.stringify(data));
       const res = await apiRequest("POST", "/api/trial-requests", {
         ...data,
         childAge: Number(data.childAge),
@@ -107,8 +108,13 @@ export function useTrialRequest() {
    * Обработчик отправки формы
    */
   const handleSubmit = form.handleSubmit((data) => {
+    console.log('handleSubmit вызван с данными:', data);
+    
     data.consentToDataProcessing = privacyAccepted;
+    console.log('Согласие на обработку данных:', privacyAccepted);
+    
     if (!data.consentToDataProcessing) {
+      console.log('Согласие не дано, прерываем отправку');
       toast({
         title: "Необходимо согласие",
         description: "Для отправки заявки необходимо согласие на обработку персональных данных",
@@ -116,7 +122,10 @@ export function useTrialRequest() {
       });
       return;
     }
+    
+    console.log('Вызываем мутацию с данными:', data);
     createTrialRequestMutation.mutate(data);
+    console.log('Мутация вызвана');
   });
 
   /**

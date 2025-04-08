@@ -334,14 +334,17 @@ apiRoutes.get("/branches", async (_req, res) => {
 });
 
 // Маршрут для обработки заявок на пробное занятие
-apiRoutes.post("/trial-requests", async (req, res) => {
+// ВАЖНО: Этот маршрут закомментирован, так как теперь используется контроллер из modules/trialRequest
+/* apiRoutes.post("/trial-requests", async (req, res) => {
   try {
+    console.log('OLD HANDLER: Получен запрос на создание пробного занятия, переключитесь на использование контроллеров');
+    console.log('Тело запроса:', req.body);
+    
     const {
       childName,
       childAge,
       parentName,
       parentPhone,
-      parentEmail,
       sectionId,
       branchId,
       desiredDate,
@@ -394,7 +397,7 @@ apiRoutes.post("/trial-requests", async (req, res) => {
     console.error('Error creating trial request:', error);
     res.status(500).json({ error: (error as Error).message });
   }
-});
+}); */
 
 // Получение всех заявок на пробное занятие (требует авторизации)
 apiRoutes.get("/trial-requests", async (req, res) => {
@@ -615,10 +618,8 @@ app.use((req, res, next) => {
 
 (async () => {
   // Регистрация API маршрутов из router.ts
+  // Важно! Контроллеры и модули должны использоваться через registerRoutes
   const server = await registerRoutes(app);
-  
-  // Дополнительные маршруты из apiRoutes
-  app.use('/api', apiRoutes);
 
   // Эндпоинт для получения студентов группы
 apiRoutes.get("/group-students/:id", async (req, res) => {

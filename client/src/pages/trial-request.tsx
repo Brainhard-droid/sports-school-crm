@@ -73,7 +73,10 @@ export default function TrialRequestPage() {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={handleSubmit}
+              onSubmit={(e) => {
+                console.log('Form submitted');
+                handleSubmit(e);
+              }}
               className="space-y-4"
             >
               <RequestFormFields 

@@ -73,6 +73,8 @@ export class TrialRequestController {
    * Создание новой заявки на пробное занятие
    */
   static createTrialRequest = asyncHandler(async (req: Request, res: Response) => {
+    console.log('Получен запрос на создание пробного занятия:', JSON.stringify(req.body));
+    
     const {
       childName,
       childAge,
