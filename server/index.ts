@@ -620,7 +620,34 @@ app.use((req, res, next) => {
   // Дополнительные маршруты из apiRoutes
   app.use('/api', apiRoutes);
 
-  // Глобальный обработчик ошибок должен быть последним middleware
+  // Эндпоинт для получения студентов группы
+apiRoutes.get("/group-students/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const groupId = parseInt(req.params.id);
+    
+    if (isNaN(groupId)) {
+      return res.status(400).json({ error: 'Invalid group ID' });
+    }
+    
+    console.log(`Getting students for group ${groupId}`);
+    
+    // Используем метод из GroupStorage для получения студентов группы с деталями
+    const students = await storage.getGroupStudentsWithDetails(groupId);
+    
+    console.log(`Found ${students.length} students in group ${groupId}`);
+    
+    res.json(students);
+  } catch (error) {
+    console.error('Error getting group students:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Глобальный обработчик ошибок должен быть последним middleware
   app.use(errorHandler);
 
   if (app.get("env") === "development") {
