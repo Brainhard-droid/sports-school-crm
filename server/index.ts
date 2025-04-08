@@ -176,6 +176,48 @@ apiRoutes.post("/schedules", async (req, res) => {
   }
 });
 
+// Эндпоинт для получения дат расписания группы по месяцу и году
+apiRoutes.get("/groups/:id/schedule-dates", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const groupId = parseInt(req.params.id);
+    const month = parseInt(req.query.month as string);
+    const year = parseInt(req.query.year as string);
+    
+    console.log('Getting schedule dates for group, month and year:', { groupId, month, year });
+    
+    if (isNaN(groupId) || isNaN(month) || isNaN(year)) {
+      return res.status(400).json({ error: 'Invalid parameters. Group ID, month and year are required.' });
+    }
+    
+    // Получаем расписание группы
+    const groupSchedules = await db
+      .select()
+      .from(schedules)
+      .where(eq(schedules.groupId, groupId));
+    
+    console.log(`Found ${groupSchedules.length} schedule entries for group ${groupId}`);
+    
+    if (!groupSchedules.length) {
+      return res.json([]);
+    }
+    
+    // Генерируем даты на основе расписания
+    const dates = generateScheduleDates(groupSchedules, month, year);
+    
+    console.log(`Generated ${dates.length} dates for group ${groupId} in month ${month}/${year}`);
+    
+    // Возвращаем массив дат в ISO формате
+    res.json(dates.map(date => date.toISOString()));
+  } catch (error) {
+    console.error('Error getting schedule dates:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 // Эндпоинт для платежей
 apiRoutes.get("/payments", async (req, res) => {
   if (!req.isAuthenticated()) {

@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export const useSchedule = (groupId?: number, month?: number, year?: number) => {
   const { data: scheduleDates = [], isLoading } = useQuery<Date[]>({
-    queryKey: ["/api/groups", groupId, "schedule-dates", month, year],
+    queryKey: [`/api/groups/${groupId}/schedule-dates`, month, year],
     queryFn: async () => {
       if (!groupId) return [];
       console.log('Fetching schedule dates:', { groupId, month, year });

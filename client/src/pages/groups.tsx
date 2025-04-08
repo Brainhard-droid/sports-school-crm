@@ -14,7 +14,7 @@ import { useLocation } from "wouter";
 
 export default function Groups() {
   const [, navigate] = useLocation();
-  const { groups, isLoading, filterGroups } = useGroups();
+  const { groups, isLoading, filterGroups, getGroupSchedules } = useGroups();
   
   // Состояния
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -71,16 +71,27 @@ export default function Groups() {
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredGroups.map((group) => (
-          <GroupCard
-            key={group.id}
-            group={group}
-            onScheduleClick={handleScheduleClick}
-            onEditClick={handleEditClick}
-            onDeleteClick={handleDeleteClick}
-            onDetailsClick={handleDetailsClick}
-          />
-        ))}
+        {filteredGroups.map((group) => {
+          // Получаем расписание для группы
+          const schedules = getGroupSchedules(group.id);
+          
+          // Расширяем объект группы, добавляя расписание
+          const enrichedGroup = {
+            ...group,
+            schedule: schedules
+          };
+          
+          return (
+            <GroupCard
+              key={group.id}
+              group={enrichedGroup}
+              onScheduleClick={handleScheduleClick}
+              onEditClick={handleEditClick}
+              onDeleteClick={handleDeleteClick}
+              onDetailsClick={handleDetailsClick}
+            />
+          );
+        })}
       </div>
 
       {filteredGroups.length === 0 && (
