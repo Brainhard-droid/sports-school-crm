@@ -201,7 +201,11 @@ export const RequestFormFields = ({
         <Checkbox
           id="privacy-policy"
           checked={privacyAccepted}
-          onCheckedChange={(checked) => setPrivacyAccepted(checked as boolean)}
+          onCheckedChange={(checked) => {
+            if (typeof checked === 'boolean') {
+              setPrivacyAccepted(checked);
+            }
+          }}
         />
         <div className="grid gap-1.5 leading-none">
           <label

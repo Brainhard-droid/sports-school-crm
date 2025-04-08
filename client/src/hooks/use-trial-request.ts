@@ -107,21 +107,20 @@ export function useTrialRequest() {
    * Обработчик отправки формы с защитой от двойной отправки
    */
   const handleSubmit = form.handleSubmit(async (data) => {
+    if (isSubmitting || !privacyAccepted) {
+      toast({
+        title: "Ошибка отправки",
+        description: !privacyAccepted 
+          ? "Для отправки заявки необходимо согласие на обработку персональных данных"
+          : "Форма уже отправляется",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
     try {
-      if (isSubmitting) {
-        return;
-      }
-      
-      setIsSubmitting(true);
-      
-      if (!privacyAccepted) {
-        toast({
-          title: "Необходимо согласие",
-          description: "Для отправки заявки необходимо согласие на обработку персональных данных",
-          variant: "destructive",
-        });
-        return;
-      }
 
       const formData = {
         ...data,
