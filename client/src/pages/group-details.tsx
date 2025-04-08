@@ -158,25 +158,40 @@ export default function GroupDetails() {
               <TableHead>ФИО</TableHead>
               <TableHead>Родитель</TableHead>
               <TableHead>Телефон</TableHead>
+              <TableHead className="text-right">Посещаемость</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!group.students?.length ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-4">
+                <TableCell colSpan={4} className="text-center py-4">
                   В группе нет учеников
                 </TableCell>
               </TableRow>
             ) : (
-              group.students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    {student.firstName} {student.lastName}
-                  </TableCell>
-                  <TableCell>{student.parentName}</TableCell>
-                  <TableCell>{student.parentPhone}</TableCell>
-                </TableRow>
-              ))
+              group.students.map((student) => {
+                // В будущем здесь можно будет добавить реальные данные о посещаемости
+                // с подсчетом процента посещений за выбранный период
+                const attendancePercentage = Math.floor(Math.random() * 100); // Временная заглушка
+                
+                return (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      {student.firstName} {student.lastName}
+                    </TableCell>
+                    <TableCell>{student.parentName}</TableCell>
+                    <TableCell>{student.parentPhone}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={`font-medium ${
+                        attendancePercentage < 50 ? 'text-red-500' : 
+                        attendancePercentage < 75 ? 'text-amber-500' : 'text-green-500'
+                      }`}>
+                        {attendancePercentage}%
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
