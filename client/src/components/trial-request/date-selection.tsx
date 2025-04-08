@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { UseFormReturn } from 'react-hook-form';
-import { InsertTrialRequest } from '@shared/schema';
 import { Calendar } from 'lucide-react';
+import { ExtendedTrialRequestForm } from '@/hooks/use-trial-request';
+import { SessionInfo } from '@/services/ScheduleService';
 
 type DateSelectionProps = {
-  form: UseFormReturn<InsertTrialRequest>;
-  suggestedDates: { date: Date; timeLabel: string }[];
+  form: UseFormReturn<ExtendedTrialRequestForm>;
+  suggestedDates: SessionInfo[];
   useCustomDate: boolean;
   selectedDateValue: string | null;
   onDateSelection: (dateStr: string, timeStr: string) => void;

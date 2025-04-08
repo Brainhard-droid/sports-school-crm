@@ -1,6 +1,5 @@
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { InsertTrialRequest } from '@shared/schema';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,9 +10,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ExtendedTrialRequestForm } from '@/hooks/use-trial-request';
 
+/**
+ * Пропсы для компонента полей формы запроса пробного занятия
+ * Следует Interface Segregation Principle - компонент принимает только те пропсы, 
+ * которые ему действительно нужны
+ */
 type RequestFormFieldsProps = {
-  form: UseFormReturn<InsertTrialRequest>;
+  form: UseFormReturn<ExtendedTrialRequestForm>;
   sections: any[];
   sectionId: number | undefined;
   branchesForSection: any[];
@@ -107,6 +112,24 @@ export const RequestFormFields = ({
                   value = value.slice(0, 12);
                   field.onChange(value);
                 }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+      <FormField
+        control={form.control}
+        name="parentEmail"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Email родителя</FormLabel>
+            <FormControl>
+              <Input
+                type="email"
+                placeholder="example@mail.ru"
+                {...field}
               />
             </FormControl>
             <FormMessage />

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useTrialRequest } from "@/hooks/use-trial-request";
+import { useTrialRequest, ExtendedTrialRequestForm } from "@/hooks/use-trial-request";
 import { RequestFormFields } from "@/components/trial-request/request-form-fields";
 import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-display";
 import { DateSelection } from "@/components/trial-request/date-selection";
