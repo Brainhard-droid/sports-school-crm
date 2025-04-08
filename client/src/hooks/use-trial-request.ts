@@ -107,11 +107,7 @@ export function useTrialRequest() {
    * Обработчик отправки формы с защитой от двойной отправки
    */
   const handleSubmit = form.handleSubmit((data) => {
-    console.log('handleSubmit вызван с данными:', data);
-    
-    // Защита от повторной отправки
     if (isSubmitting) {
-      console.log('Форма уже отправляется, игнорируем повторный запрос');
       return;
     }
     
@@ -120,10 +116,8 @@ export function useTrialRequest() {
     
     // Устанавливаем согласие на обработку данных
     data.consentToDataProcessing = privacyAccepted;
-    console.log('Согласие на обработку данных:', privacyAccepted);
     
     if (!data.consentToDataProcessing) {
-      console.log('Согласие не дано, прерываем отправку');
       toast({
         title: "Необходимо согласие",
         description: "Для отправки заявки необходимо согласие на обработку персональных данных",
@@ -133,14 +127,7 @@ export function useTrialRequest() {
       return;
     }
     
-    console.log('Вызываем мутацию с данными:', data);
-    try {
-      createTrialRequestMutation.mutate(data);
-      console.log('Мутация вызвана');
-    } catch (error) {
-      console.error('Ошибка при вызове мутации:', error);
-      setIsSubmitting(false);
-    }
+    createTrialRequestMutation.mutate(data);
   });
 
   /**

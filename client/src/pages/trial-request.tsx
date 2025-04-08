@@ -9,7 +9,6 @@ import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-di
 import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
 import { scheduleService, SessionInfo } from "@/services/ScheduleService";
-import { webSocketService } from "@/services/WebSocketService";
 
 /**
  * Страница запроса на пробное занятие.
@@ -47,17 +46,6 @@ export default function TrialRequestPage() {
     (branch: { id: number }) => branch.id === Number(branchId)
   );
   
-  // Подключаемся к WebSocket при загрузке страницы
-  useEffect(() => {
-    webSocketService.connect();
-    
-    // Отключаемся при размонтировании компонента
-    return () => {
-      // Не отключаемся полностью, так как сервис может использоваться в других местах
-      // webSocketService.disconnect();
-    }
-  }, []);
-  
   // Используем ScheduleService для парсинга расписания
   const schedule = selectedBranch?.schedule 
     ? scheduleService.parseSchedule(selectedBranch.schedule)
@@ -81,18 +69,6 @@ export default function TrialRequestPage() {
     );
   }
 
-  // Обработчик нажатия на кнопку отправки - с защитой от двойного клика
-  const handleFormSubmit = (e: React.FormEvent) => {
-    console.log('Нажата кнопка отправки формы');
-    e.preventDefault(); // Предотвращаем стандартное поведение формы
-    if (!isSubmitting) {
-      console.log('Вызываем handleSubmit');
-      handleSubmit();
-    } else {
-      console.log('Форма уже отправляется, игнорируем повторное нажатие');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
@@ -105,7 +81,7 @@ export default function TrialRequestPage() {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={handleFormSubmit}
+              onSubmit={handleSubmit}
               className="space-y-4"
             >
               <RequestFormFields 
