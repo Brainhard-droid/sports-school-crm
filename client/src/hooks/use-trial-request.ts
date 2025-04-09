@@ -133,6 +133,7 @@ export function useTrialRequest() {
    * Обработчик отправки формы с защитой от двойной отправки
    */
   const handleSubmit = form.handleSubmit(async (data) => {
+    console.log('Form submit handler called with data:', data);
     if (!privacyAccepted) {
       toast({
         title: "Ошибка отправки",
