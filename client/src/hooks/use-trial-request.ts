@@ -78,12 +78,13 @@ export function useTrialRequest() {
   console.log('Current section ID for branch query:', sectionId);
   
   const branchQuery = useQuery({
-    queryKey: ["/api/branches-by-section", sectionId],
+    queryKey: ["/api/branch-sections/section", sectionId],
     enabled: !!sectionId,
     queryFn: async () => {
       if (!sectionId) return [];
       console.log('Fetching branches for section ID:', sectionId);
-      const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
+      // Исправленный URL в соответствии с серверным маршрутом
+      const res = await apiRequest("GET", `/api/branch-sections/section/${sectionId}`);
       const data = await res.json();
       console.log('Branches data received:', data);
       return data;
