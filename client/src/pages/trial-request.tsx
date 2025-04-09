@@ -83,6 +83,9 @@ export default function TrialRequestPage() {
             <form
               onSubmit={(e) => {
                 console.log('Form submit triggered');
+                e.preventDefault(); // Предотвращаем стандартное поведение формы
+                const isValid = form.trigger(); // Принудительно запускаем валидацию всех полей
+                console.log('Form validation triggered, valid:', isValid);
                 handleSubmit(e);
               }}
               className="space-y-4"

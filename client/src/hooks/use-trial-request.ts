@@ -12,6 +12,12 @@ import { z } from "zod";
  * Соответствует принципу Single Responsibility - отвечает только за валидацию
  */
 const extendedTrialRequestSchema = insertTrialRequestSchema.extend({
+  childName: z.string().min(2, "Введите имя ребенка"),
+  childAge: z.number().min(3, "Минимальный возраст 3 года").max(18, "Максимальный возраст 18 лет"),
+  parentName: z.string().min(2, "Введите ФИО родителя"),
+  parentPhone: z.string().regex(/^\+7\d{10}$/, "Телефон должен быть в формате +7XXXXXXXXXX"),
+  sectionId: z.number().positive("Выберите секцию"),
+  branchId: z.number().positive("Выберите отделение"),
   consentToDataProcessing: z.boolean().refine(val => val === true, {
     message: 'Необходимо согласие на обработку персональных данных',
   }),
@@ -35,18 +41,19 @@ export function useTrialRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Инициализируем форму с расширенной схемой валидации
-  const form = useForm<any>({
+  const form = useForm<ExtendedTrialRequestForm>({
     resolver: zodResolver(extendedTrialRequestSchema),
     defaultValues: {
       childName: "",
-      childAge: "",
+      childAge: undefined as any, // будет преобразовано в число при отправке
       parentName: "",
       parentPhone: "+7",
-      sectionId: "",
-      branchId: "",
+      sectionId: undefined as any, // будет преобразовано в число при отправке
+      branchId: undefined as any, // будет преобразовано в число при отправке
       desiredDate: `${new Date().toISOString().split('T')[0]}T17:30:00.000Z`,
       consentToDataProcessing: false,
     },
+    mode: "onChange", // Включаем валидацию при изменении полей
   });
 
   // Получаем все секции и выводим их в консоль для отладки
@@ -134,6 +141,29 @@ export function useTrialRequest() {
    */
   const handleSubmit = form.handleSubmit(async (data) => {
     console.log('Form submit handler called with data:', data);
+    console.log('Form validation errors:', form.formState.errors);
+    
+    // Проверяем обязательные поля
+    if (!data.childName || data.childName.trim() === '') {
+      toast({
+        title: "Ошибка отправки",
+        description: "Введите имя ребенка",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Проверяем возраст
+    if (!data.childAge) {
+      toast({
+        title: "Ошибка отправки",
+        description: "Укажите возраст ребенка",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Проверяем согласие на обработку данных
     if (!privacyAccepted) {
       toast({
         title: "Ошибка отправки",
@@ -174,13 +204,18 @@ export function useTrialRequest() {
         desiredDate.getMinutes()
       ));
 
+      // Убедимся, что все данные имеют правильный тип перед отправкой
       const formData = {
         ...data,
         consentToDataProcessing: privacyAccepted,
+        childName: data.childName.trim(),
         childAge: Number(data.childAge),
+        parentName: data.parentName.trim(),
+        parentPhone: data.parentPhone,
         sectionId: Number(data.sectionId),
-        branchId: data.branchId ? Number(data.branchId) : undefined,
-        desiredDate: utcDate.toISOString()
+        branchId: Number(data.branchId), // Преобразовываем к числу, так как мы уже проверили наличие branchId выше
+        desiredDate: utcDate.toISOString(),
+        notes: data.notes
       };
 
       console.log('Отправка данных:', formData);
