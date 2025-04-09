@@ -78,7 +78,7 @@ export const BranchSectionController = {
     create: insertBranchSectionSchema,
     update: insertBranchSectionSchema.partial(),
     params: z.object({
-      id: z.string().transform(val => parseInt(val, 10)),
+      id: z.string().transform(val => parseInt(val, 10)).optional(),
       sectionId: z.string().transform(val => parseInt(val, 10))
     })
   }
