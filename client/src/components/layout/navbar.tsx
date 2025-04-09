@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { LanguageSwitcher } from "../language-switcher";
 import { useTranslation } from "react-i18next";
+import { MobileMenu } from "./mobile-menu";
 
 const navigation = [
   { name: "navigation.dashboard", href: "/", icon: LayoutDashboard, protected: true },
@@ -39,12 +40,15 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen">
       {/* Header */}
       <div className="fixed top-0 right-0 left-0 h-16 bg-background border-b z-50 flex items-center justify-between px-4">
-        <div className="text-xl font-semibold">Sports School CRM</div>
+        <div className="flex items-center">
+          <MobileMenu />
+          <div className="text-xl font-semibold ml-2">Sports School CRM</div>
+        </div>
         <LanguageSwitcher />
       </div>
 
       <div className="flex pt-16">
-        {/* Sidebar */}
+        {/* Sidebar - скрыт на мобильных устройствах */}
         <div className="hidden md:flex md:w-64 md:flex-col">
           <div className="flex flex-col flex-grow border-r bg-sidebar py-5">
             <nav className="flex-1 space-y-1 px-2">
