@@ -35,7 +35,7 @@ export function useTrialRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Инициализируем форму с расширенной схемой валидации
-  const form = useForm<ExtendedTrialRequestForm>({
+  const form = useForm<any>({
     resolver: zodResolver(extendedTrialRequestSchema),
     defaultValues: {
       childName: "",
@@ -76,7 +76,7 @@ export function useTrialRequest() {
           ...data,
           childAge: Number(data.childAge),
           sectionId: Number(data.sectionId),
-          branchId: Number(data.branchId),
+          branchId: data.branchId ? Number(data.branchId) : undefined,
         });
         
         return await res.json();
@@ -116,10 +116,19 @@ export function useTrialRequest() {
       return;
     }
 
-    if (!data.sectionId || !data.branchId) {
+    if (!data.sectionId) {
       toast({
         title: "Ошибка отправки",
-        description: "Выберите секцию и филиал",
+        description: "Выберите секцию",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.branchId) {
+      toast({
+        title: "Ошибка отправки",
+        description: "Выберите филиал",
         variant: "destructive",
       });
       return;
@@ -143,7 +152,7 @@ export function useTrialRequest() {
         consentToDataProcessing: privacyAccepted,
         childAge: Number(data.childAge),
         sectionId: Number(data.sectionId),
-        branchId: Number(data.branchId),
+        branchId: data.branchId ? Number(data.branchId) : undefined,
         desiredDate: utcDate.toISOString()
       };
 

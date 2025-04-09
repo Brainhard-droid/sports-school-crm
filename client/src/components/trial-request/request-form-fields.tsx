@@ -132,8 +132,8 @@ export const RequestFormFields = ({
                 // Безопасное преобразование в число
                 try {
                   field.onChange(value ? parseInt(value) : undefined);
-                  // Clear branchId with null instead of undefined to avoid type errors
-                  form.setValue("branchId", null as any);
+                  // Сбрасываем branchId, но используем пустую строку вместо null
+                  form.setValue("branchId", "" as any);
                 } catch (error) {
                   console.error("Error converting section ID:", error);
                 }
