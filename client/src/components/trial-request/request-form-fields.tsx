@@ -129,10 +129,14 @@ export const RequestFormFields = ({
             <FormLabel>Секция</FormLabel>
             <Select
               onValueChange={(value) => {
+                console.log('Selected section value:', value);
                 // Безопасное преобразование в число
                 try {
-                  field.onChange(value ? parseInt(value) : undefined);
-                  // Сбрасываем branchId, но используем пустую строку вместо null
+                  const numValue = value ? parseInt(value) : undefined;
+                  console.log('Converted section ID:', numValue);
+                  field.onChange(numValue);
+                  
+                  // Сбрасываем branchId при смене секции
                   form.setValue("branchId", "" as any);
                 } catch (error) {
                   console.error("Error converting section ID:", error);
@@ -146,14 +150,23 @@ export const RequestFormFields = ({
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {sections?.map((section) => (
-                  <SelectItem
-                    key={section.id}
-                    value={section.id.toString()}
-                  >
-                    {section.name}
+                {Array.isArray(sections) ? (
+                  sections.map((section) => {
+                    console.log('Section data:', section);
+                    return (
+                      <SelectItem
+                        key={section.id}
+                        value={section.id.toString()}
+                      >
+                        {section.name}
+                      </SelectItem>
+                    );
+                  })
+                ) : (
+                  <SelectItem value="" disabled>
+                    Нет доступных секций
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
             <FormMessage />
@@ -170,7 +183,14 @@ export const RequestFormFields = ({
               <FormLabel>Отделение</FormLabel>
               <Select
                 onValueChange={(value) => {
-                  field.onChange(value ? Number(value) : undefined);
+                  console.log('Selected branch value:', value);
+                  try {
+                    const numValue = value ? Number(value) : ('' as any);
+                    console.log('Converted branch ID:', numValue);
+                    field.onChange(numValue);
+                  } catch (error) {
+                    console.error("Error converting branch ID:", error);
+                  }
                 }}
                 value={field.value?.toString() || ''}
                 disabled={!sectionId}

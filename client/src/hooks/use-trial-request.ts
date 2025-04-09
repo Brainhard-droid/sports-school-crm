@@ -49,22 +49,48 @@ export function useTrialRequest() {
     },
   });
 
-  // Получаем все секции
-  const { data: sections, isLoading: sectionsLoading } = useQuery({
-    queryKey: ["/api/sections"],
+  // Получаем все секции и выводим их в консоль для отладки
+  const sectionsQuery = useQuery({
+    queryKey: ["/api/sports-sections"],
   });
+  
+  const sections = sectionsQuery.data;
+  const sectionsLoading = sectionsQuery.isLoading;
+  
+  // Добавим логирование вместо useEffect для простоты
+  console.log('Sections query status:', sectionsQuery.status);
+  if (sectionsQuery.isSuccess) {
+    console.log('Sections data loaded:', sections);
+  }
+  if (sectionsQuery.isError) {
+    console.error('Failed to load sections:', sectionsQuery.error);
+  }
 
   // Получаем филиалы с расписанием для выбранной секции
   const sectionId = form.watch("sectionId");
-  const { data: branchesForSection = [], isLoading: branchesLoading } = useQuery({
+  console.log('Current section ID for branch query:', sectionId);
+  
+  const branchQuery = useQuery({
     queryKey: ["/api/branches-by-section", sectionId],
     enabled: !!sectionId,
     queryFn: async () => {
       if (!sectionId) return [];
+      console.log('Fetching branches for section ID:', sectionId);
       const res = await apiRequest("GET", `/api/branches-by-section?sectionId=${sectionId}`);
-      return await res.json();
+      const data = await res.json();
+      console.log('Branches data received:', data);
+      return data;
     },
   });
+  
+  const branchesForSection = branchQuery.data || [];
+  const branchesLoading = branchQuery.isLoading;
+  
+  // Логирование состояния запроса филиалов
+  console.log('Branch query status:', branchQuery.status);
+  if (branchQuery.isError) {
+    console.error('Failed to load branches:', branchQuery.error);
+  }
 
   // Мутация для отправки заявки на пробное занятие
   const createTrialRequestMutation = useMutation({
