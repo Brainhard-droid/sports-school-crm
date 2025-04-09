@@ -82,12 +82,19 @@ export function useTrialRequest() {
     enabled: !!sectionId,
     queryFn: async () => {
       if (!sectionId) return [];
-      console.log('Fetching branches for section ID:', sectionId);
-      // Исправленный URL в соответствии с серверным маршрутом
-      const res = await apiRequest("GET", `/api/branch-sections/section/${sectionId}`);
-      const data = await res.json();
-      console.log('Branches data received:', data);
-      return data;
+      try {
+        console.log('Fetching branches for section ID:', sectionId);
+        // Исправленный URL в соответствии с серверным маршрутом
+        const url = `/api/branch-sections/section/${sectionId}`;
+        console.log('Отправка запроса на URL:', url);
+        const res = await apiRequest("GET", url);
+        const data = await res.json();
+        console.log('Branches data received:', data);
+        return data;
+      } catch (error) {
+        console.error('Ошибка загрузки филиалов:', error);
+        throw error;
+      }
     },
   });
   

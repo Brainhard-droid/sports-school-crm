@@ -33,14 +33,31 @@ export async function apiRequest<T = any>(
 
   if (!response.ok) {
     let errorMessage: string;
+    let errorDetails: any = {};
+    
     try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || `${response.status}: ${response.statusText}`;
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+      
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        console.log('Error response data:', errorData);
+        errorMessage = errorData.message || `${response.status}: ${response.statusText}`;
+        errorDetails = errorData;
+      } else {
+        // Если ответ не является JSON, пытаемся получить текст
+        errorMessage = await response.text() || `${response.status}: ${response.statusText}`;
+        console.log('Error response text:', errorMessage);
+      }
     } catch (e) {
-      // Если ответ не является JSON, пытаемся получить текст
-      errorMessage = await response.text() || `${response.status}: ${response.statusText}`;
+      console.error('Error parsing response:', e);
+      errorMessage = `${response.status}: ${response.statusText}`;
     }
-    throw new Error(errorMessage);
+    
+    const error = new Error(errorMessage);
+    (error as any).details = errorDetails;
+    (error as any).status = response.status;
+    throw error;
   }
 
   return response;
