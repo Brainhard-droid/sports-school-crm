@@ -81,12 +81,32 @@ export default function TrialRequestPage() {
         <CardContent>
           <Form {...form}>
             <form
+              id="trial-request-form"
               onSubmit={(e) => {
-                console.log('Form submit triggered');
-                e.preventDefault(); // Предотвращаем стандартное поведение формы
-                const isValid = form.trigger(); // Принудительно запускаем валидацию всех полей
-                console.log('Form validation triggered, valid:', isValid);
-                handleSubmit(e);
+                console.log('ОТЛАДКА: onSubmit событие сработало', e);
+                console.log('ОТЛАДКА: Target элемент:', e.target);
+                console.log('ОТЛАДКА: Current Target:', e.currentTarget);
+                
+                // Предотвращаем стандартное поведение формы
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Проверяем состояние формы 
+                console.log('ОТЛАДКА: Значения формы:', form.getValues());
+                console.log('ОТЛАДКА: Ошибки формы:', form.formState.errors);
+                
+                // Принудительно запускаем валидацию всех полей
+                console.log('ОТЛАДКА: Запускаем валидацию');
+                form.trigger().then((isValid) => {
+                  console.log('ОТЛАДКА: Форма валидна:', isValid);
+                  
+                  if (isValid) {
+                    console.log('ОТЛАДКА: Вызываем handleSubmit');
+                    handleSubmit(e);
+                  } else {
+                    console.log('ОТЛАДКА: Форма не прошла валидацию');
+                  }
+                });
               }}
               className="space-y-4"
             >
@@ -113,9 +133,23 @@ export default function TrialRequestPage() {
               />
 
               <Button
-                type="submit"
+                type="button" // Изменили с "submit" на "button" для отдельной обработки
                 className="w-full"
                 disabled={isSubmitting || !privacyAccepted}
+                onClick={(e) => {
+                  console.log('Button click event triggered', e);
+                  console.log('Privacy accepted:', privacyAccepted);
+                  console.log('FormState:', form.formState);
+                  
+                  // Явно запускаем отправку формы
+                  const formElement = e.currentTarget.closest('form');
+                  if (formElement) {
+                    console.log('Форма найдена, активируем отправку вручную');
+                    formElement.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                  } else {
+                    console.error('Форма не найдена в DOM');
+                  }
+                }}
               >
                 {isSubmitting || createTrialRequestMutation.isPending ? (
                   <>

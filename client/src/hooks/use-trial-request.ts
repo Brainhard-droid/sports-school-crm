@@ -140,8 +140,8 @@ export function useTrialRequest() {
    * Обработчик отправки формы с защитой от двойной отправки
    */
   const handleSubmit = form.handleSubmit(async (data) => {
-    console.log('Form submit handler called with data:', data);
-    console.log('Form validation errors:', form.formState.errors);
+    console.log('ВАЖНО: handleSubmit вызван с данными:', data);
+    console.log('ВАЖНО: Ошибки валидации:', form.formState.errors);
     
     // Проверяем обязательные поля
     if (!data.childName || data.childName.trim() === '') {
