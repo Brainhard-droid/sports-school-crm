@@ -9,6 +9,7 @@ import { ScheduleInfoDisplay } from "@/components/trial-request/schedule-info-di
 import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
 import { scheduleService, SessionInfo } from "@/services/ScheduleService";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Страница запроса на пробное занятие.
@@ -18,6 +19,7 @@ import { scheduleService, SessionInfo } from "@/services/ScheduleService";
  * - Dependency Inversion: зависит от абстракций (хуки, сервисы), а не конкретных реализаций
  */
 export default function TrialRequestPage() {
+  const { toast } = useToast();
   const {
     form,
     sections,
@@ -114,22 +116,85 @@ export default function TrialRequestPage() {
                 type="button"
                 className="w-full"
                 disabled={isSubmitting || !privacyAccepted}
-                onClick={() => {
+                onClick={async () => {
                   console.log('Button click event triggered');
                   console.log('Privacy accepted:', privacyAccepted);
                   console.log('FormState:', form.formState);
+                  console.log('Текущие значения формы:', form.getValues());
                   
-                  // Прямой вызов обработчика отправки формы
-                  console.log('Запускаем проверку и отправку формы');
-                  form.trigger().then((isValid) => {
-                    console.log('Результат валидации:', isValid);
-                    if (isValid) {
-                      console.log('Вызываем handleSubmit');
-                      handleSubmit();
-                    } else {
-                      console.log('Форма не прошла валидацию');
-                    }
-                  });
+                  // Предварительная обработка данных
+                  const data = form.getValues();
+                  
+                  // Принудительно устанавливаем значения
+                  form.setValue('consentToDataProcessing', privacyAccepted);
+                  
+                  // Проверяем все обязательные поля
+                  if (!data.childName) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите имя ребенка",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.childAge) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите возраст ребенка",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.parentName) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите имя родителя",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.parentPhone || data.parentPhone === '+7') {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите телефон родителя",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.sectionId) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Выберите секцию",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.branchId) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Выберите отделение",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!privacyAccepted) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Для отправки заявки необходимо согласие на обработку персональных данных",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  // Прямой вызов обработчика отправки формы без валидации
+                  console.log('Вызываем handleSubmit напрямую');
+                  handleSubmit();
                 }}
               >
                 {isSubmitting || createTrialRequestMutation.isPending ? (
