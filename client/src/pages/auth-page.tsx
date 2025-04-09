@@ -105,15 +105,22 @@ export default function AuthPage() {
     },
   });
 
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const onLoginSubmit = async (data: LoginFormData) => {
+    setLoginError(null);
     try {
       await loginMutation.mutateAsync(data);
     } catch (error) {
       console.error("Login error:", error);
+      // Set error message for display in the form
+      setLoginError(error instanceof Error ? error.message : "Authentication failed");
+      
+      // Also show as a toast
       startTransition(() => {
         toast({
           title: t('auth.error'),
-          description: error instanceof Error ? error.message : "Login failed",
+          description: error instanceof Error ? error.message : "Authentication failed",
           variant: "destructive",
         });
       });
@@ -169,6 +176,11 @@ export default function AuthPage() {
               <TabsContent value="login">
                 <Form {...loginForm}>
                   <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    {loginError && (
+                      <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md mb-2">
+                        {loginError}
+                      </div>
+                    )}
                     <FormField
                       control={loginForm.control}
                       name="username"

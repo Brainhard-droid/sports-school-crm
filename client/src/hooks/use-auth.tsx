@@ -75,8 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || 'Failed to login');
+        let errorMessage = 'Authentication failed';
+        try {
+          // Try to parse the error as JSON
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If it's not JSON, try as text
+          try {
+            const errorText = await res.text();
+            errorMessage = errorText || errorMessage;
+          } catch (e2) {
+            // Use default message if nothing works
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const userData = await res.json();
