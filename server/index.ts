@@ -8,6 +8,8 @@ import { setupAuth } from "./auth";
 import { errorHandler } from "./middleware/error";
 import { registerRoutes } from "./routes";
 import apiRoutes from "./routes/index";
+import fs from "fs";
+import path from "path";
 
 
 import { db } from './db';
@@ -591,22 +593,8 @@ app.use(passport.session());
 setupAuth(app);
 
 // CORS middleware AFTER session setup
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Set-Cookie');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
-  }
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+import { corsMiddleware } from './middleware/cors-middleware';
+app.use(corsMiddleware);
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -618,6 +606,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Загружаем и регистрируем диагностические маршруты
+  const diagnosticsRouter = await import('./routes/diagnostics').then(module => module.default);
+  app.use('/diagnostics', diagnosticsRouter);
+
   // Регистрация API маршрутов из router.ts
   // Важно! Контроллеры и модули должны использоваться через registerRoutes
   const server = await registerRoutes(app);
@@ -652,16 +644,51 @@ apiRoutes.get("/group-students/:id", async (req, res) => {
 // Глобальный обработчик ошибок должен быть последним middleware
   app.use(errorHandler);
 
-  // Всегда используем Vite для разработки
-  process.env.NODE_ENV = "development";
-  await setupVite(app, server);
+  // Используем адаптер для Vite с резервными вариантами
+  try {
+    // Импортируем динамически, чтобы избежать циклических зависимостей
+    const { initializeViteWithFallback } = await import('./utils/vite-adapter');
+    await initializeViteWithFallback(app, server);
+    log('Успешно инициализирован интерфейс через Vite адаптер');
+  } catch (error) {
+    log('Ошибка инициализации Vite адаптера, используем стандартную настройку');
+    process.env.NODE_ENV = "development";
+    await setupVite(app, server);
+  }
 
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  // Используем динамический поиск свободного порта
+  const startingPort = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  let port = startingPort;
+  
+  // Функция для проверки доступности порта
+  const tryListen = (attemptPort: number, maxAttempts: number = 5) => {
+    if (maxAttempts <= 0) {
+      log(`Не удалось найти свободный порт после нескольких попыток. Завершение работы.`);
+      process.exit(1);
+      return;
+    }
+    
+    server.listen({
+      port: attemptPort,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${attemptPort}`);
+      // Сохраняем найденный порт в переменной окружения
+      process.env.PORT = attemptPort.toString();
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        log(`Порт ${attemptPort} занят, пробуем следующий порт...`);
+        // Пробуем следующий порт
+        tryListen(attemptPort + 1, maxAttempts - 1);
+      } else {
+        // Другая ошибка
+        log(`Ошибка при попытке слушать порт ${attemptPort}: ${err}`);
+        process.exit(1);
+      }
+    });
+  };
+  
+  // Начинаем попытки слушать порт
+  tryListen(port);
 })();

@@ -1,348 +1,91 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRM Спортивной школы - Запасная версия</title>
+  <title>Система управления спортивной школой</title>
   <style>
-    :root {
-      --primary: #1e40af;
-      --primary-light: #3b82f6;
-      --primary-dark: #1e3a8a;
-      --secondary: #f8fafc;
-      --text: #1e293b;
-      --text-light: #64748b;
-      --bg: #f1f5f9;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --error: #ef4444;
-      --success: #22c55e;
-    }
-    
-    * {
-      box-sizing: border-box;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    .header {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
+      min-height: 100vh;
+      background-color: #f5f5f5;
+      color: #333;
     }
-    
+    .container {
+      max-width: 800px;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      color: #1a56db;
+      margin-bottom: 1rem;
+    }
+    p {
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      line-height: 1.5;
+    }
     .logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--primary);
-      text-decoration: none;
+      height: 80px;
+      margin-bottom: 2rem;
     }
-    
-    .main {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    
-    .sidebar {
-      flex: 1;
-      min-width: 250px;
-      background-color: var(--card);
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .content {
-      flex: 3;
-      min-width: 500px;
-      background-color: var(--card);
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .card {
-      background-color: var(--card);
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      margin-bottom: 20px;
-    }
-    
-    h1, h2, h3 {
-      margin-bottom: 16px;
-      color: var(--primary-dark);
-    }
-    
-    .nav-list {
-      list-style: none;
-    }
-    
-    .nav-item {
-      margin-bottom: 10px;
-    }
-    
-    .nav-link {
-      display: block;
-      padding: 8px 12px;
-      color: var(--text);
-      text-decoration: none;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-    }
-    
-    .nav-link:hover {
-      background-color: var(--secondary);
-      color: var(--primary);
-    }
-    
-    .nav-link.active {
-      background-color: var(--primary);
-      color: white;
-    }
-    
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    
-    .table th, .table td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .table th {
-      background-color: var(--secondary);
-      font-weight: 600;
-      color: var(--text);
-    }
-    
-    .badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 50px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    .badge-primary {
-      background-color: var(--primary-light);
-      color: white;
-    }
-    
-    .badge-success {
-      background-color: var(--success);
-      color: white;
-    }
-    
-    .badge-error {
-      background-color: var(--error);
-      color: white;
-    }
-    
-    .alert {
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-weight: 500;
-    }
-    
-    .alert-error {
-      background-color: #fee2e2;
-      color: #b91c1c;
-    }
-    
     .button {
       display: inline-block;
-      padding: 8px 16px;
-      background-color: var(--primary);
+      background-color: #1a56db;
       color: white;
-      border: none;
+      padding: 0.75rem 1.5rem;
       border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
       text-decoration: none;
+      font-weight: 500;
       transition: background-color 0.2s;
     }
-    
     .button:hover {
-      background-color: var(--primary-dark);
+      background-color: #1e429f;
     }
-    
-    .button-secondary {
-      background-color: var(--secondary);
-      color: var(--text);
-      border: 1px solid var(--border);
+    .loading {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0,0,0,.3);
+      border-radius: 50%;
+      border-top-color: #1a56db;
+      animation: spin 1s ease-in-out infinite;
     }
-    
-    .button-secondary:hover {
-      background-color: #e2e8f0;
-    }
-    
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      color: var(--text-light);
-      font-size: 14px;
-    }
-    
-    @media (max-width: 768px) {
-      .main {
-        flex-direction: column;
-      }
-      
-      .content, .sidebar {
-        min-width: 100%;
-      }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <header class="header">
-      <a href="/" class="logo">Спортивная школа</a>
-      <div>
-        <a href="/public/direct.html" class="button button-secondary">Диагностика</a>
-        <span class="button">Войти</span>
-      </div>
-    </header>
-    
-    <div class="main">
-      <aside class="sidebar">
-        <h3>Навигация</h3>
-        <ul class="nav-list">
-          <li class="nav-item"><a href="#" class="nav-link active">Панель управления</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Заявки на пробное занятие</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Ученики</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Группы</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Посещаемость</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Настройки</a></li>
-        </ul>
-        
-        <div class="card" style="margin-top: 30px;">
-          <h3>Диагностика</h3>
-          <p>Статус системы: <span class="badge badge-error">Ошибка</span></p>
-          <p style="margin-top: 10px;">
-            <button onclick="checkServer()" class="button">Проверить сервер</button>
-          </p>
-        </div>
-      </aside>
-      
-      <main class="content">
-        <div class="alert alert-error">
-          <strong>Внимание!</strong> Это запасная статическая версия приложения. Полноценное приложение в настоящий момент недоступно.
-        </div>
-        
-        <h1>Панель управления</h1>
-        
-        <div class="card">
-          <h2>Статус системы</h2>
-          <div id="status-container">
-            <p>Проверка соединения с сервером...</p>
-          </div>
-        </div>
-        
-        <div class="card">
-          <h2>Последние заявки на пробное занятие</h2>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Имя ребенка</th>
-                <th>Дата</th>
-                <th>Секция</th>
-                <th>Статус</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="card">
-          <h2>Что делать?</h2>
-          <ol style="margin-left: 20px;">
-            <li>Перейдите на <a href="/public/direct.html">страницу диагностики</a> для более детальной информации</li>
-            <li>Обновите страницу через несколько минут</li>
-            <li>Проверьте работу сервера и нажмите кнопку "Проверить сервер"</li>
-            <li>Если проблема не устраняется, обратитесь к администратору системы</li>
-          </ol>
-        </div>
-      </main>
+    <div class="logo">
+      <!-- SVG logo -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
     </div>
-    
-    <footer>
-      <p>© 2025 CRM Спортивной школы | Статическая версия</p>
-    </footer>
+    <h1>Система управления спортивной школой</h1>
+    <p>Загрузка приложения...</p>
+    <div class="loading"></div>
+    <p>Если вы видите эту страницу более 10 секунд, возможно, сервер перезагружается или приложение обновляется.</p>
+    <a href="/" class="button">Обновить страницу</a>
   </div>
-  
+
   <script>
-    async function checkServer() {
-      const statusContainer = document.getElementById('status-container');
-      statusContainer.innerHTML = '<p>Проверка соединения...</p>';
-      
-      try {
-        const response = await fetch('/api/diagnostics');
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          statusContainer.innerHTML = `
-            <p>Сервер работает <span class="badge badge-success">Онлайн</span></p>
-            <ul style="margin-top: 10px; margin-left: 20px;">
-              <li>Среда: ${data.environment}</li>
-              <li>Время сервера: ${new Date(data.serverTime).toLocaleString()}</li>
-              <li>Время работы: ${Math.floor(data.uptime / 60)} мин.</li>
-            </ul>
-            <p style="margin-top: 10px;">
-              <a href="/" class="button">Перейти в приложение</a>
-            </p>
-          `;
-        } else {
-          statusContainer.innerHTML = `
-            <p>Сервер отвечает, но возникла ошибка <span class="badge badge-error">Ошибка ${response.status}</span></p>
-            <p style="margin-top: 10px;">Попробуйте обновить страницу через несколько минут.</p>
-          `;
-        }
-      } catch (error) {
-        statusContainer.innerHTML = `
-          <p>Сервер не отвечает <span class="badge badge-error">Офлайн</span></p>
-          <p style="margin-top: 10px;">${error.message}</p>
-          <p style="margin-top: 10px;">Попробуйте обновить страницу через несколько минут.</p>
-        `;
-      }
-    }
-    
-    // Автоматически проверяем статус сервера при загрузке
-    window.addEventListener('load', checkServer);
+    // Автоматическое обновление страницы каждые 5 секунд
+    setTimeout(function() {
+      window.location.reload();
+    }, 5000);
   </script>
 </body>
 </html>
