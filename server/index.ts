@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/error";
 import { registerRoutes } from "./routes";
 import apiRoutes from "./routes/index";
 
+
 import { db } from './db';
 import { 
   sportsSections, 
@@ -651,7 +652,8 @@ apiRoutes.get("/group-students/:id", async (req, res) => {
 // Глобальный обработчик ошибок должен быть последним middleware
   app.use(errorHandler);
 
-  // Всегда используем Vite для разработки, так как режим разработки может быть не определен
+  // Всегда используем Vite для разработки
+  process.env.NODE_ENV = "development";
   await setupVite(app, server);
 
   const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
