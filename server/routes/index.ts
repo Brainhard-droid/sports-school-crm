@@ -7,10 +7,12 @@ import trialRequestRoutes from './trialRequestRoutes';
 import studentRoutes from './studentRoutes';
 import attendanceRoutes from './attendanceRoutes';
 import dateCommentRoutes from './dateCommentRoutes';
+import healthRoutes from './health';
 
 const router = Router();
 
 // Регистрация маршрутов
+router.use('/', healthRoutes);
 router.use('/branches', branchRoutes);
 router.use('/sections', sectionRoutes);
 router.use('/branch-sections', branchSectionRoutes);

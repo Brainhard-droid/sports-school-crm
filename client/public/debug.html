@@ -1,112 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CRM Debug Mode</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #f5f5f5;
-        color: #333;
-      }
-      .container {
-        max-width: 800px;
-        margin: 50px auto;
-        padding: 20px;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #2563eb;
-        margin-top: 0;
-      }
-      pre {
-        background-color: #f1f1f1;
-        padding: 15px;
-        border-radius: 5px;
-        overflow-x: auto;
-      }
-      .btn {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #2563eb;
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-        font-weight: bold;
-        margin-top: 20px;
-      }
-      .btn:hover {
-        background-color: #1d4ed8;
-      }
-      .error {
-        color: #dc2626;
-        font-weight: bold;
-      }
-      .info {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #f8fafc;
-        border-left: 4px solid #2563eb;
-        border-radius: 4px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>CRM System - Debug Mode</h1>
-      <p>This is a debug page for your CRM application. If you're seeing this page, it means there may be issues with loading the main application.</p>
-      
-      <div class="info">
-        <h2>System Information</h2>
-        <p>Current time: <span id="current-time"></span></p>
-        <p>Application version: <span id="app-version">1.0.0</span></p>
-        <p>Server status: <span id="server-status">Checking...</span></p>
-      </div>
-      
-      <div class="info">
-        <h2>Troubleshooting</h2>
-        <p>Try these steps to resolve common issues:</p>
-        <ol>
-          <li>Clear your browser cache and reload the page</li>
-          <li>Check if the server is running properly</li>
-          <li>Check for any console errors in your browser's developer tools</li>
-          <li>Make sure your environment variables are set correctly</li>
-        </ol>
-      </div>
-      
-      <a href="/" class="btn">Reload Main Application</a>
-    </div>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Диагностическая страница</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+    button {
+      padding: 10px;
+      margin: 10px 0;
+      background: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    #result {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Диагностическая страница</h1>
+  
+  <div>
+    <h2>Проверка подключения к API</h2>
+    <button onclick="checkHealth()">Проверить API</button>
+    <button onclick="checkAuth()">Проверить авторизацию</button>
+    <button onclick="checkVite()">Проверить Vite</button>
+  </div>
 
-    <script>
-      // Update current time
-      function updateTime() {
-        document.getElementById('current-time').textContent = new Date().toLocaleString();
+  <div id="result">
+    <p>Нажмите на кнопку для выполнения проверки</p>
+  </div>
+
+  <script>
+    async function checkHealth() {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        
+        document.getElementById('result').innerHTML = `
+          <h3 class="success">API работает</h3>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3 class="error">Ошибка при подключении к API</h3>
+          <pre>${error.message}</pre>
+        `;
       }
-      updateTime();
-      setInterval(updateTime, 1000);
-      
-      // Check server status
-      async function checkServerStatus() {
-        try {
-          const response = await fetch('/api/health', { method: 'GET' });
-          if (response.ok) {
-            document.getElementById('server-status').textContent = 'Online';
-            document.getElementById('server-status').style.color = '#16a34a';
-          } else {
-            document.getElementById('server-status').textContent = 'Issues Detected';
-            document.getElementById('server-status').style.color = '#ea580c';
-          }
-        } catch (error) {
-          document.getElementById('server-status').textContent = 'Offline';
-          document.getElementById('server-status').style.color = '#dc2626';
+    }
+
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/current-user');
+        const data = await response.json();
+        
+        document.getElementById('result').innerHTML = `
+          <h3 class="info">Статус авторизации</h3>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3 class="error">Ошибка при проверке авторизации</h3>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+
+    async function checkVite() {
+      try {
+        // Проверим, доступен ли Vite, запросив текущие настройки
+        const response = await fetch('/@vite/client', { method: 'HEAD' });
+        
+        if (response.ok) {
+          document.getElementById('result').innerHTML = `
+            <h3 class="success">Vite работает</h3>
+            <p>Статус: ${response.status}</p>
+            <p>Vite Dev Server доступен</p>
+          `;
+        } else {
+          document.getElementById('result').innerHTML = `
+            <h3 class="error">Vite не работает</h3>
+            <p>Статус: ${response.status}</p>
+            <p>Vite Dev Server недоступен</p>
+          `;
         }
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <h3 class="error">Ошибка при проверке Vite</h3>
+          <pre>${error.message}</pre>
+        `;
       }
-      checkServerStatus();
-    </script>
-  </body>
+    }
+  </script>
+</body>
 </html>
