@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 
 import NotFound from "@/pages/not-found";
@@ -30,15 +30,46 @@ const LoadingFallback = () => (
   </div>
 );
 
+// Добавим временный компонент для диагностики
+const DiagnosticPage = () => {
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h1 className="text-2xl font-bold mb-4 text-blue-600">Диагностика приложения</h1>
+        <p className="mb-4">
+          Это диагностическая страница для проверки работы приложения.
+        </p>
+        <div className="space-y-4">
+          <div className="border border-gray-200 p-3 rounded">
+            <h2 className="font-medium">Навигация:</h2>
+            <div className="mt-2 space-y-2">
+              <a href="/trial-request" className="block text-blue-500 hover:underline">
+                Запись на пробное занятие
+              </a>
+              <a href="/auth" className="block text-blue-500 hover:underline">
+                Авторизация
+              </a>
+              <a href="/privacy-policy" className="block text-blue-500 hover:underline">
+                Политика конфиденциальности
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Router() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
+        <Route path="/" component={DiagnosticPage} />
         <Route path="/trial-request" component={TrialRequest} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/reset-password/:token" component={ResetPassword} />
-        <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/students" component={StudentsPage} />
         <ProtectedRoute path="/groups" component={Groups} />
         <ProtectedRoute path="/groups/:id" component={GroupDetails} />
