@@ -651,11 +651,8 @@ apiRoutes.get("/group-students/:id", async (req, res) => {
 // Глобальный обработчик ошибок должен быть последним middleware
   app.use(errorHandler);
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  // Всегда используем Vite для разработки, так как режим разработки может быть не определен
+  await setupVite(app, server);
 
   const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
   server.listen({
