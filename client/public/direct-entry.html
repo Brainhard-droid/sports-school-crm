@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Спортивной школы - Вход</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-foreground: white;
+      --background: #f8f9fa;
+      --foreground: #333;
+      --card: white;
+      --card-foreground: #333;
+      --border: #dee2e6;
+      --input: #f1f3f5;
+      --ring: rgba(0, 102, 255, 0.2);
+      --radius: 0.5rem;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    
+    .login-container {
+      display: flex;
+      flex: 1;
+    }
+    
+    .login-image {
+      flex: 1;
+      background-image: url('https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=2070');
+      background-size: cover;
+      background-position: center;
+      display: none;
+    }
+    
+    .login-form-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    
+    .login-form {
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+      color: var(--primary);
+    }
+    
+    .logo svg {
+      margin-right: 0.5rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 1.5rem;
+      color: var(--foreground);
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--input);
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+    
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: var(--primary);
+      color: var(--primary-foreground);
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    button:hover {
+      opacity: 0.9;
+    }
+    
+    .alert {
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    
+    .alert-danger {
+      background-color: #ffe3e3;
+      color: #e03131;
+      border: 1px solid #ffc9c9;
+    }
+    
+    .forgot-password {
+      display: block;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .forgot-password:hover {
+      text-decoration: underline;
+    }
+    
+    .alternative-links {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    
+    .alternative-links a {
+      color: var(--primary);
+      text-decoration: none;
+      margin: 0 0.5rem;
+    }
+    
+    .alternative-links a:hover {
+      text-decoration: underline;
+    }
+    
+    .app-links {
+      margin-top: 3rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+    }
+    
+    .app-links h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    .app-link {
+      display: block;
+      padding: 1rem;
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--foreground);
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    
+    .app-link:hover {
+      background-color: var(--input);
+    }
+    
+    .app-link h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .app-link p {
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+    
+    @media (min-width: 768px) {
+      .login-image {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-image"></div>
+    <div class="login-form-container">
+      <div class="login-form">
+        <div class="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 2c1.56 1.23 2 3.4 2 5 0 2.68-2.26 4-5 4H3v2c0 3.3 2.7 6 6 6h9a5 5 0 0 0 5-5c0-3.39-3.42-5.5-6.5-4.5C16 5 14 2.5 10 2Z"></path>
+            <path d="M3 11a5 5 0 0 0 5 5"></path>
+          </svg>
+          SportSchoolCRM
+        </div>
+        
+        <h1>Войти в систему</h1>
+        
+        <div id="login-error" class="alert alert-danger"></div>
+        
+        <form id="login-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Введите ваш email" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="password" id="password" name="password" placeholder="Введите ваш пароль" required>
+          </div>
+          
+          <button type="submit">Войти</button>
+          
+          <a href="#" class="forgot-password">Забыли пароль?</a>
+        </form>
+        
+        <div class="alternative-links">
+          <span>Или </span>
+          <a href="/diagnostics/standalone">Войти через автономную версию</a>
+        </div>
+        
+        <div class="app-links">
+          <h2>Варианты входа в систему</h2>
+          
+          <div class="links-grid">
+            <a href="/diagnostics/proxy" class="app-link">
+              <h3>Прокси-доступ</h3>
+              <p>Рекомендуемый вариант доступа к системе</p>
+            </a>
+            
+            <a href="/diagnostics/standalone" class="app-link">
+              <h3>Автономная версия</h3>
+              <p>Упрощенная версия с базовой функциональностью</p>
+            </a>
+            
+            <a href="/diagnostics/direct-client" class="app-link">
+              <h3>Прямой доступ</h3>
+              <p>Прямой доступ к клиентскому приложению</p>
+            </a>
+            
+            <a href="/diagnostics" class="app-link">
+              <h3>Диагностический центр</h3>
+              <p>Проверка состояния системы</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorElement = document.getElementById('login-error');
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (response.ok) {
+          // Если авторизация успешна, перенаправляем на страницу диагностики
+          window.location.href = '/diagnostics/proxy';
+        } else {
+          const errorData = await response.json();
+          errorElement.textContent = errorData.error || 'Неверный email или пароль';
+          errorElement.style.display = 'block';
+        }
+      } catch (error) {
+        errorElement.textContent = 'Ошибка соединения с сервером. Пожалуйста, попробуйте позже.';
+        errorElement.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
