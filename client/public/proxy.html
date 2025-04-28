@@ -1,368 +1,194 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Спортивная школа - Доступ к системе</title>
+  <title>СпортШкола CRM - Прокси</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f5f5f5;
-      color: #333;
+    body { 
+      font-family: Arial, sans-serif; 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px;
       line-height: 1.6;
     }
-    .container {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    h1, h2 { color: #0066ff; }
+    .card { 
+      border: 1px solid #ddd; 
+      padding: 20px; 
+      margin: 20px 0; 
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    h1, h2, h3 {
-      color: #1a56db;
-      margin-top: 0;
+    .btn { 
+      display: inline-block; 
+      background: #0066ff; 
+      color: white; 
+      padding: 10px 20px; 
+      text-decoration: none; 
+      border-radius: 5px; 
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: background 0.3s;
     }
-    .card {
-      background-color: #f8fafc;
-      border-radius: 0.5rem;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid #e2e8f0;
+    .btn:hover {
+      background: #0055cc;
     }
-    .button {
-      display: inline-block;
-      background-color: #1a56db;
-      color: white;
-      padding: 0.75rem 1.5rem;
+    .info {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .error {
+      color: #721c24;
+      background-color: #f8d7da;
+      padding: 10px;
       border-radius: 4px;
-      text-decoration: none;
-      font-weight: 500;
-      transition: background-color 0.2s;
-      margin-right: 0.5rem;
-      margin-bottom: 0.5rem;
+      margin: 10px 0;
     }
-    .button-secondary {
-      background-color: #475569;
-    }
-    .button:hover {
-      opacity: 0.9;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .grid-item {
-      padding: 1.5rem;
-      background: #f8fafc;
-      border-radius: 0.5rem;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .status {
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      display: inline-block;
-      margin-top: 0.5rem;
-    }
-    .status-success {
-      background-color: #dcfce7;
-      color: #166534;
-    }
-    .status-warning {
-      background-color: #fef9c3;
-      color: #854d0e;
-    }
-    .status-error {
-      background-color: #fee2e2;
-      color: #b91c1c;
-    }
-    code {
-      background-color: #f1f5f9;
-      padding: 0.1rem 0.3rem;
-      border-radius: 0.25rem;
-      font-family: Menlo, Monaco, Consolas, monospace;
-      font-size: 0.9em;
-    }
-    .loading {
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      border: 3px solid rgba(0,0,0,.2);
-      border-radius: 50%;
-      border-top-color: #1a56db;
-      animation: spin 1s ease-in-out infinite;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    #app-container {
+    .iframe-container {
       width: 100%;
-      height: 600px;
-      border: 1px solid #e2e8f0;
-      border-radius: 0.5rem;
+      height: 800px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
       overflow: hidden;
-      margin-top: 1rem;
+      margin-top: 20px;
     }
-    #app-frame {
+    iframe {
       width: 100%;
       height: 100%;
-      border: 0;
+      border: none;
     }
-    .tabs {
-      display: flex;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .tab {
-      padding: 0.75rem 1.5rem;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-    }
-    .tab.active {
-      border-bottom-color: #1a56db;
-      color: #1a56db;
-      font-weight: 500;
-    }
-    .tab-content {
+    .hidden {
       display: none;
     }
-    .tab-content.active {
-      display: block;
+    #loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #666;
+    }
+    .spinner {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(0, 102, 255, 0.2);
+      border-radius: 50%;
+      border-top-color: #0066ff;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Система управления спортивной школой</h1>
+  <h1>СпортШкола CRM - Прокси доступ</h1>
+  
+  <div class="info">
+    <p>Эта страница служит прокси для обхода ограничений Vite в Replit. Используйте её, если основной интерфейс недоступен.</p>
+  </div>
+  
+  <div class="card">
+    <h2>Информационная панель</h2>
+    <p>
+      <span id="connection-status">Проверка соединения...</span>
+    </p>
+    <p>
+      <a href="/diagnostics" class="btn">Диагностика</a>
+      <a href="/fallback" class="btn">Запасная страница</a>
+      <a href="/direct-entry" class="btn">Прямой вход</a>
+      <a href="/standalone-app" class="btn">Автономное приложение</a>
+    </p>
+  </div>
+  
+  <div id="content-panel" class="card">
+    <h2>Прокси-контент</h2>
+    <p>Выберите, что вы хотите загрузить через прокси:</p>
     
-    <div class="tabs">
-      <div class="tab active" data-tab="access">Доступ к системе</div>
-      <div class="tab" data-tab="diagnostics">Диагностика</div>
-      <div class="tab" data-tab="status">Статус сервера</div>
+    <div>
+      <button id="load-frame-btn" class="btn">Загрузить приложение во фрейме</button>
+      <button id="load-standalone-btn" class="btn">Загрузить автономную версию</button>
+      <button id="load-login-btn" class="btn">Загрузить страницу входа</button>
     </div>
     
-    <div class="tab-content active" id="access-tab">
-      <div class="card">
-        <h2>Доступ к системе управления</h2>
-        <p>Из-за ограничений среды Replit, вы можете использовать любой из следующих способов доступа к системе:</p>
-        
-        <h3>1. Встроенное отображение системы</h3>
-        <button id="load-app" class="button">Загрузить приложение в iframe</button>
-        <div id="app-container" style="display: none;">
-          <iframe id="app-frame" src="/"></iframe>
-        </div>
-
-        <h3>2. Прямой доступ через фиксированные URL</h3>
-        <div class="grid">
-          <div class="grid-item">
-            <h3>Основная страница</h3>
-            <p>Доступ к основному интерфейсу системы</p>
-            <a href="/" target="_blank" class="button">Открыть в новой вкладке</a>
-          </div>
-          <div class="grid-item">
-            <h3>Запасная страница</h3>
-            <p>Упрощенный вариант с базовой функциональностью</p>
-            <a href="/diagnostics/fallback" target="_blank" class="button button-secondary">Открыть запасную</a>
-          </div>
-        </div>
-        
-        <h3>3. Использование альтернативных точек входа</h3>
-        <div class="grid">
-          <div class="grid-item">
-            <h3>Прямое подключение</h3>
-            <p>Прямой доступ в обход Vite</p>
-            <a href="/diagnostics/direct-client" target="_blank" class="button">Прямой доступ</a>
-          </div>
-          <div class="grid-item">
-            <h3>Автономная версия</h3>
-            <p>Работает полностью независимо от Vite</p>
-            <a href="/diagnostics/standalone" target="_blank" class="button">Автономная версия</a>
-          </div>
-        </div>
-      </div>
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p>Загрузка содержимого...</p>
     </div>
     
-    <div class="tab-content" id="diagnostics-tab">
-      <div class="card">
-        <h2>Диагностика системы</h2>
-        <p>Используйте эти инструменты для проверки работоспособности различных компонентов системы:</p>
-        
-        <div class="grid">
-          <div class="grid-item">
-            <h3>API</h3>
-            <p>Проверка работоспособности API</p>
-            <button class="button check-status" data-url="/diagnostics/api-check">Проверить API</button>
-            <div class="status-result"></div>
-          </div>
-          <div class="grid-item">
-            <h3>Сессия</h3>
-            <p>Проверка сессий и авторизации</p>
-            <button class="button check-status" data-url="/diagnostics/session-check">Проверить сессии</button>
-            <div class="status-result"></div>
-          </div>
-          <div class="grid-item">
-            <h3>Статические файлы</h3>
-            <p>Проверка доступности файлов</p>
-            <button class="button check-status" data-url="/diagnostics/static-check">Проверить файлы</button>
-            <div class="status-result"></div>
-          </div>
-          <div class="grid-item">
-            <h3>Окружение</h3>
-            <p>Проверка переменных окружения</p>
-            <button class="button check-status" data-url="/diagnostics/env-check">Проверить окружение</button>
-            <div class="status-result"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="tab-content" id="status-tab">
-      <div class="card">
-        <h2>Статус сервера</h2>
-        <div id="server-status">
-          <div class="loading"></div> Загрузка информации о сервере...
-        </div>
-        
-        <h3>Журнал последних событий</h3>
-        <pre id="event-log" style="max-height: 300px; overflow: auto; background: #f1f5f9; padding: 1rem; border-radius: 0.5rem;">Загрузка журнала...</pre>
-        
-        <button id="refresh-status" class="button">Обновить статус</button>
-      </div>
+    <div id="iframe-container" class="iframe-container hidden">
+      <iframe id="content-frame" src="about:blank" title="Прокси содержимое"></iframe>
     </div>
   </div>
 
   <script>
-    // Управление вкладками
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', function() {
-        // Убираем активный класс у всех вкладок
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        // Добавляем активный класс текущей вкладке
-        this.classList.add('active');
-        
-        // Скрываем все содержимое вкладок
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.remove('active');
-        });
-        
-        // Показываем содержимое текущей вкладки
-        const tabId = this.getAttribute('data-tab');
-        document.getElementById(`${tabId}-tab`).classList.add('active');
-      });
-    });
-    
-    // Обработчик для кнопки загрузки приложения
-    document.getElementById('load-app').addEventListener('click', function() {
-      const container = document.getElementById('app-container');
-      container.style.display = 'block';
-      this.textContent = 'Обновить приложение';
-      
-      // Обновляем iframe
-      const frame = document.getElementById('app-frame');
-      frame.src = frame.src;
-    });
-    
-    // Обработчики для кнопок проверки статуса
-    document.querySelectorAll('.check-status').forEach(button => {
-      button.addEventListener('click', async function() {
-        const url = this.getAttribute('data-url');
-        const resultElement = this.nextElementSibling;
-        
-        // Показываем загрузку
-        resultElement.innerHTML = '<div class="loading"></div> Проверка...';
-        resultElement.className = 'status-result';
-        
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          
-          // Форматируем и отображаем результат
-          resultElement.innerHTML = `<div class="status status-success">OK</div>
-                                    <pre style="margin-top: 0.5rem; max-height: 150px; overflow: auto;">${JSON.stringify(data, null, 2)}</pre>`;
-        } catch (error) {
-          resultElement.innerHTML = `<div class="status status-error">Ошибка</div>
-                                    <pre style="margin-top: 0.5rem; color: #b91c1c;">${error.message}</pre>`;
-        }
-      });
-    });
-    
-    // Функция для обновления статуса сервера
-    async function updateServerStatus() {
-      const statusElement = document.getElementById('server-status');
-      const logElement = document.getElementById('event-log');
+    // Функция для проверки соединения
+    async function checkConnection() {
+      const statusElement = document.getElementById('connection-status');
       
       try {
-        // Получаем статус API
-        const apiResponse = await fetch('/diagnostics/api-check');
-        const apiData = await apiResponse.json();
+        const response = await fetch('/api/status');
+        if (!response.ok) throw new Error('API не отвечает');
         
-        // Получаем статус статических файлов
-        const staticResponse = await fetch('/diagnostics/static-check');
-        const staticData = await staticResponse.json();
-        
-        // Обновляем отображение статуса
-        let statusHtml = '';
-        let statusClass = 'status-success';
-        let statusText = 'Работает нормально';
-        
-        if (!apiData || !staticData) {
-          statusClass = 'status-error';
-          statusText = 'Критическая ошибка';
-        } else if (!staticData.files['index.html']) {
-          statusClass = 'status-warning';
-          statusText = 'Требует внимания';
-        }
-        
-        statusHtml = `
-          <div class="status ${statusClass}">${statusText}</div>
-          <p>Последняя проверка: ${new Date().toLocaleTimeString()}</p>
-          <p>API: ${apiData ? 'Доступен' : 'Недоступен'}</p>
-          <p>Файлы клиента: ${staticData && staticData.files['index.html'] ? 'Найдены' : 'Отсутствуют'}</p>
+        const data = await response.json();
+        statusElement.innerHTML = `
+          <span style="color: green; font-weight: bold;">✓ Соединение установлено</span>
+          <br>Статус: ${data.status}
+          <br>Время сервера: ${new Date(data.time).toLocaleString()}
         `;
-        
-        statusElement.innerHTML = statusHtml;
-        
-        // Обновляем журнал событий
-        logElement.textContent = `[${new Date().toLocaleTimeString()}] Проверка статуса сервера\n`;
-        logElement.textContent += `[${new Date().toLocaleTimeString()}] API: ${apiData ? 'Доступен' : 'Недоступен'}\n`;
-        logElement.textContent += `[${new Date().toLocaleTimeString()}] Файлы клиента: ${staticData && staticData.files['index.html'] ? 'Найдены' : 'Отсутствуют'}\n`;
-        
-        // Добавляем дополнительную информацию из окружения
-        try {
-          const envResponse = await fetch('/diagnostics/env-check');
-          const envData = await envResponse.json();
-          
-          if (envData && envData.env) {
-            logElement.textContent += `[${new Date().toLocaleTimeString()}] Режим: ${envData.env.NODE_ENV || 'не указан'}\n`;
-            logElement.textContent += `[${new Date().toLocaleTimeString()}] Порт: ${envData.env.PORT || 'не указан'}\n`;
-          }
-        } catch (e) {
-          logElement.textContent += `[${new Date().toLocaleTimeString()}] Ошибка получения информации об окружении: ${e.message}\n`;
-        }
-        
       } catch (error) {
         statusElement.innerHTML = `
-          <div class="status status-error">Ошибка</div>
-          <p>Не удалось получить статус сервера</p>
-          <p>Ошибка: ${error.message}</p>
+          <span style="color: red; font-weight: bold;">✗ Ошибка соединения</span>
+          <br>${error.message}
         `;
-        
-        logElement.textContent = `[${new Date().toLocaleTimeString()}] Ошибка при проверке статуса: ${error.message}\n`;
       }
     }
     
-    // Обновляем статус при загрузке и по нажатию кнопки
-    updateServerStatus();
-    document.getElementById('refresh-status').addEventListener('click', updateServerStatus);
+    // Загрузка содержимого в iframe
+    function loadContent(url) {
+      const iframe = document.getElementById('content-frame');
+      const iframeContainer = document.getElementById('iframe-container');
+      const loadingElement = document.getElementById('loading');
+      
+      // Показываем индикатор загрузки
+      iframeContainer.classList.add('hidden');
+      loadingElement.classList.remove('hidden');
+      
+      // Устанавливаем обработчик события загрузки
+      iframe.onload = function() {
+        loadingElement.classList.add('hidden');
+        iframeContainer.classList.remove('hidden');
+      };
+      
+      // Загружаем URL в iframe
+      iframe.src = url;
+    }
+    
+    // Инициализация страницы
+    window.addEventListener('DOMContentLoaded', () => {
+      // Проверяем соединение
+      checkConnection();
+      
+      // Настраиваем обработчики кнопок
+      document.getElementById('load-frame-btn').addEventListener('click', () => {
+        loadContent('/');
+      });
+      
+      document.getElementById('load-standalone-btn').addEventListener('click', () => {
+        loadContent('/standalone-app');
+      });
+      
+      document.getElementById('load-login-btn').addEventListener('click', () => {
+        loadContent('/direct-entry');
+      });
+      
+      // Автоматически проверяем соединение каждые 30 секунд
+      setInterval(checkConnection, 30000);
+    });
   </script>
 </body>
 </html>

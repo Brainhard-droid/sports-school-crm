@@ -1,91 +1,176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Система управления спортивной школой</title>
+  <title>СпортШкола CRM - Запасная страница</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background-color: #f5f5f5;
+    body { 
+      font-family: Arial, sans-serif; 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px;
+      line-height: 1.6;
       color: #333;
     }
-    .container {
-      max-width: 800px;
-      padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      text-align: center;
+    h1, h2 { 
+      color: #0066ff; 
+      margin-top: 30px;
     }
-    h1 {
-      color: #1a56db;
-      margin-bottom: 1rem;
+    .card { 
+      border: 1px solid #ddd; 
+      padding: 20px; 
+      margin: 20px 0; 
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    p {
-      margin-bottom: 1.5rem;
-      font-size: 1.1rem;
-      line-height: 1.5;
+    .btn { 
+      display: inline-block; 
+      background: #0066ff; 
+      color: white; 
+      padding: 10px 20px; 
+      text-decoration: none; 
+      border-radius: 5px; 
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: background 0.3s;
     }
-    .logo {
-      height: 80px;
-      margin-bottom: 2rem;
+    .btn:hover {
+      background: #0055cc;
     }
-    .button {
-      display: inline-block;
-      background-color: #1a56db;
-      color: white;
-      padding: 0.75rem 1.5rem;
+    .info {
+      background: #f0f7ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      border-left: 4px solid #0066ff;
+    }
+    .error {
+      color: #721c24;
+      background-color: #f8d7da;
+      border-left: 4px solid #f5c6cb;
+      padding: 10px 15px;
       border-radius: 4px;
-      text-decoration: none;
-      font-weight: 500;
-      transition: background-color 0.2s;
+      margin: 10px 0;
     }
-    .button:hover {
-      background-color: #1e429f;
+    .warning {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffeeba;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin: 10px 0;
     }
-    .loading {
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: monospace;
+      background: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .hidden {
+      display: none;
+    }
+    #status-indicator {
       display: inline-block;
-      width: 50px;
-      height: 50px;
-      border: 3px solid rgba(0,0,0,.3);
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      border-top-color: #1a56db;
-      animation: spin 1s ease-in-out infinite;
+      margin-right: 5px;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .status-ok {
+      background-color: #28a745;
+    }
+    .status-error {
+      background-color: #dc3545;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">
-      <!-- SVG logo -->
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-      </svg>
-    </div>
-    <h1>Система управления спортивной школой</h1>
-    <p>Загрузка приложения...</p>
-    <div class="loading"></div>
-    <p>Если вы видите эту страницу более 10 секунд, возможно, сервер перезагружается или приложение обновляется.</p>
-    <a href="/" class="button">Обновить страницу</a>
+  <h1>СпортШкола CRM</h1>
+  
+  <div class="info">
+    <p>Это запасная страница, которая загружается, когда основной интерфейс не может быть отображен. Она обеспечивает базовую функциональность и доступ к диагностическим инструментам.</p>
   </div>
-
+  
+  <div class="card">
+    <h2>Статус системы</h2>
+    <p>
+      <span id="status-indicator"></span>
+      <span id="status-text">Проверка статуса...</span>
+    </p>
+    <pre id="status-details" class="hidden"></pre>
+  </div>
+  
+  <div class="card">
+    <h2>Навигация</h2>
+    <p>
+      <a href="/diagnostics" class="btn">Диагностический центр</a>
+      <a href="/api/status" class="btn">Проверка API</a>
+      <a href="/diagnostics/proxy" class="btn">Прокси-доступ</a>
+      <a href="/diagnostics/direct-client" class="btn">Прямой вход</a>
+    </p>
+  </div>
+  
+  <div class="card">
+    <h2>Часто задаваемые вопросы</h2>
+    
+    <h3>Почему я вижу эту страницу?</h3>
+    <p>Эта страница отображается, когда основной интерфейс приложения не может быть загружен из-за проблем с подключением к серверу разработки Vite или других технических проблем.</p>
+    
+    <h3>Как мне получить доступ к основному приложению?</h3>
+    <p>Попробуйте использовать прокси-доступ или прямой вход через соответствующие кнопки выше. Если проблема сохраняется, перезапустите сервер разработки.</p>
+    
+    <h3>Что делать, если ничего не помогает?</h3>
+    <p>Посетите диагностический центр для получения более подробной информации о возможных проблемах. Если проблема сохраняется, обратитесь к разработчику системы.</p>
+  </div>
+  
   <script>
-    // Автоматическое обновление страницы каждые 5 секунд
-    setTimeout(function() {
-      window.location.reload();
-    }, 5000);
+    // Проверка статуса сервера
+    async function checkServerStatus() {
+      const statusIndicator = document.getElementById('status-indicator');
+      const statusText = document.getElementById('status-text');
+      const statusDetails = document.getElementById('status-details');
+      
+      try {
+        const response = await fetch('/api/status');
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Обновляем индикатор и текст
+          statusIndicator.className = 'status-ok';
+          statusText.innerHTML = 'Сервер работает нормально';
+          
+          // Показываем детали
+          statusDetails.textContent = JSON.stringify(data, null, 2);
+          statusDetails.classList.remove('hidden');
+        } else {
+          throw new Error(`Статус ответа: ${response.status}`);
+        }
+      } catch (error) {
+        // Обновляем индикатор и текст для ошибки
+        statusIndicator.className = 'status-error';
+        statusText.innerHTML = `Сервер недоступен: ${error.message}`;
+        
+        // Скрываем детали
+        statusDetails.classList.add('hidden');
+      }
+    }
+    
+    // Инициализация страницы
+    document.addEventListener('DOMContentLoaded', () => {
+      // Проверяем статус сервера
+      checkServerStatus();
+      
+      // Периодически проверяем статус
+      setInterval(checkServerStatus, 30000);
+    });
   </script>
 </body>
 </html>
