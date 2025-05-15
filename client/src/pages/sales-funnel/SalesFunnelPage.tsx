@@ -212,7 +212,7 @@ export default function SalesFunnelPage() {
                         {requestsByStatus[column.id].map((request, index) => (
                           <Draggable
                             key={request.id}
-                            draggableId={request.id.toString()}
+                            draggableId={`request-${request.id}`}
                             index={index}
                           >
                             {(provided, snapshot) => (
