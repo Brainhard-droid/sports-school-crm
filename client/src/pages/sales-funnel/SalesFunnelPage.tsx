@@ -26,11 +26,6 @@ const statusColumns: StatusColumn[] = [
  * Отвечает за отображение и взаимодействие с заявками на пробные занятия
  * Следует принципу открытости/закрытости (OCP) из SOLID
  */
-/**
- * Компонент страницы воронки продаж
- * Отвечает за отображение и взаимодействие с заявками на пробные занятия
- * Следует принципу открытости/закрытости (OCP) из SOLID
- */
 export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   
@@ -59,7 +54,8 @@ export default function SalesFunnelPage() {
     }
 
     // Получаем ID и статусы
-    const requestId = parseInt(result.draggableId);
+    // Формат draggableId: "request-123", необходимо извлечь числовой ID
+    const requestId = parseInt(result.draggableId.split('-')[1]);
     const sourceStatus = result.source.droppableId;
     const targetStatus = result.destination.droppableId;
 
