@@ -76,7 +76,9 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
 
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{request.branch?.name} - {request.section?.name}</span>
+            <span>
+              {request.branch?.name || 'Филиал не указан'} - {request.section?.name || 'Секция не указана'}
+            </span>
           </div>
 
           <div className="mt-2">
