@@ -24,31 +24,60 @@ export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
+  const [draggedRequest, setDraggedRequest] = useState<{
+    id: number;
+    sourceStatus: string;
+    targetStatus: string;
+  } | null>(null);
 
   const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+    // Проверяем, есть ли пункт назначения
+    if (!result.destination) {
+      console.log('No destination');
+      return;
+    }
 
+    // Получаем ID и статусы
     const requestId = parseInt(result.draggableId);
-    const sourceStatus = result.source.droppableId as keyof typeof TrialRequestStatus;
-    const newStatus = result.destination.droppableId as keyof typeof TrialRequestStatus;
+    const sourceStatus = result.source.droppableId;
+    const targetStatus = result.destination.droppableId;
 
-    console.log('Dragging request:', { requestId, sourceStatus, newStatus });
+    console.log('Dragging request:', { requestId, sourceStatus, targetStatus });
 
     // Если карточка уже была в колонке, не делаем ничего
-    if (sourceStatus === newStatus) return;
+    if (sourceStatus === targetStatus) {
+      console.log('Same column, no action needed');
+      return;
+    }
+
+    // Находим request по ID
+    const request = requests.find(r => r.id === requestId);
+    if (!request) {
+      console.error('Request not found:', requestId);
+      return;
+    }
+
+    // Сохраняем информацию о перетаскивании
+    setDraggedRequest({
+      id: requestId,
+      sourceStatus,
+      targetStatus
+    });
 
     // Если перетаскиваем в "Пробное назначено", открываем модальное окно
-    if (newStatus === "TRIAL_ASSIGNED") {
-      const request = requests.find(r => r.id === requestId);
-      if (request) {
-        setSelectedRequest(request);
-        setShowAssignTrialModal(true);
-      }
+    if (targetStatus === "TRIAL_ASSIGNED") {
+      console.log('Opening assign trial modal for request:', request);
+      setSelectedRequest(request);
+      setShowAssignTrialModal(true);
       return;
     }
 
     // Для остальных статусов просто обновляем статус
-    updateStatus({ id: requestId, status: newStatus });
+    console.log('Updating status to:', targetStatus);
+    updateStatus({ 
+      id: requestId, 
+      status: targetStatus
+    });
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
@@ -71,11 +100,21 @@ export default function SalesFunnelPage() {
   const handleModalClose = () => {
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
+    // При закрытии модального окна без подтверждения, сбрасываем draggedRequest
+    setDraggedRequest(null);
   };
 
   const handleSuccess = () => {
+    // Если было перетаскивание, обновляем статус
+    if (draggedRequest && selectedRequest) {
+      console.log('Successfully assigned trial, updating status to:', draggedRequest.targetStatus);
+      // Статус уже обновлен из модального окна, не нужно вызывать здесь updateStatus
+    }
+    
+    // Очищаем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
+    setDraggedRequest(null);
   };
 
   if (isLoading) {
@@ -96,26 +135,38 @@ export default function SalesFunnelPage() {
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-4 gap-4">
               {statusColumns.map(column => (
-                <div key={column.id} className="bg-muted/50 rounded-lg p-4">
+                <div key={column.id} className="bg-muted/50 rounded-lg p-4 flex flex-col">
                   <h3 className="font-medium mb-4">{column.title}</h3>
                   <Droppable droppableId={column.id}>
-                    {(provided) => (
+                    {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="space-y-2 min-h-[200px]"
+                        className={`space-y-2 min-h-[300px] flex-1 rounded-md p-2 transition-colors duration-200 ${
+                          snapshot.isDraggingOver ? 'bg-primary/10' : 'bg-muted/30'
+                        }`}
+                        style={{ display: 'flex', flexDirection: 'column' }}
                       >
+                        {requestsByStatus[column.id].length === 0 && !snapshot.isDraggingOver && (
+                          <div className="text-center py-10 text-muted-foreground text-sm italic">
+                            Перетащите сюда карточку
+                          </div>
+                        )}
+                        
                         {requestsByStatus[column.id].map((request, index) => (
                           <Draggable
                             key={request.id}
                             draggableId={request.id.toString()}
                             index={index}
                           >
-                            {(provided) => (
+                            {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                className={`transition-transform ${
+                                  snapshot.isDragging ? 'scale-[1.02] shadow-lg' : ''
+                                }`}
                               >
                                 <TrialRequestCard
                                   request={request}

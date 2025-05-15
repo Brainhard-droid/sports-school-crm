@@ -36,14 +36,19 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   // При открытии модального окна, заполняем дату из запроса
   useEffect(() => {
     if (request && isOpen) {
+      // Сбрасываем предыдущие значения при каждом открытии
+      setScheduledDate("");
+      
       if (request.desiredDate) {
         const desiredDateObj = new Date(request.desiredDate);
+        console.log('Desired date from request:', desiredDateObj);
         
         // Извлекаем время из notes, если оно там есть (формат "TIME:16:30")
         let timeString = "09:00"; // Время по умолчанию
         const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
         if (timeMatch) {
           timeString = timeMatch[1];
+          console.log('Found time in notes:', timeString);
         }
         
         // Форматируем дату для datetime-local input
@@ -51,6 +56,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
         const month = String(desiredDateObj.getMonth() + 1).padStart(2, '0');
         const day = String(desiredDateObj.getDate()).padStart(2, '0');
         const formattedDate = `${year}-${month}-${day}T${timeString}`;
+        console.log('Formatted date for input:', formattedDate);
         
         setCustomDate(formattedDate);
         setUseCustomDate(true);
@@ -142,7 +148,14 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const handleSubmit = async () => {
     if (!request) return;
 
-    const finalDate = useCustomDate ? customDate : scheduledDate;
+    // Определяем, какую дату использовать
+    let finalDate: string;
+    if (useCustomDate) {
+      finalDate = customDate;
+    } else {
+      finalDate = scheduledDate;
+    }
+    
     if (!finalDate) {
       toast({
         title: "Выберите дату",
@@ -152,7 +165,9 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       return;
     }
 
+    console.log('Submitting with date:', finalDate);
     setIsLoading(true);
+    
     try {
       // Преобразуем строку даты в объект Date, сохраняя правильное местное время
       const dateTimeParts = finalDate.split('T');
@@ -168,6 +183,9 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
         timeParts[1]  // минута
       );
       
+      console.log('Updating status with date object:', scheduledDateObj);
+      
+      // Вызываем мутацию для обновления статуса с новой назначенной датой
       await updateStatus({
         id: request.id,
         status: "TRIAL_ASSIGNED",
@@ -179,7 +197,10 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
         description: "Информация успешно обновлена",
       });
 
-      onSuccess?.();
+      // После успешного обновления сообщаем родительскому компоненту
+      if (onSuccess) {
+        onSuccess();
+      }
       onClose();
     } catch (error) {
       console.error('Error assigning trial:', error);

@@ -19,19 +19,32 @@ export function useTrialRequests() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, scheduledDate }: { 
       id: number; 
-      status: keyof typeof TrialRequestStatus;
+      status: keyof typeof TrialRequestStatus | string;
       scheduledDate?: Date;
     }) => {
       console.log('Updating trial request status:', { id, status, scheduledDate });
+      
+      // Убедимся, что status - это строка в верхнем регистре
+      const normalizedStatus = status.toUpperCase();
+      
+      // Если статус "TRIAL_ASSIGNED", но дата не указана, выдаем ошибку
+      if (normalizedStatus === "TRIAL_ASSIGNED" && !scheduledDate) {
+        throw new Error('Для пробного занятия необходимо указать дату');
+      }
+      
       const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, { 
-        status: status.toUpperCase(),
+        status: normalizedStatus,
         scheduledDate: scheduledDate?.toISOString()
       });
+      
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Ошибка при обновлении статуса');
       }
-      return res.json();
+      
+      const data = await res.json();
+      console.log('Status updated successfully:', data);
+      return data;
     },
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
