@@ -10,6 +10,7 @@ import { DateSelection } from "@/components/trial-request/date-selection";
 import { SuccessModal } from "@/components/trial-request/success-modal";
 import { scheduleService, SessionInfo } from "@/services/ScheduleService";
 import { useToast } from "@/hooks/use-toast";
+import { PrivacyPolicyCheckbox } from "@/components/trial-request/privacy-policy-checkbox";
 
 /**
  * Страница запроса на пробное занятие.
@@ -96,8 +97,6 @@ export default function TrialRequestPage() {
                 sectionId={sectionId}
                 branchesForSection={branchesForSection}
                 branchesLoading={branchesLoading}
-                privacyAccepted={privacyAccepted}
-                setPrivacyAccepted={setPrivacyAccepted}
               />
 
               {schedule && <ScheduleInfoDisplay schedule={schedule} />}
@@ -110,6 +109,12 @@ export default function TrialRequestPage() {
                 onDateSelection={handleDateSelection}
                 onCustomDateChange={handleCustomDateChange}
                 setUseCustomDate={setUseCustomDate}
+              />
+              
+              {/* Чекбокс согласия на обработку персональных данных всегда в конце формы */}
+              <PrivacyPolicyCheckbox
+                privacyAccepted={privacyAccepted}
+                setPrivacyAccepted={setPrivacyAccepted}
               />
 
               <Button
