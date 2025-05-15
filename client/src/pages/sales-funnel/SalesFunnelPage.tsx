@@ -111,9 +111,26 @@ export default function SalesFunnelPage() {
   };
 
   const handleModalClose = () => {
+    console.log('Закрытие модального окна');
+    
+    // Проверяем, был ли драг перед открытием модального окна
+    if (draggedRequest) {
+      console.log('Был обнаружен драг, перемещаем карточку обратно, если необходимо');
+      console.log('Dragged request:', draggedRequest);
+      
+      if (draggedRequest.targetStatus === "TRIAL_ASSIGNED") {
+        // Если модальное окно было открыто после перетаскивания в колонку "Пробное назначено",
+        // но пользователь его закрыл без назначения, возвращаем карточку в исходную колонку
+        updateStatus({
+          id: draggedRequest.id, 
+          status: draggedRequest.sourceStatus
+        });
+      }
+    }
+    
+    // Сбрасываем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
-    // При закрытии модального окна без подтверждения, сбрасываем draggedRequest
     setDraggedRequest(null);
   };
 

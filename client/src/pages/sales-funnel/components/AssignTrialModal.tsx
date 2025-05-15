@@ -38,16 +38,46 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
     const extractRequestDateTime = () => {
       if (!request || !isOpen) return;
       
+      console.log('Открываем окно для запроса:', request);
+      
       // Сбрасываем предыдущие значения при каждом открытии
       setScheduledDate("");
-      setCustomDate("");
       
-      if (!request.desiredDate) return;
+      // Проверяем, есть ли уже назначенная дата
+      if (request.scheduledDate) {
+        // Если это редактирование уже назначенной даты
+        console.log('Найдена назначенная дата:', request.scheduledDate);
+        const scheduledDateObj = new Date(request.scheduledDate);
+        
+        // Форматируем дату для datetime-local input
+        const year = scheduledDateObj.getFullYear();
+        const month = String(scheduledDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(scheduledDateObj.getDate()).padStart(2, '0');
+        const hours = String(scheduledDateObj.getHours()).padStart(2, '0');
+        const minutes = String(scheduledDateObj.getMinutes()).padStart(2, '0');
+        
+        const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+        console.log('Форматированная назначенная дата:', formattedDate);
+        
+        setCustomDate(formattedDate);
+        setUseCustomDate(true);
+        return;
+      }
+      
+      // Если нет назначенной даты, проверяем желаемую дату
+      if (!request.desiredDate) {
+        console.log('Желаемая дата не указана, устанавливаем текущую дату');
+        const now = new Date();
+        const formattedCurrentDate = now.toISOString().slice(0, 16);
+        setCustomDate(formattedCurrentDate);
+        setUseCustomDate(true);
+        return;
+      }
       
       try {
         // Получаем дату из запроса и конвертируем ее в объект
         const desiredDateObj = new Date(request.desiredDate);
-        console.log('Desired date from request:', desiredDateObj);
+        console.log('Желаемая дата из запроса:', desiredDateObj);
         
         // Извлекаем время из notes, если оно там есть (формат "TIME:16:30")
         let timeString = "09:00"; // Время по умолчанию
@@ -55,7 +85,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
           const timeMatch = request.notes.match(/TIME:(\d{1,2}:\d{2})/);
           if (timeMatch) {
             timeString = timeMatch[1];
-            console.log('Found time in notes:', timeString);
+            console.log('Найдено время в примечаниях:', timeString);
           }
         }
         
@@ -64,13 +94,13 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
         const month = String(desiredDateObj.getMonth() + 1).padStart(2, '0');
         const day = String(desiredDateObj.getDate()).padStart(2, '0');
         const formattedDate = `${year}-${month}-${day}T${timeString}`;
-        console.log('Formatted date for input:', formattedDate);
+        console.log('Форматированная желаемая дата:', formattedDate);
         
         // Устанавливаем дату и помечаем, что используем пользовательский ввод
         setCustomDate(formattedDate);
         setUseCustomDate(true);
       } catch (error) {
-        console.error('Error parsing desired date:', error);
+        console.error('Ошибка при обработке желаемой даты:', error);
         // В случае ошибки, просто устанавливаем текущую дату
         const now = new Date();
         const formattedCurrentDate = now.toISOString().slice(0, 16);

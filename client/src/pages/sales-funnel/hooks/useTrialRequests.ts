@@ -38,6 +38,8 @@ export function useTrialRequests() {
     
     // Оптимистичное обновление данных
     onMutate: async (variables) => {
+      console.log('Оптимистичное обновление для заявки:', variables);
+      
       // Отменяем текущие запросы, чтобы не перезаписать оптимистичное обновление
       await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
 
@@ -48,11 +50,13 @@ export function useTrialRequests() {
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         return old.map(request => {
           if (request.id === variables.id) {
+            // Создаем обновленную копию запроса
             const updatedRequest: ExtendedTrialRequest = {
               ...request,
               status: variables.status as string,
               scheduledDate: variables.scheduledDate || null
             };
+            console.log('Оптимистично обновленная заявка:', updatedRequest);
             return updatedRequest;
           }
           return request;
@@ -68,10 +72,32 @@ export function useTrialRequests() {
       queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
     },
     
-    // В любом случае после завершения запрашиваем свежие данные
+    // По успешному выполнению обновляем кэш без полной перезагрузки данных
+    onSuccess: (data) => {
+      console.log('Мутация успешно выполнена с данными:', data);
+      
+      // Обновляем кэш с новыми данными, чтобы избежать перемещения карточек
+      queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
+        if (!old || !Array.isArray(old)) return old;
+        
+        return old.map(request => {
+          if (request.id === data.id) {
+            console.log(`Обновляем заявку ${request.id} с новым статусом ${data.status}`);
+            return data;
+          }
+          return request;
+        });
+      });
+    },
+    
+    // В любом случае после завершения запрашиваем свежие данные с задержкой
     onSettled: () => {
-      console.log('Refreshing trial requests data after mutation');
-      queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+      // Добавляем задержку перед запросом свежих данных,
+      // чтобы пользователь успел увидеть результат своего действия
+      setTimeout(() => {
+        console.log('Обновляем данные запросов после мутации');
+        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+      }, 2000); // Задержка 2 секунды
     },
   });
 

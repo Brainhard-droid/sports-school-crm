@@ -38,24 +38,36 @@ export class TrialRequestService {
     status: string, 
     scheduledDate?: Date
   ): Promise<ExtendedTrialRequest> {
-    console.log('Updating trial request status:', { id, status, scheduledDate });
+    console.log('Обновление статуса заявки:', { id, status, scheduledDate });
     
-    const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, { 
-      status: status.toUpperCase(),
-      scheduledDate: scheduledDate?.toISOString()
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || 'Ошибка при обновлении статуса');
+    try {
+      // Делаем PATCH запрос для обновления статуса
+      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, { 
+        status: status.toUpperCase(),
+        scheduledDate: scheduledDate?.toISOString()
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error('Ошибка при обновлении статуса', errorData);
+        throw new Error(errorData.message || 'Ошибка при обновлении статуса');
+      }
+      
+      // Получаем обновленную заявку
+      const updatedRequest = await res.json();
+      console.log('Статус успешно обновлен:', updatedRequest);
+      
+      // Обогащаем данные о филиале и секции
+      const enrichedRequest = await this.enrichRequestWithBranchAndSectionData(updatedRequest);
+      
+      return {
+        ...enrichedRequest,
+        status: status // Явно устанавливаем статус, чтобы гарантировать соответствие UI
+      };
+    } catch (error) {
+      console.error('Ошибка при обновлении статуса заявки:', error);
+      throw error;
     }
-    
-    const updatedRequest = await res.json();
-    console.log('Status updated successfully:', updatedRequest);
-    
-    // Обогащаем данные о филиале и секции
-    const enrichedRequest = await this.enrichRequestWithBranchAndSectionData(updatedRequest);
-    return enrichedRequest;
   }
   
   /**
