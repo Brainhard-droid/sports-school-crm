@@ -33,22 +33,30 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const { updateStatus } = useTrialRequests();
   const [suggestedDates, setSuggestedDates] = useState<{date: Date, timeLabel: string}[]>([]);
   
-  // При открытии модального окна, заполняем дату из запроса
+  // При открытии модального окна, заполняем дату из запроса (принцип SRP из SOLID)
   useEffect(() => {
-    if (request && isOpen) {
+    const extractRequestDateTime = () => {
+      if (!request || !isOpen) return;
+      
       // Сбрасываем предыдущие значения при каждом открытии
       setScheduledDate("");
+      setCustomDate("");
       
-      if (request.desiredDate) {
+      if (!request.desiredDate) return;
+      
+      try {
+        // Получаем дату из запроса и конвертируем ее в объект
         const desiredDateObj = new Date(request.desiredDate);
         console.log('Desired date from request:', desiredDateObj);
         
         // Извлекаем время из notes, если оно там есть (формат "TIME:16:30")
         let timeString = "09:00"; // Время по умолчанию
-        const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
-        if (timeMatch) {
-          timeString = timeMatch[1];
-          console.log('Found time in notes:', timeString);
+        if (request.notes) {
+          const timeMatch = request.notes.match(/TIME:(\d{1,2}:\d{2})/);
+          if (timeMatch) {
+            timeString = timeMatch[1];
+            console.log('Found time in notes:', timeString);
+          }
         }
         
         // Форматируем дату для datetime-local input
@@ -58,10 +66,21 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
         const formattedDate = `${year}-${month}-${day}T${timeString}`;
         console.log('Formatted date for input:', formattedDate);
         
+        // Устанавливаем дату и помечаем, что используем пользовательский ввод
         setCustomDate(formattedDate);
         setUseCustomDate(true);
+      } catch (error) {
+        console.error('Error parsing desired date:', error);
+        // В случае ошибки, просто устанавливаем текущую дату
+        const now = new Date();
+        const formattedCurrentDate = now.toISOString().slice(0, 16);
+        setCustomDate(formattedCurrentDate);
+        setUseCustomDate(true);
       }
-    }
+    };
+    
+    // Вызываем функцию для извлечения даты и времени
+    extractRequestDateTime();
   }, [request, isOpen]);
 
   // Загрузка расписания для выбранной секции и филиала

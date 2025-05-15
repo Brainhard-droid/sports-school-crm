@@ -20,6 +20,11 @@ const statusColumns: StatusColumn[] = [
   { id: "SIGNED", title: "Записан" },
 ];
 
+/**
+ * Компонент страницы воронки продаж
+ * Отвечает за отображение и взаимодействие с заявками на пробные занятия
+ * Следует принципу открытости/закрытости (OCP) из SOLID
+ */
 export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
@@ -28,8 +33,13 @@ export default function SalesFunnelPage() {
     id: number;
     sourceStatus: string;
     targetStatus: string;
+    request: ExtendedTrialRequest;
   } | null>(null);
 
+  /**
+   * Обработчик события окончания перетаскивания
+   * Управляет изменением статуса заявки при перетаскивании
+   */
   const handleDragEnd = (result: DropResult) => {
     // Проверяем, есть ли пункт назначения
     if (!result.destination) {
@@ -57,11 +67,14 @@ export default function SalesFunnelPage() {
       return;
     }
 
-    // Сохраняем информацию о перетаскивании
+    console.log('Found request:', request);
+
+    // Сохраняем информацию о перетаскивании для последующего использования
     setDraggedRequest({
       id: requestId,
       sourceStatus,
-      targetStatus
+      targetStatus,
+      request: { ...request } // Сохраняем копию запроса
     });
 
     // Если перетаскиваем в "Пробное назначено", открываем модальное окно
@@ -72,7 +85,7 @@ export default function SalesFunnelPage() {
       return;
     }
 
-    // Для остальных статусов просто обновляем статус
+    // Для остальных статусов сразу обновляем статус
     console.log('Updating status to:', targetStatus);
     updateStatus({ 
       id: requestId, 

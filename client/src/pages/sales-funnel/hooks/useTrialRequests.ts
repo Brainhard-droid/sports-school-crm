@@ -1,30 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
-import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
+import { ExtendedTrialRequest } from "@shared/schema";
+import { TrialRequestService } from "../services/TrialRequestService";
 
+/**
+ * Хук для работы с заявками на пробные занятия
+ * Следует принципу единственной ответственности (SRP) из SOLID
+ */
 export function useTrialRequests() {
   const queryClient = useQueryClient();
 
+  // Получение всех заявок
   const { data: requests, isLoading } = useQuery<ExtendedTrialRequest[]>({
     queryKey: ["/api/trial-requests"],
     queryFn: async () => {
-      console.log('Fetching trial requests...');
-      const res = await apiRequest("GET", "/api/trial-requests");
-      const data = await res.json();
-      console.log('Received trial requests:', data);
-      return data;
+      return await TrialRequestService.getAllTrialRequests();
     },
   });
 
+  // Мутация для обновления статуса заявки
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, scheduledDate }: { 
       id: number; 
-      status: keyof typeof TrialRequestStatus | string;
+      status: string;
       scheduledDate?: Date;
     }) => {
-      console.log('Updating trial request status:', { id, status, scheduledDate });
-      
-      // Убедимся, что status - это строка в верхнем регистре
+      // Проверка данных
       const normalizedStatus = status.toUpperCase();
       
       // Если статус "TRIAL_ASSIGNED", но дата не указана, выдаем ошибку
@@ -32,25 +32,19 @@ export function useTrialRequests() {
         throw new Error('Для пробного занятия необходимо указать дату');
       }
       
-      const res = await apiRequest("PATCH", `/api/trial-requests/${id}`, { 
-        status: normalizedStatus,
-        scheduledDate: scheduledDate?.toISOString()
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Ошибка при обновлении статуса');
-      }
-      
-      const data = await res.json();
-      console.log('Status updated successfully:', data);
-      return data;
+      // Делегируем логику обновления сервису
+      return await TrialRequestService.updateRequestStatus(id, normalizedStatus, scheduledDate);
     },
+    
+    // Оптимистичное обновление данных
     onMutate: async (variables) => {
+      // Отменяем текущие запросы, чтобы не перезаписать оптимистичное обновление
       await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
 
+      // Сохраняем предыдущее состояние для отката в случае ошибки
       const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
 
+      // Обновляем кэш оптимистично
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         return old.map(request => {
           if (request.id === variables.id) {
@@ -67,10 +61,16 @@ export function useTrialRequests() {
 
       return { previousRequests };
     },
+    
+    // Если произошла ошибка, восстанавливаем предыдущее состояние
     onError: (_, __, context) => {
+      console.error('Error updating trial request status, restoring previous state');
       queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
     },
+    
+    // В любом случае после завершения запрашиваем свежие данные
     onSettled: () => {
+      console.log('Refreshing trial requests data after mutation');
       queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
     },
   });
