@@ -88,11 +88,18 @@ export default function SalesFunnelPage() {
       request: { ...request } // Сохраняем копию запроса
     });
 
-    // Если перетаскиваем в "Пробное назначено", открываем модальное окно
+    // Обрабатываем различные целевые статусы
     if (targetStatus === "TRIAL_ASSIGNED") {
+      // Для "Пробное назначено" открываем модальное окно назначения даты
       console.log('Opening assign trial modal for request:', request);
       setSelectedRequest(request);
       setShowAssignTrialModal(true);
+      return;
+    } else if (targetStatus === "REFUSED") {
+      // Для "Отказ" открываем модальное окно указания причины
+      console.log('Opening refuse modal for request:', request);
+      setSelectedRequest(request);
+      setShowRefuseModal(true);
       return;
     }
 
@@ -120,6 +127,16 @@ export default function SalesFunnelPage() {
     setSelectedRequest(request);
     setShowAssignTrialModal(true);
   };
+  
+  /**
+   * Обработчик отказа от заявки
+   * Открывает модальное окно указания причины отказа
+   */
+  const handleRefuse = (request: ExtendedTrialRequest) => {
+    console.log('Refusing request:', request);
+    setSelectedRequest(request);
+    setShowRefuseModal(true);
+  };
 
   const handleModalClose = () => {
     console.log('Закрытие модального окна');
@@ -129,9 +146,9 @@ export default function SalesFunnelPage() {
       console.log('Был обнаружен драг, перемещаем карточку обратно, если необходимо');
       console.log('Dragged request:', draggedRequest);
       
-      if (draggedRequest.targetStatus === "TRIAL_ASSIGNED") {
-        // Если модальное окно было открыто после перетаскивания в колонку "Пробное назначено",
-        // но пользователь его закрыл без назначения, возвращаем карточку в исходную колонку
+      // Если модальное окно было открыто после перетаскивания,
+      // но пользователь его закрыл без действия, возвращаем карточку в исходную колонку
+      if (draggedRequest.targetStatus === "TRIAL_ASSIGNED" || draggedRequest.targetStatus === "REFUSED") {
         updateStatus({
           id: draggedRequest.id, 
           status: draggedRequest.sourceStatus
@@ -142,19 +159,21 @@ export default function SalesFunnelPage() {
     // Сбрасываем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
+    setShowRefuseModal(false);
     setDraggedRequest(null);
   };
 
   const handleSuccess = () => {
     // Если было перетаскивание, обновляем статус
     if (draggedRequest && selectedRequest) {
-      console.log('Successfully assigned trial, updating status to:', draggedRequest.targetStatus);
+      console.log('Successfully processed request, updated status to:', draggedRequest.targetStatus);
       // Статус уже обновлен из модального окна, не нужно вызывать здесь updateStatus
     }
     
     // Очищаем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
+    setShowRefuseModal(false);
     setDraggedRequest(null);
   };
 
@@ -213,6 +232,7 @@ export default function SalesFunnelPage() {
                                   request={request}
                                   onEdit={handleEdit}
                                   onAssignTrial={handleAssignTrial}
+                                  onRefuse={handleRefuse}
                                 />
                               </div>
                             )}
@@ -242,6 +262,15 @@ export default function SalesFunnelPage() {
         <AssignTrialModal
           request={selectedRequest}
           isOpen={showAssignTrialModal}
+          onClose={handleModalClose}
+          onSuccess={handleSuccess}
+        />
+      )}
+      
+      {selectedRequest && showRefuseModal && (
+        <RefuseTrialModal
+          request={selectedRequest}
+          isOpen={showRefuseModal}
           onClose={handleModalClose}
           onSuccess={handleSuccess}
         />
