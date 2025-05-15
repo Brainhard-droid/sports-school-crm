@@ -32,20 +32,38 @@ export class TrialRequestService {
   
   /**
    * Обновляет статус заявки
+   * @param id - Идентификатор заявки
+   * @param status - Новый статус
+   * @param scheduledDate - Дата назначенного пробного занятия (опционально)
+   * @param refuseReason - Причина отказа (опционально, только для статуса REFUSED)
+   * @returns Обновленную заявку с данными о филиале и секции
    */
   static async updateRequestStatus(
     id: number, 
     status: string, 
-    scheduledDate?: Date
+    scheduledDate?: Date,
+    refuseReason?: string
   ): Promise<ExtendedTrialRequest> {
-    console.log('Обновление статуса заявки:', { id, status, scheduledDate });
+    console.log('Обновление статуса заявки:', { id, status, scheduledDate, refuseReason });
     
     try {
+      // Формируем данные запроса
+      const requestData: any = { 
+        status: status.toUpperCase()
+      };
+      
+      // Добавляем дату пробного занятия, если указана
+      if (scheduledDate) {
+        requestData.scheduledDate = scheduledDate.toISOString();
+      }
+      
+      // Добавляем причину отказа в notes, если указана
+      if (refuseReason && status.toUpperCase() === 'REFUSED') {
+        requestData.notes = refuseReason;
+      }
+      
       // Делаем PATCH запрос для обновления статуса
-      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, { 
-        status: status.toUpperCase(),
-        scheduledDate: scheduledDate?.toISOString()
-      });
+      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, requestData);
       
       if (!res.ok) {
         const errorData = await res.json();

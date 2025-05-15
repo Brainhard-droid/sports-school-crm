@@ -19,21 +19,27 @@ export function useTrialRequests() {
 
   // Мутация для обновления статуса заявки
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, scheduledDate }: { 
+    mutationFn: async ({ id, status, scheduledDate, refuseReason }: { 
       id: number; 
       status: string;
       scheduledDate?: Date;
+      refuseReason?: string;
     }) => {
       // Проверка данных
       const normalizedStatus = status.toUpperCase();
       
-      // Если статус "TRIAL_ASSIGNED", но дата не указана, выдаем ошибку
+      // Проверки в зависимости от статуса
       if (normalizedStatus === "TRIAL_ASSIGNED" && !scheduledDate) {
         throw new Error('Для пробного занятия необходимо указать дату');
       }
       
       // Делегируем логику обновления сервису
-      return await TrialRequestService.updateRequestStatus(id, normalizedStatus, scheduledDate);
+      return await TrialRequestService.updateRequestStatus(
+        id, 
+        normalizedStatus, 
+        scheduledDate,
+        refuseReason
+      );
     },
     
     // Оптимистичное обновление данных

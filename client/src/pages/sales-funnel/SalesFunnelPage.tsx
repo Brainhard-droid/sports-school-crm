@@ -6,6 +6,7 @@ import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
+import { RefuseTrialModal } from "./components/RefuseTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 
 type StatusColumn = {
@@ -25,10 +26,20 @@ const statusColumns: StatusColumn[] = [
  * Отвечает за отображение и взаимодействие с заявками на пробные занятия
  * Следует принципу открытости/закрытости (OCP) из SOLID
  */
+/**
+ * Компонент страницы воронки продаж
+ * Отвечает за отображение и взаимодействие с заявками на пробные занятия
+ * Следует принципу открытости/закрытости (OCP) из SOLID
+ */
 export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
+  
+  // Состояния для модальных окон и выбранной заявки
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
+  const [showRefuseModal, setShowRefuseModal] = useState(false);
+  
+  // Состояние для отслеживания перетаскивания
   const [draggedRequest, setDraggedRequest] = useState<{
     id: number;
     sourceStatus: string;
