@@ -128,8 +128,69 @@ export default function TrialRequestPage() {
                   // Принудительно устанавливаем значения
                   form.setValue('consentToDataProcessing', privacyAccepted);
                   
-                  // Упрощаем код, просто вызываем handleSubmit напрямую
-                  // Так как форма может сама провалидировать данные
+                  // Проверяем все обязательные поля
+                  if (!data.childName) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите имя ребенка",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.childAge) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите возраст ребенка",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.parentName) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите имя родителя",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.parentPhone || data.parentPhone === '+7') {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Введите телефон родителя",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.sectionId) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Выберите секцию",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!data.branchId) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Выберите отделение",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!privacyAccepted) {
+                    toast({
+                      title: "Ошибка отправки",
+                      description: "Для отправки заявки необходимо согласие на обработку персональных данных",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
                   
                   // Прямой вызов обработчика отправки формы без валидации
                   console.log('Вызываем handleSubmit напрямую');
