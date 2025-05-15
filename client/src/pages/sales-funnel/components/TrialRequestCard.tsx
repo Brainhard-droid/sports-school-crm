@@ -40,7 +40,7 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
               {/* Всегда показываем пункт меню "Назначить/Перенести пробное" для всех типов заявок */}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onAssignTrial(request)}>
-                {request.status === TrialRequestStatus.TRIAL_ASSIGNED
+                {request.status === "TRIAL_ASSIGNED"
                   ? "Перенести пробное"
                   : "Назначить пробное"}
               </DropdownMenuItem>

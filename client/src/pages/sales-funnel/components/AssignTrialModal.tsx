@@ -175,7 +175,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       });
 
       toast({
-        title: request.status === TrialRequestStatus.TRIAL_ASSIGNED ? "Пробное занятие перенесено" : "Пробное занятие назначено",
+        title: request.status === "TRIAL_ASSIGNED" ? "Пробное занятие перенесено" : "Пробное занятие назначено",
         description: "Информация успешно обновлена",
       });
 
@@ -198,7 +198,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       <DialogContent className="w-[90vw] max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {request?.status === TrialRequestStatus.TRIAL_ASSIGNED
+            {request?.status === "TRIAL_ASSIGNED"
               ? "Перенести пробное занятие"
               : "Назначить пробное занятие"}
           </DialogTitle>
