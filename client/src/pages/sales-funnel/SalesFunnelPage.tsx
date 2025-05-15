@@ -38,7 +38,7 @@ export default function SalesFunnelPage() {
     if (sourceStatus === newStatus) return;
 
     // Если перетаскиваем в "Пробное назначено", открываем модальное окно
-    if (newStatus === TrialRequestStatus.TRIAL_ASSIGNED) {
+    if (newStatus === "TRIAL_ASSIGNED") {
       const request = requests.find(r => r.id === requestId);
       if (request) {
         setSelectedRequest(request);

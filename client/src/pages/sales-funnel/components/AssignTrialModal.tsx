@@ -32,6 +32,31 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
   const [isLoading, setIsLoading] = useState(false);
   const { updateStatus } = useTrialRequests();
   const [suggestedDates, setSuggestedDates] = useState<{date: Date, timeLabel: string}[]>([]);
+  
+  // При открытии модального окна, заполняем дату из запроса
+  useEffect(() => {
+    if (request && isOpen) {
+      if (request.desiredDate) {
+        const desiredDateObj = new Date(request.desiredDate);
+        
+        // Извлекаем время из notes, если оно там есть (формат "TIME:16:30")
+        let timeString = "09:00"; // Время по умолчанию
+        const timeMatch = request.notes?.match(/TIME:(\d{1,2}:\d{2})/);
+        if (timeMatch) {
+          timeString = timeMatch[1];
+        }
+        
+        // Форматируем дату для datetime-local input
+        const year = desiredDateObj.getFullYear();
+        const month = String(desiredDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(desiredDateObj.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}T${timeString}`;
+        
+        setCustomDate(formattedDate);
+        setUseCustomDate(true);
+      }
+    }
+  }, [request, isOpen]);
 
   // Загрузка расписания для выбранной секции и филиала
   const { data: branchSchedule, isLoading: scheduleLoading } = useQuery({
@@ -145,7 +170,7 @@ export function AssignTrialModal({ request, isOpen, onClose, onSuccess }: Assign
       
       await updateStatus({
         id: request.id,
-        status: TrialRequestStatus.TRIAL_ASSIGNED,
+        status: "TRIAL_ASSIGNED",
         scheduledDate: scheduledDateObj
       });
 
