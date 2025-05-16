@@ -108,6 +108,7 @@ export const trialRequests = pgTable("trial_requests", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   notes: text("notes"),
+  archived: boolean("archived").default(false),
 });
 
 export const branches = pgTable("branches", {

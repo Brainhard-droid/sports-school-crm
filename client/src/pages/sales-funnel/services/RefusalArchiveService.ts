@@ -12,7 +12,19 @@ export class RefusalArchiveService {
    * Проверяет, является ли заявка архивированной
    */
   static isArchived(request: ExtendedTrialRequest): boolean {
-    return request.notes?.includes(this.ARCHIVE_MARKER) || false;
+    // Проверяем наличие флага archived (имеет приоритет)
+    if (request.archived === true) return true;
+    
+    // Проверяем текстовые маркеры архивации в примечаниях
+    if (!request.notes) return false;
+    
+    const notesLower = request.notes.toLowerCase();
+    return (
+      notesLower.includes(this.ARCHIVE_MARKER.toLowerCase()) || 
+      notesLower.includes('архивирована') ||
+      notesLower.includes('заархивирована') ||
+      notesLower.includes('[архив')
+    );
   }
 
   /**
