@@ -56,7 +56,7 @@ export default function SalesFunnelPage() {
 
   /**
    * Обработчик события окончания перетаскивания
-   * Управляет изменением статуса заявки при перетаскивании
+   * Управляет изменением статуса заявки при перетаскивании и обеспечивает плавный UI
    */
   const handleDragEnd = (result: DropResult) => {
     // Проверяем, есть ли пункт назначения
@@ -87,27 +87,44 @@ export default function SalesFunnelPage() {
 
     console.log('Found request:', request);
 
+    // Создаем копию запроса для оптимистичного UI-обновления
+    const requestCopy = { ...request };
+    
     // Сохраняем информацию о перетаскивании для последующего использования
     setDraggedRequest({
       id: requestId,
       sourceStatus,
       targetStatus,
-      request: { ...request } // Сохраняем копию запроса
+      request: requestCopy
     });
 
     // Если перетаскиваем в "Пробное назначено", открываем модальное окно назначения
     if (targetStatus === "TRIAL_ASSIGNED") {
       console.log('Opening assign trial modal for request:', request);
-      setSelectedRequest(request);
+      setSelectedRequest(requestCopy);
       setShowAssignTrialModal(true);
+      
+      // Оптимистично обновляем UI, меняя статус в карточке
+      // Это позволит карточке остаться в целевой колонке до завершения действия
+      updateStatus({ 
+        id: requestId, 
+        status: targetStatus
+      });
       return;
     }
     
     // Если перетаскиваем в "Отказ", открываем модальное окно для указания причин отказа
     if (targetStatus === "REFUSED") {
       console.log('Opening reject trial modal for request:', request);
-      setSelectedRequest(request);
+      setSelectedRequest(requestCopy);
       setShowRejectTrialModal(true);
+      
+      // Оптимистично обновляем UI, меняя статус в карточке
+      // Это позволит карточке остаться в целевой колонке до завершения действия
+      updateStatus({ 
+        id: requestId, 
+        status: targetStatus
+      });
       return;
     }
 

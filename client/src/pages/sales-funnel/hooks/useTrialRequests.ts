@@ -69,25 +69,28 @@ export function useTrialRequests() {
       return updatedRequest;
     },
     
-    // Оптимистичное обновление данных
+    // Оптимистичное обновление данных - мгновенное обновление UI
     onMutate: async (variables) => {
       console.log('Оптимистичное обновление для заявки:', variables);
       
-      // Отменяем текущие запросы, чтобы не перезаписать оптимистичное обновление
+      // Немедленно отменяем текущие запросы, чтобы не перезаписать оптимистичное обновление
       await queryClient.cancelQueries({ queryKey: ["/api/trial-requests"] });
 
       // Сохраняем предыдущее состояние для отката в случае ошибки
       const previousRequests = queryClient.getQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"]);
 
-      // Обновляем кэш оптимистично
+      // Обновляем кэш оптимистично и мгновенно
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
+        if (!old || !Array.isArray(old)) return old;
+        
         return old.map(request => {
           if (request.id === variables.id) {
-            // Создаем обновленную копию запроса
+            // Создаем обновленную копию запроса со всеми необходимыми полями
             const updatedRequest: ExtendedTrialRequest = {
               ...request,
               status: variables.status as string,
-              scheduledDate: variables.scheduledDate || null
+              scheduledDate: variables.scheduledDate || null,
+              notes: variables.notes || request.notes
             };
             console.log('Оптимистично обновленная заявка:', updatedRequest);
             return updatedRequest;
@@ -99,39 +102,46 @@ export function useTrialRequests() {
       return { previousRequests };
     },
     
-    // Если произошла ошибка, восстанавливаем предыдущее состояние
-    onError: (_, __, context) => {
-      console.error('Error updating trial request status, restoring previous state');
-      queryClient.setQueryData(["/api/trial-requests"], context?.previousRequests);
+    // Обработка ошибок с восстановлением предыдущего состояния
+    onError: (error, variables, context) => {
+      console.error('Ошибка при обновлении статуса заявки:', error);
+      
+      // Восстанавливаем предыдущее состояние
+      if (context?.previousRequests) {
+        queryClient.setQueryData(["/api/trial-requests"], context.previousRequests);
+      }
+      
+      // Показываем ошибку в консоли для отладки
+      console.error(`Не удалось обновить заявку #${variables.id} на статус ${variables.status}`);
     },
     
     // По успешному выполнению обновляем кэш без полной перезагрузки данных
     onSuccess: (data) => {
       console.log('Мутация успешно выполнена с данными:', data);
       
-      // Обновляем кэш с новыми данными, чтобы избежать перемещения карточек
+      // Мгновенно обновляем кэш с новыми данными, сохраняя связанные объекты
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         if (!old || !Array.isArray(old)) return old;
         
         return old.map(request => {
           if (request.id === data.id) {
             console.log(`Обновляем заявку ${request.id} с новым статусом ${data.status}`);
-            return data;
+            // Сохраняем важные связанные объекты, которые могут отсутствовать в ответе API
+            return { 
+              ...data,
+              section: request.section || data.section,
+              branch: request.branch || data.branch
+            };
           }
           return request;
         });
       });
-    },
-    
-    // В любом случае после завершения запрашиваем свежие данные с задержкой
-    onSettled: () => {
-      // Добавляем задержку перед запросом свежих данных,
-      // чтобы пользователь успел увидеть результат своего действия
+      
+      // Через короткое время обновляем данные из базы
       setTimeout(() => {
-        console.log('Обновляем данные запросов после мутации');
         queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
-      }, 2000); // Задержка 2 секунды
-    },
+      }, 300); // Быстрая задержка для обновления
+    }
   });
 
   return {
