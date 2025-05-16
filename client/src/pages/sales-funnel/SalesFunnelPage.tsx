@@ -6,6 +6,7 @@ import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
+import { RejectTrialModal } from "./components/RejectTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 
 type StatusColumn = {
@@ -29,6 +30,7 @@ export default function SalesFunnelPage() {
   const { requests = [], isLoading, updateStatus } = useTrialRequests();
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
+  const [showRejectTrialModal, setShowRejectTrialModal] = useState(false);
   const [draggedRequest, setDraggedRequest] = useState<{
     id: number;
     sourceStatus: string;
@@ -77,11 +79,19 @@ export default function SalesFunnelPage() {
       request: { ...request } // Сохраняем копию запроса
     });
 
-    // Если перетаскиваем в "Пробное назначено", открываем модальное окно
+    // Если перетаскиваем в "Пробное назначено", открываем модальное окно назначения
     if (targetStatus === "TRIAL_ASSIGNED") {
       console.log('Opening assign trial modal for request:', request);
       setSelectedRequest(request);
       setShowAssignTrialModal(true);
+      return;
+    }
+    
+    // Если перетаскиваем в "Отказ", открываем модальное окно для указания причин отказа
+    if (targetStatus === "REFUSED") {
+      console.log('Opening reject trial modal for request:', request);
+      setSelectedRequest(request);
+      setShowRejectTrialModal(true);
       return;
     }
 
@@ -109,6 +119,16 @@ export default function SalesFunnelPage() {
     setSelectedRequest(request);
     setShowAssignTrialModal(true);
   };
+  
+  /**
+   * Обработчик отказа от пробного занятия
+   * Открывает модальное окно с формой для указания причин отказа
+   */
+  const handleReject = (request: ExtendedTrialRequest) => {
+    console.log('Rejecting trial request:', request);
+    setSelectedRequest(request);
+    setShowRejectTrialModal(true);
+  };
 
   const handleModalClose = () => {
     console.log('Закрытие модального окна');
@@ -118,8 +138,8 @@ export default function SalesFunnelPage() {
       console.log('Был обнаружен драг, перемещаем карточку обратно, если необходимо');
       console.log('Dragged request:', draggedRequest);
       
-      if (draggedRequest.targetStatus === "TRIAL_ASSIGNED") {
-        // Если модальное окно было открыто после перетаскивания в колонку "Пробное назначено",
+      if (draggedRequest.targetStatus === "TRIAL_ASSIGNED" || draggedRequest.targetStatus === "REFUSED") {
+        // Если модальное окно было открыто после перетаскивания в колонку "Пробное назначено" или "Отказ",
         // но пользователь его закрыл без назначения, возвращаем карточку в исходную колонку
         updateStatus({
           id: draggedRequest.id, 
@@ -131,6 +151,7 @@ export default function SalesFunnelPage() {
     // Сбрасываем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
+    setShowRejectTrialModal(false);
     setDraggedRequest(null);
   };
 
@@ -202,6 +223,7 @@ export default function SalesFunnelPage() {
                                   request={request}
                                   onEdit={handleEdit}
                                   onAssignTrial={handleAssignTrial}
+                                  onReject={handleReject}
                                 />
                               </div>
                             )}
@@ -231,6 +253,15 @@ export default function SalesFunnelPage() {
         <AssignTrialModal
           request={selectedRequest}
           isOpen={showAssignTrialModal}
+          onClose={handleModalClose}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {selectedRequest && showRejectTrialModal && (
+        <RejectTrialModal
+          request={selectedRequest}
+          isOpen={showRejectTrialModal}
           onClose={handleModalClose}
           onSuccess={handleSuccess}
         />
