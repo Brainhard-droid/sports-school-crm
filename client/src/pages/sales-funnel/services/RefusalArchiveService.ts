@@ -22,6 +22,9 @@ export class RefusalArchiveService {
       // Проверяем только отказы
       if (request.status !== TrialRequestStatus.REFUSED) return false;
       
+      // Проверяем, что заявка не архивирована
+      if (request.notes && request.notes.includes('архивирована')) return false;
+      
       // Проверяем дату обновления
       if (request.updatedAt) {
         const updatedDate = new Date(request.updatedAt);
@@ -69,6 +72,53 @@ export class RefusalArchiveService {
   }
   
   /**
+   * Восстанавливает заявку из архива
+   * @param requestId ID заявки
+   * @returns True, если восстановление успешно
+   */
+  static async restoreFromArchive(requestId: number): Promise<boolean> {
+    try {
+      console.log(`Восстановление заявки #${requestId} из архива`);
+      
+      // Получаем текущую заявку
+      const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
+      
+      if (!response.ok) {
+        throw new Error('Не удалось получить заявку');
+      }
+      
+      const request = await response.json();
+      
+      // Удаляем метку архивирования из примечаний
+      let notes = request.notes || '';
+      notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '').trim();
+      
+      // Если примечания были, добавляем метку восстановления
+      if (notes) {
+        notes += ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
+      } else {
+        notes = `Восстановлена из архива ${new Date().toLocaleDateString()}`;
+      }
+      
+      // Обновляем заявку
+      const updateResponse = await apiRequest(
+        "PATCH", 
+        `/api/trial-requests/${requestId}/status`,
+        {
+          status: TrialRequestStatus.REFUSED,
+          notes: notes,
+          archived: false
+        }
+      );
+      
+      return updateResponse.ok;
+    } catch (error) {
+      console.error('Ошибка при восстановлении заявки из архива:', error);
+      return false;
+    }
+  }
+  
+  /**
    * Архивирует список заявок
    * @param requests Список заявок для архивирования
    * @returns Количество успешно архивированных заявок
@@ -80,7 +130,7 @@ export class RefusalArchiveService {
     
     for (const request of requests) {
       // Передаем существующие примечания, чтобы сохранить информацию о причинах отказа
-      const success = await this.archiveRefusal(request.id, request.notes);
+      const success = await this.archiveRefusal(request.id, request.notes || undefined);
       if (success) successCount++;
     }
     

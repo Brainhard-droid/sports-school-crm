@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useTrialRequests } from "./hooks/useTrialRequests";
-import { Loader2, PieChart, Clock } from "lucide-react";
+import { Loader2, Archive, Clock } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
@@ -10,6 +10,7 @@ import { RejectTrialModal } from "./components/RejectTrialModal";
 import { RefusalStatsModal } from "./components/RefusalStatsModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -33,7 +34,8 @@ export default function SalesFunnelPage() {
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
   const [showRejectTrialModal, setShowRejectTrialModal] = useState(false);
-  const [showRefusalStatsModal, setShowRefusalStatsModal] = useState(false);
+  // Используем useLocation для перехода на страницу архива
+  const [_, setLocation] = useLocation();
   const [draggedRequest, setDraggedRequest] = useState<{
     id: number;
     sourceStatus: string;
@@ -239,17 +241,15 @@ export default function SalesFunnelPage() {
               </CardDescription>
             )}
           </div>
-          {refusedRequests.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-1"
-              onClick={() => setShowRefusalStatsModal(true)}
-            >
-              <PieChart className="h-4 w-4" />
-              Статистика отказов
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => setLocation('/refusal-archive')}
+          >
+            <Archive className="h-4 w-4" />
+            Архив отказов
+          </Button>
         </CardHeader>
         <CardContent>
           <DragDropContext onDragEnd={handleDragEnd}>
