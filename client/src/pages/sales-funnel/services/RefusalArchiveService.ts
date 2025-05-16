@@ -6,6 +6,21 @@ import { ExtendedTrialRequest } from "@shared/schema";
  * Следует принципу единственной ответственности (SRP) из SOLID
  */
 export class RefusalArchiveService {
+  // Маркер для определения архивированных заявок
+  static readonly ARCHIVE_MARKER = "[Заявка автоматически архивирована";
+  
+  /**
+   * Проверяет, архивирована ли заявка
+   * @param request Заявка для проверки
+   * @returns true, если заявка архивирована
+   */
+  static isArchived(request: ExtendedTrialRequest): boolean {
+    return !!request.notes && (
+      request.notes.includes(this.ARCHIVE_MARKER) || 
+      request.notes.includes('архивирована')
+    );
+  }
+  
   /**
    * Фильтрует заявки старше указанного количества дней
    * @param requests Список заявок
@@ -34,7 +49,7 @@ export class RefusalArchiveService {
     try {
       // Формируем обновленные примечания с меткой об архивировании
       const currentDate = new Date().toLocaleDateString();
-      const archiveNote = `[Заявка автоматически архивирована ${currentDate}]`;
+      const archiveNote = `${this.ARCHIVE_MARKER} ${currentDate}]`;
       
       // Сохраняем старые примечания, если они есть
       const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;

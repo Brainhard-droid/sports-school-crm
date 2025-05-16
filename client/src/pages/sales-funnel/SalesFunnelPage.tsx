@@ -11,6 +11,7 @@ import { RejectTrialModal } from "./components/RejectTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { RefusalArchiveService } from "./services/RefusalArchiveService";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -52,11 +53,8 @@ export default function SalesFunnelPage() {
       // Отбираем только неархивированные отказы для отображения
       const refusals = requests.filter(
         request => request.status === TrialRequestStatus.REFUSED &&
-                  // Проверяем, не архивирована ли заявка (используем более точную проверку)
-                  !(request.notes && (
-                    request.notes.includes('архивирована') || 
-                    request.notes.includes('Заявка автоматически архивирована')
-                  ))
+                  // Используем сервис для проверки, не архивирована ли заявка
+                  !RefusalArchiveService.isArchived(request)
       );
       setRefusedRequests(refusals);
     }
@@ -152,11 +150,8 @@ export default function SalesFunnelPage() {
       
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
-        // Заявка считается архивированной, если в notes содержится текст "архивирована"
-        const isArchived = r.notes && (
-          r.notes.includes('архивирована') || 
-          r.notes.includes('Заявка автоматически архивирована')
-        );
+        // Используем метод сервиса для проверки архивации
+        const isArchived = RefusalArchiveService.isArchived(r);
         return statusMatches && !isArchived;
       }
       

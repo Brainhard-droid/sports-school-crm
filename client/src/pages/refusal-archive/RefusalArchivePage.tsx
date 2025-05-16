@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,17 +64,20 @@ export default function RefusalArchivePage() {
         });
         
         // Обновляем данные с сервера
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
         
-        // Обновляем локальные списки
+        // Оптимистично обновляем локальные данные без ожидания загрузки с сервера
+        // Это улучшает отзывчивость интерфейса, следуя принципу OCP из SOLID
+        const archivedRequest = {
+          ...request,
+          notes: `${request.notes || ''} [Заявка автоматически архивирована ${new Date().toLocaleDateString()}]`
+        };
+        
         setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
-        setArchivedRefusals(prev => [
-          {
-            ...request,
-            notes: `${request.notes || ''} [Заявка автоматически архивирована ${new Date().toLocaleDateString()}]`
-          },
-          ...prev
-        ]);
+        setArchivedRefusals(prev => [archivedRequest, ...prev]);
+        
+        // Обновляем статистику
+        collectReasonStats([...activeRefusals.filter(r => r.id !== request.id), ...archivedRefusals, archivedRequest]);
       } else {
         toast({
           title: "Ошибка",
@@ -113,7 +116,21 @@ export default function RefusalArchivePage() {
       // Обновляем данные запросов, если были архивированы заявки
       if (archivedCount > 0) {
         // Обновляем данные с сервера
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        
+        // Оптимистично обновляем локальные данные
+        // Создаем копии заявок с архивными метками
+        const newArchivedRequests = activeRefusals.map(request => ({
+          ...request,
+          notes: `${request.notes || ''} [Заявка автоматически архивирована ${new Date().toLocaleDateString()}]`
+        }));
+        
+        // Обновляем списки
+        setActiveRefusals([]);
+        setArchivedRefusals(prev => [...newArchivedRequests, ...prev]);
+        
+        // Обновляем статистику с учетом новых архивированных заявок
+        collectReasonStats([...archivedRefusals, ...newArchivedRequests]);
       }
     } catch (error) {
       console.error('Ошибка при архивировании:', error);
@@ -143,15 +160,21 @@ export default function RefusalArchivePage() {
         });
         
         // Обновляем данные запросов
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
         
-        // Обновляем локальные списки
-        setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
-        setActiveRefusals(prev => [{
+        // Создаем восстановленную версию заявки для оптимистичного обновления UI
+        const restoredRequest = {
           ...request,
           notes: request.notes?.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
             .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`
-        }, ...prev]);
+        };
+        
+        // Обновляем локальные списки
+        setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
+        setActiveRefusals(prev => [restoredRequest, ...prev]);
+        
+        // Обновляем статистику с учетом восстановленной заявки
+        collectReasonStats([...archivedRefusals.filter(r => r.id !== request.id), ...activeRefusals, restoredRequest]);
       } else {
         toast({
           title: "Ошибка",
@@ -171,8 +194,8 @@ export default function RefusalArchivePage() {
     }
   };
 
-  // Обрабатываем список отказов при их изменении
-  useEffect(() => {
+  // Обработка списка отказов и обновление статистики
+  const processRefusals = useCallback(() => {
     if (isLoading || !requests) return;
     
     console.log('Обрабатываем список отказов для архива');
@@ -180,13 +203,13 @@ export default function RefusalArchivePage() {
     // Фильтруем только отказы
     const refusals = requests.filter(r => r.status === TrialRequestStatus.REFUSED);
     
-    // Разделяем на активные и архивированные
+    // Разделяем на активные и архивированные с помощью сервиса
     const active: ExtendedTrialRequest[] = [];
     const archived: ExtendedTrialRequest[] = [];
     
     refusals.forEach(request => {
-      // Отказ считается архивированным, если в примечаниях есть метка "архивирована"
-      const isArchived = request.notes && request.notes.includes('архивирована');
+      // Используем сервис для проверки архивации
+      const isArchived = RefusalArchiveService.isArchived(request);
       
       if (isArchived) {
         archived.push(request);
@@ -198,13 +221,19 @@ export default function RefusalArchivePage() {
     // Отбираем старые отказы для архивирования
     const oldRefusalsFiltered = RefusalArchiveService.filterOldRefusals(active, 5);
     
+    // Обновляем состояние
     setActiveRefusals(active);
     setArchivedRefusals(archived);
     setOldRefusals(oldRefusalsFiltered);
     
     // Собираем статистику по причинам отказов
-    collectReasonStats(refusals);
+    collectReasonStats([...active, ...archived]);
   }, [requests, isLoading]);
+
+  // Обрабатываем список отказов при изменении
+  useEffect(() => {
+    processRefusals();
+  }, [processRefusals]);
   
   // Функция для сбора статистики по причинам отказов
   const collectReasonStats = (requests: ExtendedTrialRequest[]) => {
