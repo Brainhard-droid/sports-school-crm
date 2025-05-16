@@ -150,18 +150,22 @@ export class TrialRequestController {
     if (scheduledDate) {
       updateData.scheduledDate = new Date(scheduledDate);
     }
-
-    // Обработка архивации и примечаний
-    if (archived !== undefined) {
-      updateData.archived = archived;
+    
+    // Обработка архивирования и примечаний
+    if (archived === true) {
+      // Если заявка архивируется, добавляем отметку в примечания
+      const archiveNote = `Заявка автоматически архивирована ${new Date().toLocaleDateString()}`;
       
-      if (archived === true) {
-        const archiveNote = `[Заявка автоматически архивирована ${new Date().toLocaleDateString()}]`;
-        updateData.notes = notes ? `${notes} ${archiveNote}` : 
-                          existingRequest.notes ? `${existingRequest.notes} ${archiveNote}` : 
-                          archiveNote;
+      // Если уже есть примечания, добавляем к ним; иначе создаем новые
+      if (notes) {
+        updateData.notes = `${notes} [${archiveNote}]`;
+      } else if (existingRequest.notes) {
+        updateData.notes = `${existingRequest.notes} [${archiveNote}]`;
+      } else {
+        updateData.notes = archiveNote;
       }
     } else if (notes !== undefined) {
+      // Если заявка не архивируется, используем переданные примечания
       updateData.notes = notes;
     }
 

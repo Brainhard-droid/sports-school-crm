@@ -1,111 +1,115 @@
-import { ExtendedTrialRequest } from "@shared/schema";
 import { apiRequest, getResponseData } from "@/lib/api";
+import { ExtendedTrialRequest } from "@shared/schema";
 
 /**
- * Сервис для работы с архивом отказов
- * Следует принципам Single Responsibility и Open/Closed
+ * Сервис для работы с архивированием отказов
+ * Следует принципу единственной ответственности (SRP) из SOLID
  */
 export class RefusalArchiveService {
-  private static readonly ARCHIVE_MARKER = '[Заявка автоматически архивирована';
-
+  // Маркер для определения архивированных заявок
+  static readonly ARCHIVE_MARKER = "[Заявка автоматически архивирована";
+  
   /**
-   * Проверяет, является ли заявка архивированной
+   * Проверяет, архивирована ли заявка
+   * @param request Заявка для проверки
+   * @returns true, если заявка архивирована
    */
   static isArchived(request: ExtendedTrialRequest): boolean {
-    // Проверяем наличие флага archived (имеет приоритет)
-    if (request.archived === true) return true;
-    
-    // Проверяем текстовые маркеры архивации в примечаниях
-    if (!request.notes) return false;
-    
-    const notesLower = request.notes.toLowerCase();
-    return (
-      notesLower.includes(this.ARCHIVE_MARKER.toLowerCase()) || 
-      notesLower.includes('архивирована') ||
-      notesLower.includes('заархивирована') ||
-      notesLower.includes('[архив')
+    return !!request.notes && (
+      request.notes.includes(this.ARCHIVE_MARKER) || 
+      request.notes.includes('архивирована')
     );
   }
-
+  
   /**
-   * Фильтрует старые заявки
+   * Фильтрует заявки старше указанного количества дней
+   * @param requests Список заявок
+   * @param days Количество дней
+   * @returns Отфильтрованный список заявок
    */
-  static filterOldRefusals(requests: ExtendedTrialRequest[], daysOld: number): ExtendedTrialRequest[] {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-
+  static filterOldRefusals(requests: ExtendedTrialRequest[], days: number = 5): ExtendedTrialRequest[] {
+    const now = new Date();
+    const cutoffDate = new Date(now.setDate(now.getDate() - days));
+    
     return requests.filter(request => {
+      // Используем дату обновления как более актуальную для отслеживания активности по заявке
       const requestDate = new Date(request.updatedAt || request.createdAt || Date.now());
       return requestDate < cutoffDate;
     });
   }
-
+  
   /**
-   * Архивирует заявку
+   * Архивирует заявку (скрывает её, но сохраняет в базе данных)
+   * Для реализации архивирования мы добавляем специальную метку в примечания,
+   * но не удаляем заявку из базы данных
+   * @param requestId ID заявки
+   * @param oldNotes Старые примечания заявки
    */
-  static async archiveRefusal(requestId: number, oldNotes?: string | null): Promise<boolean> {
+  static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
     try {
-      // Используем существующий метод updateStatus на сервере,
-      // который уже имеет нужную логику архивации
-      const response = await apiRequest("PATCH", `/api/trial-requests/${requestId}/status`, { 
-        notes: oldNotes || '',
-        archived: true,
-        status: 'REFUSED' // Убеждаемся, что статус остается REFUSED
-      });
-
-      if (!response.ok) {
-        console.error('Failed to archive request:', await response.text());
-        return false;
-      }
-
+      // Формируем обновленные примечания с меткой об архивировании
+      const currentDate = new Date().toLocaleDateString();
+      const archiveNote = `${this.ARCHIVE_MARKER} ${currentDate}]`;
+      
+      // Сохраняем старые примечания, если они есть
+      const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;
+      
+      // Отправляем запрос на обновление примечаний заявки
+      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
+      
       return true;
     } catch (error) {
       console.error('Ошибка при архивировании заявки:', error);
       return false;
     }
   }
-
-  /**
-   * Архивирует несколько заявок
-   */
-  static async archiveBatch(requests: ExtendedTrialRequest[]): Promise<number> {
-    let archivedCount = 0;
-
-    for (const request of requests) {
-      const success = await this.archiveRefusal(request.id, request.notes);
-      if (success) archivedCount++;
-    }
-
-    return archivedCount;
-  }
-
+  
   /**
    * Восстанавливает заявку из архива
+   * @param requestId ID заявки
+   * @returns True, если восстановление успешно
    */
   static async restoreFromArchive(requestId: number): Promise<boolean> {
     try {
       // Получаем текущую заявку
       const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
       const request = await getResponseData<ExtendedTrialRequest>(response);
-
-      if (!request) return false;
-
-      // Формируем новую заметку: удаляем метку архивации и добавляем метку восстановления
+      
+      if (!request) {
+        return false;
+      }
+      
+      // Удаляем метку архивирования из примечаний
       let notes = request.notes || '';
       notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
         .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
-
-      // Обновляем заявку через метод updateStatus
-      const updateResponse = await apiRequest("PATCH", `/api/trial-requests/${requestId}/status`, {
-        notes,
-        archived: false,
-        status: 'REFUSED' // Сохраняем статус "Отказ"
-      });
-
-      return updateResponse.ok;
+      
+      // Отправляем запрос на обновление примечаний заявки
+      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
+      
+      return true;
     } catch (error) {
-      console.error('Ошибка при восстановлении из архива:', error);
+      console.error('Ошибка при восстановлении заявки из архива:', error);
       return false;
     }
+  }
+  
+  /**
+   * Архивирует список заявок
+   * @param requests Список заявок для архивирования
+   * @returns Количество успешно архивированных заявок
+   */
+  static async archiveBatch(requests: ExtendedTrialRequest[]): Promise<number> {
+    let archivedCount = 0;
+    
+    // Архивируем каждую заявку из списка
+    for (const request of requests) {
+      const success = await this.archiveRefusal(request.id, request.notes || undefined);
+      if (success) {
+        archivedCount++;
+      }
+    }
+    
+    return archivedCount;
   }
 }
