@@ -195,8 +195,26 @@ export default function SalesFunnelPage() {
   return (
     <div className="container mx-auto py-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Воронка продаж</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Воронка продаж</CardTitle>
+            {refusedRequests.length > 0 && (
+              <CardDescription>
+                Количество отказов: {refusedRequests.length}
+              </CardDescription>
+            )}
+          </div>
+          {refusedRequests.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1"
+              onClick={() => setShowRefusalStatsModal(true)}
+            >
+              <PieChart className="h-4 w-4" />
+              Статистика отказов
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <DragDropContext onDragEnd={handleDragEnd}>
@@ -280,6 +298,15 @@ export default function SalesFunnelPage() {
           isOpen={showRejectTrialModal}
           onClose={handleModalClose}
           onSuccess={handleSuccess}
+        />
+      )}
+      
+      {/* Модальное окно статистики отказов */}
+      {showRefusalStatsModal && (
+        <RefusalStatsModal 
+          isOpen={showRefusalStatsModal}
+          onClose={() => setShowRefusalStatsModal(false)}
+          refusedRequests={refusedRequests}
         />
       )}
     </div>

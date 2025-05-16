@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PieChart } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Loader2, PieChart, Archive } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { RefusalArchiveService } from "../services/RefusalArchiveService";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Тип для статистики по отказам
 type RefusalStat = {
@@ -29,9 +33,45 @@ export function RefusalStatsModal({
   onClose,
   refusedRequests
 }: RefusalStatsModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [stats, setStats] = useState<RefusalStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [oldRefusals, setOldRefusals] = useState<ExtendedTrialRequest[]>([]);
+  const [archiving, setArchiving] = useState(false);
+
+  // Функция архивирования старых отказов
+  const handleArchiveOldRefusals = async () => {
+    if (oldRefusals.length === 0) return;
+    
+    setArchiving(true);
+    try {
+      // Архивируем старые отказы
+      const archivedCount = await RefusalArchiveService.archiveBatch(oldRefusals);
+      
+      // Показываем уведомление об успешном архивировании
+      toast({
+        title: "Архивирование выполнено",
+        description: `Архивировано ${archivedCount} из ${oldRefusals.length} заявок`,
+        variant: archivedCount > 0 ? "default" : "destructive",
+      });
+      
+      // Обновляем данные запросов, если были архивированы заявки
+      if (archivedCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        onClose(); // Закрываем модальное окно после успешного архивирования
+      }
+    } catch (error) {
+      console.error('Ошибка при архивировании:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось архивировать заявки",
+        variant: "destructive",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   // Рассчитываем статистику по отказам при изменении списка отказов
   useEffect(() => {
@@ -78,17 +118,8 @@ export function RefusalStatsModal({
       // Сортируем по убыванию количества
       statsArray.sort((a, b) => b.count - a.count);
 
-      // Отбираем старые отказы (возрастом более 5 дней)
-      const fiveDaysAgo = new Date();
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-      
-      const oldRefusalsFiltered = refusedRequests.filter(request => {
-        if (request.updatedAt) {
-          const updatedDate = new Date(request.updatedAt);
-          return updatedDate < fiveDaysAgo;
-        }
-        return false;
-      });
+      // Отбираем старые отказы (возрастом более 5 дней) с использованием сервиса
+      const oldRefusalsFiltered = RefusalArchiveService.filterOldRefusals(refusedRequests, 5);
 
       setOldRefusals(oldRefusalsFiltered);
       setStats(statsArray);
@@ -155,13 +186,38 @@ export function RefusalStatsModal({
                     <ScrollArea className="h-[120px]">
                       <ul className="space-y-1">
                         {oldRefusals.map(request => (
-                          <li key={request.id} className="text-xs p-1 bg-muted/50 rounded">
-                            {request.childName} ({new Date(request.updatedAt || '').toLocaleDateString()})
+                          <li key={request.id} className="text-xs p-1 bg-muted/50 rounded flex justify-between items-center">
+                            <span>
+                              {request.childName} ({new Date(request.updatedAt || '').toLocaleDateString()})
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ID: {request.id}
+                            </span>
                           </li>
                         ))}
                       </ul>
                     </ScrollArea>
                   </CardContent>
+                  <CardFooter className="pt-0">
+                    <Button 
+                      onClick={handleArchiveOldRefusals} 
+                      size="sm" 
+                      className="w-full gap-1"
+                      disabled={archiving}
+                    >
+                      {archiving ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Архивирование...
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-3 w-3" />
+                          Архивировать все ({oldRefusals.length})
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
                 </Card>
               )}
             </div>
