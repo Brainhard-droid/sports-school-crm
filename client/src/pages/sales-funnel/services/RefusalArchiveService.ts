@@ -58,7 +58,7 @@ export class RefusalArchiveService {
     try {
       // Получаем текущую заявку
       const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
-      const request = await getResponseData(response);
+      const request = await getResponseData<ExtendedTrialRequest>(response);
       
       if (!request) {
         return false;

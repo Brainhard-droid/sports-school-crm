@@ -52,8 +52,11 @@ export default function SalesFunnelPage() {
       // Отбираем только неархивированные отказы для отображения
       const refusals = requests.filter(
         request => request.status === TrialRequestStatus.REFUSED &&
-                  // Проверяем, не архивирована ли заявка
-                  request.notes?.indexOf('архивирована') === -1
+                  // Проверяем, не архивирована ли заявка (используем более точную проверку)
+                  !(request.notes && (
+                    request.notes.includes('архивирована') || 
+                    request.notes.includes('Заявка автоматически архивирована')
+                  ))
       );
       setRefusedRequests(refusals);
     }
@@ -150,7 +153,10 @@ export default function SalesFunnelPage() {
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
         // Заявка считается архивированной, если в notes содержится текст "архивирована"
-        const isArchived = r.notes && r.notes.includes('архивирована');
+        const isArchived = r.notes && (
+          r.notes.includes('архивирована') || 
+          r.notes.includes('Заявка автоматически архивирована')
+        );
         return statusMatches && !isArchived;
       }
       
