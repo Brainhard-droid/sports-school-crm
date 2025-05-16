@@ -19,6 +19,7 @@ import Payments from "@/pages/payments";
 import ResetPassword from "@/pages/reset-password";
 import TrialRequest from "@/pages/trial-request";
 import SalesFunnel from "@/pages/sales-funnel/SalesFunnelPage";
+import RefusalArchive from "@/pages/refusal-archive/RefusalArchivePage";
 import Settings from "@/pages/settings/index";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import ChatPage from "@/pages/chat-page";
@@ -45,6 +46,7 @@ function Router() {
         <ProtectedRoute path="/attendance" component={Attendance} />
         <ProtectedRoute path="/payments" component={Payments} />
         <ProtectedRoute path="/sales-funnel" component={SalesFunnel} />
+        <ProtectedRoute path="/refusal-archive" component={RefusalArchive} />
         <ProtectedRoute path="/chat" component={ChatPage} />
         <ProtectedRoute path="/settings" component={Settings} />
         <Route component={NotFound} />

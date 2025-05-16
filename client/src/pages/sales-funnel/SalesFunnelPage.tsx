@@ -336,14 +336,7 @@ export default function SalesFunnelPage() {
         />
       )}
       
-      {/* Модальное окно статистики отказов */}
-      {showRefusalStatsModal && (
-        <RefusalStatsModal 
-          isOpen={showRefusalStatsModal}
-          onClose={() => setShowRefusalStatsModal(false)}
-          refusedRequests={refusedRequests}
-        />
-      )}
+      {/* Модальные окна для работы с заявками */}
     </div>
   );
 }
