@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getResponseData } from "@/lib/api";
 import { ExtendedTrialRequest } from "@shared/schema";
 
 /**
@@ -40,10 +40,7 @@ export class RefusalArchiveService {
       const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;
       
       // Отправляем запрос на обновление примечаний заявки
-      await apiRequest(`/api/trial-requests/${requestId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ notes }),
-      });
+      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
       
       return true;
     } catch (error) {
@@ -60,8 +57,8 @@ export class RefusalArchiveService {
   static async restoreFromArchive(requestId: number): Promise<boolean> {
     try {
       // Получаем текущую заявку
-      const response = await apiRequest(`/api/trial-requests/${requestId}`);
-      const request = await response.json();
+      const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
+      const request = await getResponseData(response);
       
       if (!request) {
         return false;
@@ -73,10 +70,7 @@ export class RefusalArchiveService {
         .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
       
       // Отправляем запрос на обновление примечаний заявки
-      await apiRequest(`/api/trial-requests/${requestId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ notes }),
-      });
+      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
       
       return true;
     } catch (error) {

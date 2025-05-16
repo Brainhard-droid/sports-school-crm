@@ -7,7 +7,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
 import { RejectTrialModal } from "./components/RejectTrialModal";
-import { RefusalStatsModal } from "./components/RefusalStatsModal";
+// Удалена ссылка на модальное окно статистики отказов
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
