@@ -43,14 +43,12 @@ export class RefusalArchiveService {
   /**
    * Архивирует заявку
    */
-  static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
+  static async archiveRefusal(requestId: number, oldNotes?: string | null): Promise<boolean> {
     try {
-      const currentDate = new Date().toLocaleDateString();
-      const archiveNote = `${this.ARCHIVE_MARKER} ${currentDate}]`;
-      const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;
-
-      const response = await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { 
-        notes,
+      // Используем существующий метод updateStatus на сервере,
+      // который уже имеет нужную логику архивации
+      const response = await apiRequest("PATCH", `/api/trial-requests/${requestId}/status`, { 
+        notes: oldNotes || '',
         archived: true,
         status: 'REFUSED' // Убеждаемся, что статус остается REFUSED
       });
@@ -86,18 +84,22 @@ export class RefusalArchiveService {
    */
   static async restoreFromArchive(requestId: number): Promise<boolean> {
     try {
+      // Получаем текущую заявку
       const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
       const request = await getResponseData<ExtendedTrialRequest>(response);
 
       if (!request) return false;
 
+      // Формируем новую заметку: удаляем метку архивации и добавляем метку восстановления
       let notes = request.notes || '';
       notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
         .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
 
-      const updateResponse = await apiRequest("PATCH", `/api/trial-requests/${requestId}`, {
+      // Обновляем заявку через метод updateStatus
+      const updateResponse = await apiRequest("PATCH", `/api/trial-requests/${requestId}/status`, {
         notes,
-        archived: false
+        archived: false,
+        status: 'REFUSED' // Сохраняем статус "Отказ"
       });
 
       return updateResponse.ok;
