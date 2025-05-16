@@ -43,10 +43,10 @@ export default function SalesFunnelPage() {
     targetStatus: string;
     request: ExtendedTrialRequest;
   } | null>(null);
-  
+
   // Отфильтрованные отказы для статистики
   const [refusedRequests, setRefusedRequests] = useState<ExtendedTrialRequest[]>([]);
-  
+
   // Обновляем список отказов при изменении основного списка заявок
   useEffect(() => {
     if (requests) {
@@ -95,7 +95,7 @@ export default function SalesFunnelPage() {
 
     // Создаем копию запроса для оптимистичного UI-обновления
     const requestCopy = { ...request };
-    
+
     // Сохраняем информацию о перетаскивании для последующего использования
     setDraggedRequest({
       id: requestId,
@@ -109,7 +109,7 @@ export default function SalesFunnelPage() {
       console.log('Opening assign trial modal for request:', request);
       setSelectedRequest(requestCopy);
       setShowAssignTrialModal(true);
-      
+
       // Оптимистично обновляем UI, меняя статус в карточке
       // Это позволит карточке остаться в целевой колонке до завершения действия
       updateStatus({ 
@@ -118,13 +118,13 @@ export default function SalesFunnelPage() {
       });
       return;
     }
-    
+
     // Если перетаскиваем в "Отказ", открываем модальное окно для указания причин отказа
     if (targetStatus === "REFUSED") {
       console.log('Opening reject trial modal for request:', request);
       setSelectedRequest(requestCopy);
       setShowRejectTrialModal(true);
-      
+
       // Оптимистично обновляем UI, меняя статус в карточке
       // Это позволит карточке остаться в целевой колонке до завершения действия
       updateStatus({ 
@@ -147,18 +147,15 @@ export default function SalesFunnelPage() {
     acc[column.id] = requests.filter(r => {
       // Проверяем статус
       const statusMatches = r.status && r.status.toUpperCase() === column.id;
-      
+
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
-        // Используем метод сервиса для проверки архивации
-        const isArchived = RefusalArchiveService.isArchived(r);
-        return statusMatches && !isArchived;
+        return statusMatches && !RefusalArchiveService.isArchived(r);
       }
-      
-      // Для остальных колонок просто проверяем статус
+
       return statusMatches;
     });
-    
+
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
@@ -173,7 +170,7 @@ export default function SalesFunnelPage() {
     setSelectedRequest(request);
     setShowAssignTrialModal(true);
   };
-  
+
   /**
    * Обработчик отказа от пробного занятия
    * Открывает модальное окно с формой для указания причин отказа
@@ -186,12 +183,12 @@ export default function SalesFunnelPage() {
 
   const handleModalClose = () => {
     console.log('Закрытие модального окна');
-    
+
     // Проверяем, был ли драг перед открытием модального окна
     if (draggedRequest) {
       console.log('Был обнаружен драг, перемещаем карточку обратно, если необходимо');
       console.log('Dragged request:', draggedRequest);
-      
+
       if (draggedRequest.targetStatus === "TRIAL_ASSIGNED" || draggedRequest.targetStatus === "REFUSED") {
         // Если модальное окно было открыто после перетаскивания в колонку "Пробное назначено" или "Отказ",
         // но пользователь его закрыл без назначения, возвращаем карточку в исходную колонку
@@ -201,7 +198,7 @@ export default function SalesFunnelPage() {
         });
       }
     }
-    
+
     // Сбрасываем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
@@ -215,7 +212,7 @@ export default function SalesFunnelPage() {
       console.log('Successfully assigned trial, updating status to:', draggedRequest.targetStatus);
       // Статус уже обновлен из модального окна, не нужно вызывать здесь updateStatus
     }
-    
+
     // Очищаем состояние
     setSelectedRequest(null);
     setShowAssignTrialModal(false);
@@ -273,7 +270,7 @@ export default function SalesFunnelPage() {
                             Перетащите сюда карточку
                           </div>
                         )}
-                        
+
                         {requestsByStatus[column.id].map((request, index) => (
                           <Draggable
                             key={request.id}
@@ -336,7 +333,7 @@ export default function SalesFunnelPage() {
           onSuccess={handleSuccess}
         />
       )}
-      
+
       {/* Модальные окна для работы с заявками */}
     </div>
   );

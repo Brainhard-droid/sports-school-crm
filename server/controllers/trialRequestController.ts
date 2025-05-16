@@ -150,6 +150,11 @@ export class TrialRequestController {
     if (scheduledDate) {
       updateData.scheduledDate = new Date(scheduledDate);
     }
+
+    // Обработка архивации
+    if (archived !== undefined) {
+      updateData.archived = archived;
+    }
     
     // Обработка архивирования и примечаний
     if (archived === true) {

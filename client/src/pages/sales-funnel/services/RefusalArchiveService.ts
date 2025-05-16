@@ -1,115 +1,91 @@
-import { apiRequest, getResponseData } from "@/lib/api";
 import { ExtendedTrialRequest } from "@shared/schema";
+import { apiRequest, getResponseData } from "@/lib/api";
 
 /**
- * Сервис для работы с архивированием отказов
- * Следует принципу единственной ответственности (SRP) из SOLID
+ * Сервис для работы с архивом отказов
+ * Следует принципам Single Responsibility и Open/Closed
  */
 export class RefusalArchiveService {
-  // Маркер для определения архивированных заявок
-  static readonly ARCHIVE_MARKER = "[Заявка автоматически архивирована";
-  
+  private static readonly ARCHIVE_MARKER = '[Заявка автоматически архивирована';
+
   /**
-   * Проверяет, архивирована ли заявка
-   * @param request Заявка для проверки
-   * @returns true, если заявка архивирована
+   * Проверяет, является ли заявка архивированной
    */
   static isArchived(request: ExtendedTrialRequest): boolean {
-    return !!request.notes && (
-      request.notes.includes(this.ARCHIVE_MARKER) || 
-      request.notes.includes('архивирована')
-    );
+    return request.notes?.includes(this.ARCHIVE_MARKER) || false;
   }
-  
+
   /**
-   * Фильтрует заявки старше указанного количества дней
-   * @param requests Список заявок
-   * @param days Количество дней
-   * @returns Отфильтрованный список заявок
+   * Фильтрует старые заявки
    */
-  static filterOldRefusals(requests: ExtendedTrialRequest[], days: number = 5): ExtendedTrialRequest[] {
-    const now = new Date();
-    const cutoffDate = new Date(now.setDate(now.getDate() - days));
-    
+  static filterOldRefusals(requests: ExtendedTrialRequest[], daysOld: number): ExtendedTrialRequest[] {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
     return requests.filter(request => {
-      // Используем дату обновления как более актуальную для отслеживания активности по заявке
       const requestDate = new Date(request.updatedAt || request.createdAt || Date.now());
       return requestDate < cutoffDate;
     });
   }
-  
+
   /**
-   * Архивирует заявку (скрывает её, но сохраняет в базе данных)
-   * Для реализации архивирования мы добавляем специальную метку в примечания,
-   * но не удаляем заявку из базы данных
-   * @param requestId ID заявки
-   * @param oldNotes Старые примечания заявки
+   * Архивирует заявку
    */
   static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
     try {
-      // Формируем обновленные примечания с меткой об архивировании
       const currentDate = new Date().toLocaleDateString();
       const archiveNote = `${this.ARCHIVE_MARKER} ${currentDate}]`;
-      
-      // Сохраняем старые примечания, если они есть
       const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;
-      
-      // Отправляем запрос на обновление примечаний заявки
-      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
-      
-      return true;
+
+      const response = await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { 
+        notes,
+        archived: true
+      });
+
+      return response.ok;
     } catch (error) {
       console.error('Ошибка при архивировании заявки:', error);
       return false;
     }
   }
-  
+
   /**
-   * Восстанавливает заявку из архива
-   * @param requestId ID заявки
-   * @returns True, если восстановление успешно
-   */
-  static async restoreFromArchive(requestId: number): Promise<boolean> {
-    try {
-      // Получаем текущую заявку
-      const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
-      const request = await getResponseData<ExtendedTrialRequest>(response);
-      
-      if (!request) {
-        return false;
-      }
-      
-      // Удаляем метку архивирования из примечаний
-      let notes = request.notes || '';
-      notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
-        .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
-      
-      // Отправляем запрос на обновление примечаний заявки
-      await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
-      
-      return true;
-    } catch (error) {
-      console.error('Ошибка при восстановлении заявки из архива:', error);
-      return false;
-    }
-  }
-  
-  /**
-   * Архивирует список заявок
-   * @param requests Список заявок для архивирования
-   * @returns Количество успешно архивированных заявок
+   * Архивирует несколько заявок
    */
   static async archiveBatch(requests: ExtendedTrialRequest[]): Promise<number> {
     let archivedCount = 0;
-    
-    // Архивируем каждую заявку из списка
+
     for (const request of requests) {
-      const success = await this.archiveRefusal(request.id, request.notes || undefined);
-      if (success) {
-        archivedCount++;
-      }
+      const success = await this.archiveRefusal(request.id, request.notes);
+      if (success) archivedCount++;
     }
-    
+
     return archivedCount;
+  }
+
+  /**
+   * Восстанавливает заявку из архива
+   */
+  static async restoreFromArchive(requestId: number): Promise<boolean> {
+    try {
+      const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
+      const request = await getResponseData<ExtendedTrialRequest>(response);
+
+      if (!request) return false;
+
+      let notes = request.notes || '';
+      notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
+        .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
+
+      const updateResponse = await apiRequest("PATCH", `/api/trial-requests/${requestId}`, {
+        notes,
+        archived: false
+      });
+
+      return updateResponse.ok;
+    } catch (error) {
+      console.error('Ошибка при восстановлении из архива:', error);
+      return false;
+    }
   }
 }
