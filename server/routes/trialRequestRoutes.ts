@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const router = Router();
 
-// Схемы валидации
+// Схема для обновления статуса заявки
 const updateStatusSchema = z.object({
   status: z.enum([
     TrialRequestStatus.NEW,
@@ -17,6 +17,7 @@ const updateStatusSchema = z.object({
   ]),
   scheduledDate: z.string().optional(),
   notes: z.string().optional(),
+  archived: z.boolean().optional(),
 });
 
 // Маршруты для работы с заявками на пробные занятия

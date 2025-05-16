@@ -127,7 +127,7 @@ export class TrialRequestController {
       throw new ApiErrorClass('Некорректный ID заявки', 400);
     }
 
-    const { status, scheduledDate, notes } = req.body;
+    const { status, scheduledDate, notes, archived } = req.body;
 
     // Проверяем, существует ли заявка
     const existingRequest = await storage.getTrialRequestById(id);
@@ -151,7 +151,21 @@ export class TrialRequestController {
       updateData.scheduledDate = new Date(scheduledDate);
     }
     
-    if (notes !== undefined) {
+    // Обработка архивирования и примечаний
+    if (archived === true) {
+      // Если заявка архивируется, добавляем отметку в примечания
+      const archiveNote = `Заявка автоматически архивирована ${new Date().toLocaleDateString()}`;
+      
+      // Если уже есть примечания, добавляем к ним; иначе создаем новые
+      if (notes) {
+        updateData.notes = `${notes} [${archiveNote}]`;
+      } else if (existingRequest.notes) {
+        updateData.notes = `${existingRequest.notes} [${archiveNote}]`;
+      } else {
+        updateData.notes = archiveNote;
+      }
+    } else if (notes !== undefined) {
+      // Если заявка не архивируется, используем переданные примечания
       updateData.notes = notes;
     }
 
