@@ -15,9 +15,10 @@ interface TrialRequestCardProps {
   request: ExtendedTrialRequest;
   onEdit: (request: ExtendedTrialRequest) => void;
   onAssignTrial: (request: ExtendedTrialRequest) => void;
+  onReject: (request: ExtendedTrialRequest) => void;
 }
 
-export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialRequestCardProps) {
+export function TrialRequestCard({ request, onEdit, onAssignTrial, onReject }: TrialRequestCardProps) {
   return (
     <Card className="mb-2">
       <CardContent className="pt-4">
@@ -45,7 +46,13 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial }: TrialReques
                   : "Назначить пробное"}
               </DropdownMenuItem>
               
-              {/* Удалена кнопка "Отменить пробное" по запросу клиента */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => onReject(request)}
+                className="text-destructive focus:text-destructive"
+              >
+                Отказ
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
