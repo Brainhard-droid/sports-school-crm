@@ -143,17 +143,17 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    // Фильтруем заявки по статусу, исключая архивированные для колонки "Отказ"
+    // Фильтруем заявки по статусу и флагу архивации
     acc[column.id] = requests.filter(r => {
       // Проверяем статус
       const statusMatches = r.status && r.status.toUpperCase() === column.id;
 
-      // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
+      // Для колонки "Отказ" проверяем флаг архивации
       if (column.id === "REFUSED") {
-        return statusMatches && !RefusalArchiveService.isArchived(r);
+        return statusMatches && !r.archived && !RefusalArchiveService.isArchived(r);
       }
 
-      return statusMatches;
+      return statusMatches && !r.archived;
     });
 
     return acc;

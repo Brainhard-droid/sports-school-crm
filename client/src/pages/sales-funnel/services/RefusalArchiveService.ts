@@ -39,10 +39,16 @@ export class RefusalArchiveService {
 
       const response = await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { 
         notes,
-        archived: true
+        archived: true,
+        status: 'REFUSED' // Убеждаемся, что статус остается REFUSED
       });
 
-      return response.ok;
+      if (!response.ok) {
+        console.error('Failed to archive request:', await response.text());
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error('Ошибка при архивировании заявки:', error);
       return false;
