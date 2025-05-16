@@ -19,10 +19,11 @@ export function useTrialRequests() {
 
   // Мутация для обновления статуса заявки
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, scheduledDate }: { 
+    mutationFn: async ({ id, status, scheduledDate, notes }: { 
       id: number; 
       status: string;
       scheduledDate?: Date;
+      notes?: string;
     }) => {
       // Проверка данных
       const normalizedStatus = status.toUpperCase();
@@ -32,8 +33,25 @@ export function useTrialRequests() {
         throw new Error('Для пробного занятия необходимо указать дату');
       }
       
-      // Делегируем логику обновления сервису
-      return await TrialRequestService.updateRequestStatus(id, normalizedStatus, scheduledDate);
+      console.log(`Обновление статуса заявки #${id} на ${normalizedStatus}`);
+      
+      // Создаем объект с параметрами для вызова сервиса
+      const params: any = {
+        id,
+        status: normalizedStatus,
+      };
+      
+      // Добавляем необязательные параметры, если они указаны
+      if (scheduledDate) params.scheduledDate = scheduledDate;
+      if (notes) params.notes = notes;
+      
+      // Используем готовый сервис для обновления статуса
+      return await TrialRequestService.updateRequestStatus(
+        params.id, 
+        params.status,
+        params.scheduledDate,
+        params.notes
+      );
     },
     
     // Оптимистичное обновление данных

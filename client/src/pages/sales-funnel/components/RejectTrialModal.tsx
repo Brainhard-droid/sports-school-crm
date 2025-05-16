@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import { useTrialRequests } from "../hooks/useTrialRequests";
 
 // Определяем наиболее частые причины отказа
 const commonReasons = [
@@ -37,6 +38,9 @@ export function RejectTrialModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Получаем доступ к функции обновления статуса
+  const { updateStatus } = useTrialRequests();
+  
   // Состояние для чекбоксов
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [customReason, setCustomReason] = useState<string>('');
@@ -60,21 +64,16 @@ export function RejectTrialModal({
         notes += selectedReasons.length > 0 ? `. ${customReason}` : customReason;
       }
       
-      const response = await apiRequest(
-        "PATCH", 
-        `/api/trial-requests/${request.id}/status`,
-        {
-          status: TrialRequestStatus.REFUSED,
-          notes
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Ошибка при отклонении заявки");
-      }
-
-      return response.json();
+      console.log('Отправка запроса на отклонение заявки:', request.id, 'с примечанием:', notes);
+      
+      // Используем функцию обновления статуса из хука useTrialRequests
+      updateStatus({
+        id: request.id,
+        status: TrialRequestStatus.REFUSED,
+        notes
+      });
+      
+      return request;
     },
     onSuccess: () => {
       toast({

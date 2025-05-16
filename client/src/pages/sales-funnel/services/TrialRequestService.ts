@@ -36,21 +36,39 @@ export class TrialRequestService {
   static async updateRequestStatus(
     id: number, 
     status: string, 
-    scheduledDate?: Date
+    scheduledDate?: Date,
+    notes?: string
   ): Promise<ExtendedTrialRequest> {
-    console.log('Обновление статуса заявки:', { id, status, scheduledDate });
+    console.log('Обновление статуса заявки:', { id, status, scheduledDate, notes });
     
     try {
+      // Подготавливаем данные для запроса
+      const payload: any = {
+        status: status.toUpperCase()
+      };
+      
+      // Добавляем дату, если она указана
+      if (scheduledDate) {
+        payload.scheduledDate = scheduledDate.toISOString();
+      }
+      
+      // Добавляем примечания, если они указаны
+      if (notes) {
+        payload.notes = notes;
+      }
+      
       // Делаем PATCH запрос для обновления статуса
-      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, { 
-        status: status.toUpperCase(),
-        scheduledDate: scheduledDate?.toISOString()
-      });
+      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, payload);
       
       if (!res.ok) {
-        const errorData = await res.json();
-        console.error('Ошибка при обновлении статуса', errorData);
-        throw new Error(errorData.message || 'Ошибка при обновлении статуса');
+        const errorText = await res.text();
+        console.error('Ошибка при обновлении статуса', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || 'Ошибка при обновлении статуса');
+        } catch (e) {
+          throw new Error('Ошибка при обновлении статуса');
+        }
       }
       
       // Получаем обновленную заявку
