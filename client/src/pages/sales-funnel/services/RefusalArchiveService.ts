@@ -34,19 +34,30 @@ export class RefusalArchiveService {
   
   /**
    * Архивирует заявку (скрывает её, но сохраняет в базе данных)
-   * Для реализации архивирования мы добавляем специальную метку,
+   * Для реализации архивирования мы добавляем специальную метку в примечания,
    * но не удаляем заявку из базы данных
    * @param requestId ID заявки
+   * @param oldNotes Старые примечания заявки
    */
-  static async archiveRefusal(requestId: number): Promise<boolean> {
+  static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
     try {
+      // Формируем новые примечания, добавляя метку архивирования
+      const archiveNote = `Заявка автоматически архивирована ${new Date().toLocaleDateString()}`;
+      
+      // Если есть старые примечания, сохраняем их
+      const notes = oldNotes 
+        ? `${oldNotes} [${archiveNote}]`
+        : archiveNote;
+        
+      console.log(`Архивирование заявки #${requestId} с примечанием: ${notes}`);
+      
       const response = await apiRequest(
         "PATCH", 
         `/api/trial-requests/${requestId}/status`,
         {
           status: TrialRequestStatus.REFUSED,
-          archived: true,
-          notes: `Заявка автоматически архивирована ${new Date().toLocaleDateString()}`
+          notes: notes,
+          archived: true
         }
       );
       
@@ -68,7 +79,8 @@ export class RefusalArchiveService {
     let successCount = 0;
     
     for (const request of requests) {
-      const success = await this.archiveRefusal(request.id);
+      // Передаем существующие примечания, чтобы сохранить информацию о причинах отказа
+      const success = await this.archiveRefusal(request.id, request.notes);
       if (success) successCount++;
     }
     

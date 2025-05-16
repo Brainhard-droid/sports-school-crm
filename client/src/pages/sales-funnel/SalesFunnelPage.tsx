@@ -140,7 +140,22 @@ export default function SalesFunnelPage() {
   };
 
   const requestsByStatus = statusColumns.reduce((acc, column) => {
-    acc[column.id] = requests.filter(r => r.status && r.status.toUpperCase() === column.id);
+    // Фильтруем заявки по статусу, исключая архивированные для колонки "Отказ"
+    acc[column.id] = requests.filter(r => {
+      // Проверяем статус
+      const statusMatches = r.status && r.status.toUpperCase() === column.id;
+      
+      // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
+      if (column.id === "REFUSED") {
+        // Заявка считается архивированной, если в notes содержится текст "архивирована"
+        const isArchived = r.notes && r.notes.includes('архивирована');
+        return statusMatches && !isArchived;
+      }
+      
+      // Для остальных колонок просто проверяем статус
+      return statusMatches;
+    });
+    
     return acc;
   }, {} as Record<keyof typeof TrialRequestStatus, ExtendedTrialRequest[]>);
 
