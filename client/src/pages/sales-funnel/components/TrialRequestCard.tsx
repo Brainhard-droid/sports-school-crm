@@ -93,6 +93,14 @@ export function TrialRequestCard({ request, onEdit, onAssignTrial, onReject }: T
             <p className="text-sm">{request.parentName}</p>
             <p className="text-sm">{request.parentPhone}</p>
           </div>
+          
+          {/* Отображаем причины отказа, если статус REFUSED */}
+          {request.status === TrialRequestStatus.REFUSED && request.notes && (
+            <div className="mt-3 p-2 bg-muted/50 rounded-sm border-l-2 border-destructive">
+              <p className="text-xs font-medium text-destructive mb-1">Причина отказа:</p>
+              <p className="text-xs">{request.notes}</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

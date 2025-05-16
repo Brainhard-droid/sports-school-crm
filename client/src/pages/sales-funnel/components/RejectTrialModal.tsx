@@ -41,39 +41,48 @@ export function RejectTrialModal({
   // Получаем доступ к функции обновления статуса
   const { updateStatus } = useTrialRequests();
   
-  // Состояние для чекбоксов
+  // Состояние для чекбоксов причин отказа
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [customReason, setCustomReason] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Мутация для обновления статуса
+  // Мутация для обновления статуса на "Отказ"
   const rejectTrialMutation = useMutation({
     mutationFn: async () => {
-      if (!request) return;
+      if (!request) return null;
+      setIsSubmitting(true);
       
-      // Формируем текст примечания с причинами отказа
-      let notes = 'Причины отказа: ';
-      
-      if (selectedReasons.length > 0) {
-        notes += selectedReasons.map(reasonId => {
-          const reason = commonReasons.find(r => r.id === reasonId);
-          return reason ? reason.label : reasonId;
-        }).join(', ');
+      try {
+        // Формируем текст примечания с причинами отказа
+        let notes = 'Причины отказа: ';
+        
+        if (selectedReasons.length > 0) {
+          notes += selectedReasons.map(reasonId => {
+            const reason = commonReasons.find(r => r.id === reasonId);
+            return reason ? reason.label : reasonId;
+          }).join(', ');
+        }
+        
+        if (customReason.trim()) {
+          notes += selectedReasons.length > 0 ? `. ${customReason}` : customReason;
+        }
+        
+        console.log('Отправка запроса на отклонение заявки:', request.id, 'с примечанием:', notes);
+        
+        // Подготавливаем данные для запроса
+        const payload = {
+          id: request.id,
+          status: TrialRequestStatus.REFUSED,
+          notes
+        };
+        
+        // Выполняем обновление статуса
+        updateStatus(payload);
+        
+        return request;
+      } finally {
+        setIsSubmitting(false);
       }
-      
-      if (customReason.trim()) {
-        notes += selectedReasons.length > 0 ? `. ${customReason}` : customReason;
-      }
-      
-      console.log('Отправка запроса на отклонение заявки:', request.id, 'с примечанием:', notes);
-      
-      // Используем функцию обновления статуса из хука useTrialRequests
-      updateStatus({
-        id: request.id,
-        status: TrialRequestStatus.REFUSED,
-        notes
-      });
-      
-      return request;
     },
     onSuccess: () => {
       toast({

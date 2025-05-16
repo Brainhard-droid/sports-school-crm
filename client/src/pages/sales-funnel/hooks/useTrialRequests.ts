@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ExtendedTrialRequest } from "@shared/schema";
 import { TrialRequestService } from "../services/TrialRequestService";
+import { apiRequest } from "@/lib/api";
 
 /**
  * Хук для работы с заявками на пробные занятия
@@ -33,25 +34,39 @@ export function useTrialRequests() {
         throw new Error('Для пробного занятия необходимо указать дату');
       }
       
-      console.log(`Обновление статуса заявки #${id} на ${normalizedStatus}`);
+      console.log(`Обновление статуса заявки #${id} на ${normalizedStatus}`, { notes });
       
-      // Создаем объект с параметрами для вызова сервиса
-      const params: any = {
-        id,
-        status: normalizedStatus,
+      // Подготавливаем данные для запроса
+      const payload: any = {
+        status: normalizedStatus
       };
       
-      // Добавляем необязательные параметры, если они указаны
-      if (scheduledDate) params.scheduledDate = scheduledDate;
-      if (notes) params.notes = notes;
+      // Добавляем дату, если она указана
+      if (scheduledDate) {
+        payload.scheduledDate = scheduledDate.toISOString();
+      }
       
-      // Используем готовый сервис для обновления статуса
-      return await TrialRequestService.updateRequestStatus(
-        params.id, 
-        params.status,
-        params.scheduledDate,
-        params.notes
-      );
+      // Добавляем примечания, если они указаны
+      if (notes) {
+        payload.notes = notes;
+      }
+      
+      // Делаем PATCH запрос для обновления статуса
+      const res = await apiRequest("PATCH", `/api/trial-requests/${id}/status`, payload);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Ошибка при обновлении статуса', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || 'Ошибка при обновлении статуса');
+        } catch (e) {
+          throw new Error('Ошибка при обновлении статуса');
+        }
+      }
+      
+      const updatedRequest = await res.json();
+      return updatedRequest;
     },
     
     // Оптимистичное обновление данных

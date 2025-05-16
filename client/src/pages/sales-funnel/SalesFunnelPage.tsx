@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useTrialRequests } from "./hooks/useTrialRequests";
-import { Loader2 } from "lucide-react";
+import { Loader2, PieChart, Clock } from "lucide-react";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
 import { RejectTrialModal } from "./components/RejectTrialModal";
+import { RefusalStatsModal } from "./components/RefusalStatsModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
+import { Button } from "@/components/ui/button";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -31,12 +33,26 @@ export default function SalesFunnelPage() {
   const [selectedRequest, setSelectedRequest] = useState<ExtendedTrialRequest | null>(null);
   const [showAssignTrialModal, setShowAssignTrialModal] = useState(false);
   const [showRejectTrialModal, setShowRejectTrialModal] = useState(false);
+  const [showRefusalStatsModal, setShowRefusalStatsModal] = useState(false);
   const [draggedRequest, setDraggedRequest] = useState<{
     id: number;
     sourceStatus: string;
     targetStatus: string;
     request: ExtendedTrialRequest;
   } | null>(null);
+  
+  // Отфильтрованные отказы для статистики
+  const [refusedRequests, setRefusedRequests] = useState<ExtendedTrialRequest[]>([]);
+  
+  // Обновляем список отказов при изменении основного списка заявок
+  useEffect(() => {
+    if (requests) {
+      const refusals = requests.filter(
+        request => request.status === TrialRequestStatus.REFUSED
+      );
+      setRefusedRequests(refusals);
+    }
+  }, [requests]);
 
   /**
    * Обработчик события окончания перетаскивания
