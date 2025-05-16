@@ -47,8 +47,11 @@ export default function SalesFunnelPage() {
   // Обновляем список отказов при изменении основного списка заявок
   useEffect(() => {
     if (requests) {
+      // Отбираем только неархивированные отказы для отображения
       const refusals = requests.filter(
-        request => request.status === TrialRequestStatus.REFUSED
+        request => request.status === TrialRequestStatus.REFUSED &&
+                  // Проверяем, не архивирована ли заявка
+                  request.notes?.indexOf('архивирована') === -1
       );
       setRefusedRequests(refusals);
     }
