@@ -217,8 +217,9 @@ export default function RefusalArchivePage() {
     const archived: ExtendedTrialRequest[] = [];
     
     refusals.forEach(request => {
-      // Используем сервис для проверки, является ли заявка архивированной
+      // Используем сервис для точной проверки, является ли заявка архивированной
       const isArchived = RefusalArchiveService.isArchived(request);
+      console.log(`Заявка ${request.id}: архивирована=${isArchived}, примечания="${request.notes}"`);
       
       if (isArchived) {
         archived.push(request);
