@@ -176,12 +176,10 @@ export class RefusalArchiveService {
   /**
    * Восстанавливает заявку из архива
    * @param requestId ID заявки для восстановления
-   * @param optimisticCallback Колбэк для оптимистичного обновления UI
    * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
    */
   static async restoreFromArchive(
-    requestId: number, 
-    optimisticCallback?: (id: number, notes: string) => void
+    requestId: number
   ): Promise<{success: boolean, notes: string}> {
     try {
       console.log(`RefusalArchiveService: Восстановление заявки ID=${requestId}`);
@@ -195,28 +193,17 @@ export class RefusalArchiveService {
       
       const request = await getResponseData<ExtendedTrialRequest>(response);
       
-      // Подготавливаем текст примечаний без маркера архивирования
+      // Подготавливаем текст примечаний без маркеров архивирования
       let notes = request.notes || '';
       
-      // Удаляем все маркеры архивирования более эффективным способом
-      notes = notes
-        .replace(new RegExp(ARCHIVE_MARKERS.ARCHIVE_TAG, 'g'), '')
-        .replace(/\[[^\]]*архивирован[^\]]*\]/gi, '') // Удаляем все метки архивирования
-        .trim();
+      // Сначала полностью очищаем от всех технических меток
+      notes = this.cleanNotesForDisplay(notes);
       
-      // Добавляем маркер восстановления
+      // Добавляем новый маркер восстановления - будет скрыт при отображении
       const restoreMarker = this.getRestoreMarker();
       notes = `${notes} ${restoreMarker}`.trim();
       
-      // Очищаем текст для отображения
-      const displayNotes = this.cleanNotesForDisplay(notes);
-      
-      // Вызываем оптимистичный колбэк до выполнения запроса для мгновенного обновления UI
-      if (optimisticCallback) {
-        optimisticCallback(requestId, notes);
-      }
-      
-      console.log('Восстановление с примечаниями:', displayNotes);
+      console.log('Восстановление с примечаниями (техническими для сервера):', notes);
       
       // Отправляем запрос к API для обновления заявки через маршрут status
       const updateResponse = await apiRequest(
@@ -224,7 +211,7 @@ export class RefusalArchiveService {
         `/api/trial-requests/${requestId}/status`,
         { 
           notes,
-          status: "REFUSED"  // Подтверждаем статус отказа
+          status: "REFUSED"  // Устанавливаем статус обычного отказа (не архивированного)
         }
       );
       

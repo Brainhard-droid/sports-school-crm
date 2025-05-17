@@ -255,32 +255,36 @@ export default function RefusalArchivePage() {
   
   // Функция восстановления заявки из архива
   const handleRestoreRefusal = async (request: ExtendedTrialRequest) => {
+    // Если уже идет восстановление этой заявки, прерываем
+    if (restoring === request.id) return;
+    
+    console.log(`Начинаем восстановление заявки ID=${request.id} из архива`);
     setRestoring(request.id);
+    
     try {
-      // Оптимистично обновляем UI - удаляем из архивированных и добавляем в активные
+      // 1. СНАЧАЛА делаем оптимистичное обновление UI
+      // Удаляем из архивированных
       setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
       
-      // Подготавливаем обновленный текст примечаний для восстановленной заявки
-      // Удаляем все метки архивирования
-      let updatedNotes = (request.notes || '');
+      // Готовим полностью очищенный текст примечаний
+      const cleanNotes = RefusalArchiveService.cleanNotesForDisplay(request.notes || '');
       
-      // Удаляем метку сообщения архивирования
-      updatedNotes = updatedNotes
-        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}[^\\]]*\\]`, 'g'), '')
-        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_TAG}\\]`, 'g'), '')
-        .trim();
+      // Формируем метку восстановления (для сервера)
+      const restoreMarker = RefusalArchiveService.getRestoreMarker();
+      const updatedNotes = `${cleanNotes} ${restoreMarker}`.trim();
       
-      updatedNotes = `${updatedNotes} ${RefusalArchiveService.getRestoreMarker()}`.trim();
-      
+      // Создаем объект заявки с очищенными примечаниями
       const updatedRequest = {
         ...request,
-        notes: updatedNotes
+        notes: cleanNotes, // Для отображения в UI используем полностью очищенный текст
+        status: 'REFUSED'  // Явно указываем статус отказа, а не "архивированного отказа"
       };
       
+      // Добавляем в активные отказы
       setActiveRefusals(prev => [updatedRequest, ...prev]);
       
-      // Восстанавливаем заявку из архива в БД
-      const success = await RefusalArchiveService.restoreFromArchive(request.id);
+      // 2. ПОТОМ отправляем запрос на сервер с техническими метками
+      const { success } = await RefusalArchiveService.restoreFromArchive(request.id);
       
       if (success) {
         // Показываем уведомление об успешном восстановлении
@@ -290,22 +294,21 @@ export default function RefusalArchivePage() {
           variant: "default",
         });
         
-        // Обновляем данные с сервера с задержкой,
-        // чтобы дать время на обновление БД
+        // 3. Обновляем данные с сервера с УВЕЛИЧЕННОЙ задержкой
+        // чтобы предотвратить мерцание интерфейса
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
-          refreshData();
-        }, 500);
+        }, 1500); // Значительно увеличиваем задержку для лучшего UX
       } else {
         // Если произошла ошибка, откатываем UI изменения
+        setArchivedRefusals(prev => [...prev, request]);
+        setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
+        
         toast({
           title: "Ошибка",
           description: "Не удалось восстановить заявку",
           variant: "destructive",
         });
-        
-        // Запрашиваем обновленные данные с сервера
-        refreshData();
       }
     } catch (error) {
       console.error('Ошибка при восстановлении из архива:', error);
@@ -328,34 +331,47 @@ export default function RefusalArchivePage() {
     
     console.log('Обрабатываем список отказов для архива');
     
-    // Фильтруем только отказы
-    const refusals = requests.filter(r => r.status === TrialRequestStatus.REFUSED);
+    // Фильтруем только отказы - включая статус REFUSED и ARCHIVED_REFUSAL
+    const refusals = requests.filter(r => 
+      r.status === TrialRequestStatus.REFUSED || 
+      r.status === TrialRequestStatus.ARCHIVED_REFUSAL
+    );
     
     // Разделяем на активные и архивированные
     const active: ExtendedTrialRequest[] = [];
     const archived: ExtendedTrialRequest[] = [];
     
     refusals.forEach(request => {
-      // Используем сервис для точной проверки, является ли заявка архивированной
+      // Создаем клон заявки, чтобы не мутировать оригинальные данные
+      const cleanedRequest = {
+        ...request,
+        // Очищаем примечания от всех технических меток для отображения
+        notes: RefusalArchiveService.cleanNotesForDisplay(request.notes || '')
+      };
+      
+      // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
       const isArchived = RefusalArchiveService.isArchived(request);
-      console.log(`Заявка ${request.id}: архивирована=${isArchived}, примечания="${request.notes}"`);
       
       if (isArchived) {
-        archived.push(request);
+        archived.push(cleanedRequest);
       } else {
-        active.push(request);
+        active.push(cleanedRequest);
       }
     });
     
     // Отбираем старые отказы для архивирования
     const oldRefusalsFiltered = RefusalArchiveService.filterOldRefusals(active, 5);
     
+    // Устанавливаем очищенные данные в состояние
     setActiveRefusals(active);
     setArchivedRefusals(archived);
     setOldRefusals(oldRefusalsFiltered);
     
-    // Собираем статистику по причинам отказов
-    collectReasonStats(refusals);
+    // Собираем статистику по причинам отказов с очищенными примечаниями
+    collectReasonStats(refusals.map(req => ({
+      ...req,
+      notes: RefusalArchiveService.cleanNotesForDisplay(req.notes || '')
+    })));
   }, [requests, isLoading]);
   
   // Обрабатываем список отказов при их изменении
