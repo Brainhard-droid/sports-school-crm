@@ -11,7 +11,7 @@ import { StudentsList } from '@/components/students/students-list';
 import { StudentFilters } from '@/components/students/student-filters';
 import { CreateStudentDialog } from '@/components/students';
 
-import { Grid, List, UserRoundPlus, Users, UserPlus, UsersRound } from 'lucide-react';
+import { Grid, List, UserRoundPlus, Users } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -130,26 +130,14 @@ export default function StudentsPage() {
       {/* Вкладки и списки учеников */}
       <Tabs 
         value={tabValue} 
-        onValueChange={(value) => setTabValue(value as 'all' | 'active' | 'archived' | 'newStudents')}
+        onValueChange={(value) => setTabValue(value as 'all' | 'active' | 'archived')}
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <TabsList>
-            <TabsTrigger value="all" className="flex items-center gap-1">
-              <UsersRound className="h-4 w-4" />
-              <span>Все ученики</span>
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              <span>Активные</span>
-            </TabsTrigger>
-            <TabsTrigger value="newStudents" className="flex items-center gap-1">
-              <UserPlus className="h-4 w-4" />
-              <span>Новые ученики</span>
-            </TabsTrigger>
-            <TabsTrigger value="archived" className="flex items-center gap-1">
-              <UserRoundPlus className="h-4 w-4 opacity-50" />
-              <span>Архивные</span>
-            </TabsTrigger>
+            <TabsTrigger value="all">Все ученики</TabsTrigger>
+            <TabsTrigger value="active">Активные</TabsTrigger>
+            <TabsTrigger value="newStudents">Новые ученики</TabsTrigger>
+            <TabsTrigger value="archived">Архивные</TabsTrigger>
           </TabsList>
           
           <ToggleGroup 
@@ -182,20 +170,6 @@ export default function StudentsPage() {
           />
           {renderStudentList(
             students.filter(s => s.active),
-            viewMode, 
-            isLoading,
-            error, 
-            handleArchiveToggle
-          )}
-        </TabsContent>
-
-        <TabsContent value="newStudents">
-          <StudentFilters 
-            filters={{ searchTerm }} 
-            onFiltersChange={({ searchTerm }) => setSearchTerm(searchTerm)} 
-          />
-          {renderStudentList(
-            students.filter(s => s.active && (!s.groups || s.groups.length === 0)),
             viewMode, 
             isLoading,
             error, 
