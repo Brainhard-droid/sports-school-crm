@@ -17,7 +17,12 @@ export class TrialRequestStorage implements ITrialRequestStorage {
    */
   async getAllTrialRequests(): Promise<TrialRequest[]> {
     try {
-      return await db.select().from(trialRequests);
+      console.log('Getting all trial requests with archived filter');
+      return await db
+        .select()
+        .from(trialRequests)
+        .where(eq(trialRequests.archived, false))
+        .orderBy(desc(trialRequests.createdAt));
     } catch (error) {
       console.error('Error getting all trial requests:', error);
       throw error;

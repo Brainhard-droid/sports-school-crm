@@ -119,6 +119,9 @@ export function useTrialRequests() {
     onSuccess: (data) => {
       console.log('Мутация успешно выполнена с данными:', data);
       
+      // Принудительно обновляем данные с сервера
+      queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+      
       // Мгновенно обновляем кэш с новыми данными, сохраняя связанные объекты
       queryClient.setQueryData<ExtendedTrialRequest[]>(["/api/trial-requests"], (old = []) => {
         if (!old || !Array.isArray(old)) return old;
