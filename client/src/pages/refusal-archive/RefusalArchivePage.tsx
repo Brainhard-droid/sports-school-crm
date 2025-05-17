@@ -68,11 +68,14 @@ export default function RefusalArchivePage() {
     try {
       console.log(`Начинаем архивирование заявки ID=${request.id}`);
       
-      // Архивируем заявку в БД с оптимистичным обновлением UI
+      // Сначала выполняем оптимистичное обновление UI 
+      // до выполнения запроса на сервер
+      optimisticArchiveUpdate(request.id, request.notes || '');
+      
+      // Архивируем заявку на сервере
       const { success, notes } = await RefusalArchiveService.archiveRefusal(
         request.id, 
-        request.notes || undefined,
-        optimisticArchiveUpdate // Передаем колбэк для оптимистичного обновления
+        request.notes || undefined
       );
       
       if (success) {
@@ -572,7 +575,7 @@ export default function RefusalArchivePage() {
                             </div>
                             {request.notes && (
                               <div className="text-xs bg-muted p-2 rounded mt-2">
-                                {request.notes}
+                                {RefusalArchiveService.cleanNotesForDisplay(request.notes)}
                               </div>
                             )}
                           </li>

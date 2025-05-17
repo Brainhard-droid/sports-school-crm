@@ -78,11 +78,19 @@ export class RefusalArchiveService {
   static cleanNotesForDisplay(notes: string): string {
     if (!notes) return '';
     
-    // Удаляем все технические маркеры
+    // Удаляем все технические маркеры и сообщения о архивации/восстановлении
     return notes
+      // Удаляем короткие коды
       .replace(new RegExp(ARCHIVE_MARKERS.ARCHIVE_TAG, 'g'), '')
       .replace(new RegExp(ARCHIVE_MARKERS.RESTORE_TAG, 'g'), '')
-      .replace(/\s{2,}/g, ' ') // Убираем лишние пробелы
+      // Удаляем сообщения о архивации/восстановлении
+      .replace(/\[.*(архивирован|восстановлен).*\]/gi, '')
+      // Удаляем упоминания технических меток
+      .replace(/\[___[A-Z_]+___\]/gi, '')
+      // Удаляем старый формат тегов
+      .replace(/___[A-Z_]+___/g, '')
+      // Оптимизируем оставшийся текст
+      .replace(/\s{2,}/g, ' ')
       .trim();
   }
   
