@@ -67,7 +67,9 @@ export default function RefusalArchivePage() {
 
   // Функция архивирования заявки с оптимистичным обновлением
   const handleArchiveRefusal = async (request: ExtendedTrialRequest) => {
-    setArchiving(true);
+    // Добавляем ID заявки в список архивируемых
+    setArchivingIds(prev => [...prev, request.id]);
+    
     try {
       console.log(`Начинаем архивирование заявки ID=${request.id}`);
       
@@ -119,7 +121,8 @@ export default function RefusalArchivePage() {
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchiving(false);
+      // Удаляем ID заявки из списка архивируемых
+      setArchivingIds(prev => prev.filter(id => id !== request.id));
     }
   };
   
@@ -131,7 +134,9 @@ export default function RefusalArchivePage() {
       return;
     }
     
-    setArchiving(true);
+    // Устанавливаем флаг массового архивирования
+    setArchivingAll(true);
+    
     try {
       console.log(`Начинаем архивирование ${activeRefusals.length} отказов`);
       
@@ -179,7 +184,8 @@ export default function RefusalArchivePage() {
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchiving(false);
+      // Сбрасываем флаг массового архивирования
+      setArchivingAll(false);
     }
   };
   
@@ -197,7 +203,8 @@ export default function RefusalArchivePage() {
       return;
     }
     
-    setArchiving(true);
+    // Устанавливаем флаг массового архивирования
+    setArchivingAll(true);
     
     try {
       console.log(`Начинаем архивирование ${oldRefusals.length} старых отказов`);
@@ -252,7 +259,8 @@ export default function RefusalArchivePage() {
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchiving(false);
+      // Сбрасываем флаг массового архивирования
+      setArchivingAll(false);
     }
   };
   
@@ -514,9 +522,9 @@ export default function RefusalArchivePage() {
                         onClick={handleArchiveAllRefusals} 
                         size="sm" 
                         className="gap-1"
-                        disabled={archiving}
+                        disabled={archivingAll}
                       >
-                        {archiving ? (
+                        {archivingAll ? (
                           <>
                             <Loader2 className="h-3 w-3 animate-spin" />
                             Архивирование...
@@ -576,10 +584,10 @@ export default function RefusalArchivePage() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleArchiveRefusal(request)}
-                                disabled={archiving}
+                                disabled={archivingIds.includes(request.id) || archivingAll}
                                 className="gap-1"
                               >
-                                {archiving ? (
+                                {archivingIds.includes(request.id) ? (
                                   <>
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                     Архивирование...
