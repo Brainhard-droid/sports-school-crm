@@ -632,7 +632,7 @@ export default function RefusalArchivePage() {
                             </div>
                             {request.notes && (
                               <div className="text-xs bg-muted p-2 rounded mt-2">
-                                {request.notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')}
+                                {RefusalArchiveService.cleanNotesForDisplay(request.notes)}
                               </div>
                             )}
                           </li>

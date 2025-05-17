@@ -75,7 +75,7 @@ export class RefusalArchiveService {
    * @param notes Исходный текст примечаний
    * @returns Текст примечаний без технических маркеров
    */
-  static cleanNotesForDisplay(notes?: string): string {
+  static cleanNotesForDisplay(notes: string): string {
     if (!notes) return '';
     
     // Удаляем все технические маркеры
