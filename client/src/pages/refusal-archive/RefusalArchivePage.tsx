@@ -116,10 +116,31 @@ export default function RefusalArchivePage() {
   const handleArchiveAllRefusals = async () => {
     if (activeRefusals.length === 0) return;
     
+    if (!confirm(`Вы уверены, что хотите архивировать все ${activeRefusals.length} отказов?`)) {
+      return;
+    }
+    
     setArchiving(true);
     try {
-      // Архивируем активные отказы
+      console.log(`Начинаем архивирование ${activeRefusals.length} отказов`);
+      
+      // Архивируем активные отказы через обновленный сервис
       const archivedCount = await RefusalArchiveService.archiveBatch(activeRefusals);
+      
+      console.log(`Успешно архивировано: ${archivedCount} из ${activeRefusals.length}`);
+      
+      // Оптимистично обновляем UI после успешного архивирования
+      if (archivedCount > 0) {
+        // Очищаем список активных отказов
+        setActiveRefusals([]);
+        
+        // Добавляем в архивированные с обновленными примечаниями
+        const updatedRequests = activeRefusals.map(request => ({
+          ...request,
+          notes: `${request.notes || ''} ${RefusalArchiveService.getArchiveMarker()}`
+        }));
+        setArchivedRefusals(prev => [...prev, ...updatedRequests]);
+      }
       
       // Показываем уведомление об успешном архивировании
       toast({
@@ -128,18 +149,97 @@ export default function RefusalArchivePage() {
         variant: archivedCount > 0 ? "default" : "destructive",
       });
       
-      // Обновляем данные запросов, если были архивированы заявки
+      // Обновляем данные запросов с сервера, если были архивированы заявки
       if (archivedCount > 0) {
-        // Обновляем данные с сервера
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+        // Обновляем данные с сервера с небольшой задержкой
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+          refreshData();
+        }, 1000);
       }
     } catch (error) {
-      console.error('Ошибка при архивировании:', error);
+      console.error('Ошибка при массовом архивировании:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось архивировать заявки",
         variant: "destructive",
       });
+      
+      // Запрашиваем обновленные данные с сервера
+      refreshData();
+    } finally {
+      setArchiving(false);
+    }
+  };
+  
+  // Функция архивирования всех старых отказов
+  const handleArchiveAllOld = async () => {
+    if (oldRefusals.length === 0) {
+      toast({
+        description: "Нет старых отказов для архивирования",
+        variant: "warning"
+      });
+      return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите архивировать все старые отказы (${oldRefusals.length} шт.)?`)) {
+      return;
+    }
+    
+    setArchiving(true);
+    
+    try {
+      console.log(`Начинаем архивирование ${oldRefusals.length} старых отказов`);
+      
+      // Архивируем старые отказы через обновленный сервис
+      const archivedCount = await RefusalArchiveService.archiveBatch(oldRefusals);
+      
+      console.log(`Успешно архивировано старых отказов: ${archivedCount} из ${oldRefusals.length}`);
+      
+      // Оптимистично обновляем UI после успешного архивирования
+      if (archivedCount > 0) {
+        // Удаляем архивированные заявки из списка активных
+        setActiveRefusals(prev => prev.filter(r => 
+          !oldRefusals.some(old => old.id === r.id)
+        ));
+        
+        // Удаляем архивированные заявки из списка старых
+        setOldRefusals([]);
+        
+        // Добавляем в архивированные с обновленными примечаниями
+        const updatedRequests = oldRefusals.map(request => ({
+          ...request,
+          notes: `${request.notes || ''} ${RefusalArchiveService.getArchiveMarker()}`
+        }));
+        setArchivedRefusals(prev => [...prev, ...updatedRequests]);
+        
+        toast({
+          description: `Архивировано ${archivedCount} старых отказов`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          description: "Не удалось архивировать старые отказы",
+          variant: "destructive"
+        });
+      }
+      
+      // Обновляем данные с сервера после успешного архивирования
+      if (archivedCount > 0) {
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+          refreshData();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Ошибка при массовом архивировании старых отказов:", error);
+      toast({
+        description: "Произошла ошибка при архивировании",
+        variant: "destructive"
+      });
+      
+      // Запрашиваем обновленные данные с сервера
+      refreshData();
     } finally {
       setArchiving(false);
     }
