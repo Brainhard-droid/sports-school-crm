@@ -2,7 +2,7 @@ import {
   TrialRequest, InsertTrialRequest, trialRequests, TrialRequestStatus,
   sportsSections, branches
 } from "@shared/schema";
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { ITrialRequestStorage } from "../interfaces/storage/ITrialRequestStorage";
 
