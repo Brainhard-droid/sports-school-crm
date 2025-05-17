@@ -29,32 +29,31 @@ export default function RefusalArchivePage() {
   const [_, setLocation] = useLocation();
   const { requests = [], isLoading } = useTrialRequests();
   const [activeTab, setActiveTab] = useState<string>("active");
-
+  
   // Активные отказы - те, которые еще не заархивированы
   const [activeRefusals, setActiveRefusals] = useState<ExtendedTrialRequest[]>([]);
-
+  
   // Архивированные отказы
   const [archivedRefusals, setArchivedRefusals] = useState<ExtendedTrialRequest[]>([]);
-
+  
   // Старые отказы, которые можно архивировать
   const [oldRefusals, setOldRefusals] = useState<ExtendedTrialRequest[]>([]);
-
+  
   // Статистика по отказам
   const [stats, setStats] = useState<RefusalStat[]>([]);
-
-  // Храним состояние архивирования для каждой заявки отдельно
-  const [archivingIds, setArchivingIds] = useState<Set<number>>(new Set());
-  const [archivingAll, setArchivingAll] = useState(false);
-
+  
+  const [archiving, setArchiving] = useState(false);
+  const [restoring, setRestoring] = useState<number | null>(null);
+  
   // Функция для оптимистичного обновления UI при архивировании
   const optimisticArchiveUpdate = (requestId: number, updatedNotes: string) => {
     // Находим заявку
     const request = activeRefusals.find(r => r.id === requestId);
     if (!request) return;
-
+    
     // Оптимистично обновляем UI - удаляем из активных и добавляем в архивированные
     setActiveRefusals(prev => prev.filter(r => r.id !== requestId));
-
+    
     // Добавляем в список архивированных с оптимистичным обновлением
     const updatedRequest = {
       ...request,
@@ -65,44 +64,44 @@ export default function RefusalArchivePage() {
 
   // Функция архивирования заявки с оптимистичным обновлением
   const handleArchiveRefusal = async (request: ExtendedTrialRequest) => {
-    setArchivingIds(prev => new Set(prev).add(request.id));
+    setArchiving(true);
     try {
       console.log(`Начинаем архивирование заявки ID=${request.id}`);
-
+      
       // Сначала выполняем оптимистичное обновление UI 
       // до выполнения запроса на сервер
       optimisticArchiveUpdate(request.id, request.notes || '');
-
+      
       // Архивируем заявку на сервере
       const { success, notes } = await RefusalArchiveService.archiveRefusal(
         request.id, 
         request.notes || undefined
       );
-
+      
       if (success) {
         console.log(`Заявка ID=${request.id} успешно архивирована`);
-
+        
         // Показываем уведомление об успешном архивировании
         toast({
           title: "Архивирование выполнено",
           description: `Заявка #${request.id} перемещена в архив`,
           variant: "default",
         });
-
+        
         // Обновляем данные с сервера с небольшой задержкой
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
         }, 300); // Уменьшаем задержку для более быстрого обновления
       } else {
         console.error(`Ошибка при архивировании заявки ID=${request.id}`);
-
+        
         // Восстанавливаем состояние при ошибке
         toast({
           title: "Ошибка",
           description: "Не удалось архивировать заявку",
           variant: "destructive",
         });
-
+        
         // Возвращаем оптимистично обновленные данные в исходное состояние
         refreshData();
       }
@@ -113,40 +112,36 @@ export default function RefusalArchivePage() {
         description: "Не удалось архивировать заявку",
         variant: "destructive",
       });
-
+      
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchivingIds(prev => {
-        const next = new Set(prev);
-        next.delete(request.id);
-        return next;
-      });
+      setArchiving(false);
     }
   };
-
+  
   // Функция архивирования всех активных отказов
   const handleArchiveAllRefusals = async () => {
     if (activeRefusals.length === 0) return;
-
+    
     if (!confirm(`Вы уверены, что хотите архивировать все ${activeRefusals.length} отказов?`)) {
       return;
     }
-
-    setArchivingAll(true);
+    
+    setArchiving(true);
     try {
       console.log(`Начинаем архивирование ${activeRefusals.length} отказов`);
-
+      
       // Архивируем активные отказы через обновленный сервис
       const archivedCount = await RefusalArchiveService.archiveBatch(activeRefusals);
-
+      
       console.log(`Успешно архивировано: ${archivedCount} из ${activeRefusals.length}`);
-
+      
       // Оптимистично обновляем UI после успешного архивирования
       if (archivedCount > 0) {
         // Очищаем список активных отказов
         setActiveRefusals([]);
-
+        
         // Добавляем в архивированные с обновленными примечаниями
         const updatedRequests = activeRefusals.map(request => ({
           ...request,
@@ -154,14 +149,14 @@ export default function RefusalArchivePage() {
         }));
         setArchivedRefusals(prev => [...prev, ...updatedRequests]);
       }
-
+      
       // Показываем уведомление об успешном архивировании
       toast({
         title: "Архивирование выполнено",
         description: `Архивировано ${archivedCount} из ${activeRefusals.length} заявок`,
         variant: archivedCount > 0 ? "default" : "destructive",
       });
-
+      
       // Обновляем данные запросов с сервера, если были архивированы заявки
       if (archivedCount > 0) {
         // Обновляем данные с сервера с небольшой задержкой
@@ -177,18 +172,14 @@ export default function RefusalArchivePage() {
         description: "Не удалось архивировать заявки",
         variant: "destructive",
       });
-
+      
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchivingAll(false);
-      setArchivingIds(new Set());
-
-      // Обновляем UI после архивирования
-      await queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+      setArchiving(false);
     }
   };
-
+  
   // Функция архивирования всех старых отказов
   const handleArchiveAllOld = async () => {
     if (oldRefusals.length === 0) {
@@ -198,38 +189,38 @@ export default function RefusalArchivePage() {
       });
       return;
     }
-
+    
     if (!confirm(`Вы уверены, что хотите архивировать все старые отказы (${oldRefusals.length} шт.)?`)) {
       return;
     }
-
-    setArchivingAll(true);
-
+    
+    setArchiving(true);
+    
     try {
       console.log(`Начинаем архивирование ${oldRefusals.length} старых отказов`);
-
+      
       // Архивируем старые отказы через обновленный сервис
       const archivedCount = await RefusalArchiveService.archiveBatch(oldRefusals);
-
+      
       console.log(`Успешно архивировано старых отказов: ${archivedCount} из ${oldRefusals.length}`);
-
+      
       // Оптимистично обновляем UI после успешного архивирования
       if (archivedCount > 0) {
         // Удаляем архивированные заявки из списка активных
         setActiveRefusals(prev => prev.filter(r => 
           !oldRefusals.some(old => old.id === r.id)
         ));
-
+        
         // Удаляем архивированные заявки из списка старых
         setOldRefusals([]);
-
+        
         // Добавляем в архивированные с обновленными примечаниями
         const updatedRequests = oldRefusals.map(request => ({
           ...request,
           notes: `${request.notes || ''} ${RefusalArchiveService.getArchiveMarker()}`
         }));
         setArchivedRefusals(prev => [...prev, ...updatedRequests]);
-
+        
         toast({
           description: `Архивировано ${archivedCount} старых отказов`,
           variant: "default"
@@ -240,7 +231,7 @@ export default function RefusalArchivePage() {
           variant: "destructive"
         });
       }
-
+      
       // Обновляем данные с сервера после успешного архивирования
       if (archivedCount > 0) {
         setTimeout(() => {
@@ -254,51 +245,47 @@ export default function RefusalArchivePage() {
         description: "Произошла ошибка при архивировании",
         variant: "destructive"
       });
-
+      
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
-      setArchivingAll(false);
-      setArchivingIds(new Set());
-
-      // Обновляем UI после архивирования
-      await queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+      setArchiving(false);
     }
   };
-
+  
   // Функция восстановления заявки из архива
   const handleRestoreRefusal = async (request: ExtendedTrialRequest) => {
     // Если уже идет восстановление этой заявки, прерываем
     if (restoring === request.id) return;
-
+    
     console.log(`Начинаем восстановление заявки ID=${request.id} из архива`);
     setRestoring(request.id);
-
+    
     try {
       // 1. СНАЧАЛА делаем оптимистичное обновление UI
       // Удаляем из архивированных
       setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
-
+      
       // Готовим полностью очищенный текст примечаний
       const cleanNotes = RefusalArchiveService.cleanNotesForDisplay(request.notes || '');
-
+      
       // Формируем метку восстановления (для сервера)
       const restoreMarker = RefusalArchiveService.getRestoreMarker();
       const updatedNotes = `${cleanNotes} ${restoreMarker}`.trim();
-
+      
       // Создаем объект заявки с очищенными примечаниями
       const updatedRequest = {
         ...request,
         notes: cleanNotes, // Для отображения в UI используем полностью очищенный текст
         status: 'REFUSED'  // Явно указываем статус отказа, а не "архивированного отказа"
       };
-
+      
       // Добавляем в активные отказы
       setActiveRefusals(prev => [updatedRequest, ...prev]);
-
+      
       // 2. ПОТОМ отправляем запрос на сервер с техническими метками
       const { success } = await RefusalArchiveService.restoreFromArchive(request.id);
-
+      
       if (success) {
         // Показываем уведомление об успешном восстановлении
         toast({
@@ -306,7 +293,7 @@ export default function RefusalArchivePage() {
           description: `Заявка #${request.id} восстановлена из архива`,
           variant: "default",
         });
-
+        
         // 3. Обновляем данные с сервера с УВЕЛИЧЕННОЙ задержкой
         // чтобы предотвратить мерцание интерфейса
         setTimeout(() => {
@@ -316,7 +303,7 @@ export default function RefusalArchivePage() {
         // Если произошла ошибка, откатываем UI изменения
         setArchivedRefusals(prev => [...prev, request]);
         setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
-
+        
         toast({
           title: "Ошибка",
           description: "Не удалось восстановить заявку",
@@ -330,7 +317,7 @@ export default function RefusalArchivePage() {
         description: "Не удалось восстановить заявку из архива",
         variant: "destructive",
       });
-
+      
       // Запрашиваем обновленные данные с сервера
       refreshData();
     } finally {
@@ -341,19 +328,19 @@ export default function RefusalArchivePage() {
   // Функция обновления данных
   const refreshData = useCallback(() => {
     if (isLoading || !requests) return;
-
+    
     console.log('Обрабатываем список отказов для архива');
-
+    
     // Фильтруем только отказы - включая статус REFUSED и ARCHIVED_REFUSAL
     const refusals = requests.filter(r => 
       r.status === TrialRequestStatus.REFUSED || 
       r.status === TrialRequestStatus.ARCHIVED_REFUSAL
     );
-
+    
     // Разделяем на активные и архивированные
     const active: ExtendedTrialRequest[] = [];
     const archived: ExtendedTrialRequest[] = [];
-
+    
     refusals.forEach(request => {
       // Создаем клон заявки, чтобы не мутировать оригинальные данные
       const cleanedRequest = {
@@ -361,37 +348,37 @@ export default function RefusalArchivePage() {
         // Очищаем примечания от всех технических меток для отображения
         notes: RefusalArchiveService.cleanNotesForDisplay(request.notes || '')
       };
-
+      
       // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
       const isArchived = RefusalArchiveService.isArchived(request);
-
+      
       if (isArchived) {
         archived.push(cleanedRequest);
       } else {
         active.push(cleanedRequest);
       }
     });
-
+    
     // Отбираем старые отказы для архивирования
     const oldRefusalsFiltered = RefusalArchiveService.filterOldRefusals(active, 5);
-
+    
     // Устанавливаем очищенные данные в состояние
     setActiveRefusals(active);
     setArchivedRefusals(archived);
     setOldRefusals(oldRefusalsFiltered);
-
+    
     // Собираем статистику по причинам отказов с очищенными примечаниями
     collectReasonStats(refusals.map(req => ({
       ...req,
       notes: RefusalArchiveService.cleanNotesForDisplay(req.notes || '')
     })));
   }, [requests, isLoading]);
-
+  
   // Обрабатываем список отказов при их изменении
   useEffect(() => {
     refreshData();
   }, [refreshData]);
-
+  
   // Функция для сбора статистики по причинам отказов
   const collectReasonStats = (requests: ExtendedTrialRequest[]) => {
     const reasons: Record<string, number> = {};
@@ -427,14 +414,14 @@ export default function RefusalArchivePage() {
 
     // Сортируем по убыванию количества
     statsArray.sort((a, b) => b.count - a.count);
-
+    
     setStats(statsArray);
   };
-
+  
   // Форматирование даты архивирования для отображения
   const getArchiveDate = (notes: string | null | undefined): string => {
     if (!notes) return '';
-
+    
     // Ищем дату в формате сообщения об архивировании: [Заявка архивирована 17.05.2025]
     const match = notes.match(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}\\s+(\\d{1,2}\\.\\d{1,2}\\.\\d{4})\\]`));
     return match ? match[1] : '';
@@ -475,7 +462,7 @@ export default function RefusalArchivePage() {
           </Button>
         </div>
       </div>
-
+      
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[200px]">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -506,7 +493,7 @@ export default function RefusalArchivePage() {
                   Статистика
                 </TabsTrigger>
               </TabsList>
-
+              
               <TabsContent value="active" className="min-h-[400px]">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -518,15 +505,15 @@ export default function RefusalArchivePage() {
                         Активные отказы, которые отображаются в колонке "Отказ"
                       </p>
                     </div>
-
+                    
                     {activeRefusals.length > 0 && (
                       <Button 
                         onClick={handleArchiveAllRefusals} 
                         size="sm" 
                         className="gap-1"
-                        disabled={archivingAll}
+                        disabled={archiving}
                       >
-                        {archivingAll ? (
+                        {archiving ? (
                           <>
                             <Loader2 className="h-3 w-3 animate-spin" />
                             Архивирование...
@@ -540,7 +527,7 @@ export default function RefusalArchivePage() {
                       </Button>
                     )}
                   </div>
-
+                  
                   {oldRefusals.length > 0 && (
                     <Card className="shadow-none border-amber-200 bg-amber-50 dark:bg-amber-950/20">
                       <CardHeader className="py-2 px-3">
@@ -569,7 +556,7 @@ export default function RefusalArchivePage() {
                       </CardContent>
                     </Card>
                   )}
-
+                  
                   {activeRefusals.length > 0 ? (
                     <ScrollArea className="h-[400px]">
                       <ul className="space-y-2">
@@ -585,11 +572,11 @@ export default function RefusalArchivePage() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                disabled={archivingIds.has(request.id) || archivingAll}
                                 onClick={() => handleArchiveRefusal(request)}
+                                disabled={archiving}
                                 className="gap-1"
                               >
-                                {archivingIds.has(request.id) ? (
+                                {archiving ? (
                                   <>
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                     Архивирование...
@@ -618,7 +605,7 @@ export default function RefusalArchivePage() {
                   )}
                 </div>
               </TabsContent>
-
+              
               <TabsContent value="archived" className="min-h-[400px]">
                 <div className="space-y-4">
                   <div>
@@ -629,7 +616,7 @@ export default function RefusalArchivePage() {
                       Заявки, которые были архивированы и не отображаются в основном списке
                     </p>
                   </div>
-
+                  
                   {archivedRefusals.length > 0 ? (
                     <ScrollArea className="h-[400px]">
                       <ul className="space-y-2">
@@ -683,7 +670,7 @@ export default function RefusalArchivePage() {
                   )}
                 </div>
               </TabsContent>
-
+              
               <TabsContent value="stats" className="min-h-[400px]">
                 <div className="space-y-4">
                   <div>
@@ -694,7 +681,7 @@ export default function RefusalArchivePage() {
                       Анализ самых частых причин отказа от пробных занятий
                     </p>
                   </div>
-
+                  
                   {stats.length > 0 ? (
                     <Card>
                       <CardHeader className="pb-2">
