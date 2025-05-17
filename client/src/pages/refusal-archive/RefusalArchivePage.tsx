@@ -177,7 +177,7 @@ export default function RefusalArchivePage() {
     if (oldRefusals.length === 0) {
       toast({
         description: "Нет старых отказов для архивирования",
-        variant: "warning"
+        variant: "default"
       });
       return;
     }
@@ -215,7 +215,7 @@ export default function RefusalArchivePage() {
         
         toast({
           description: `Архивировано ${archivedCount} старых отказов`,
-          variant: "success"
+          variant: "default"
         });
       } else {
         toast({

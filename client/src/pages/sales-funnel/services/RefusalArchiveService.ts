@@ -94,14 +94,14 @@ export class RefusalArchiveService {
       
       console.log('Архивирование с примечаниями:', notes);
       
-      // ВАЖНО: отправляем запрос к API с флагом archived: true
-      // Это сообщает бэкенду, что заявка должна быть архивирована
+      // Отправляем запрос к API с обновленными примечаниями и статусом REFUSED
+      // Бэкенд не распознает поле archived, поэтому используем существующие поля
       const response = await apiRequest(
         "PATCH",
         `/api/trial-requests/${requestId}/status`,
         { 
           notes,
-          archived: true // Ключевое изменение: отмечаем заявку как архивированную
+          status: "REFUSED" // Подтверждаем статус отказа
         }
       );
       
@@ -156,12 +156,14 @@ export class RefusalArchiveService {
       console.log('Восстановление с примечаниями:', notes);
       
       // Отправляем запрос к API для обновления заявки через маршрут status
-      // Важно: используем тот же маршрут, что и для архивирования,
-      // но без параметра archived
+      // Важно: подтверждаем статус REFUSED, но с обновленными примечаниями
       const updateResponse = await apiRequest(
         "PATCH",
         `/api/trial-requests/${requestId}/status`,
-        { notes }
+        { 
+          notes,
+          status: "REFUSED"  // Подтверждаем статус отказа
+        }
       );
       
       // Проверяем успешность запроса
