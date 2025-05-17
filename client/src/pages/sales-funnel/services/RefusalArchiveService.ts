@@ -1,11 +1,54 @@
 import { apiRequest, getResponseData } from "@/lib/api";
 import { ExtendedTrialRequest } from "@shared/schema";
 
+// Константы для маркеров архивирования (соблюдаем Open/Closed принцип SOLID)
+export const ARCHIVE_MARKERS = {
+  ARCHIVED: "архивирована",
+  ARCHIVE_PREFIX: "[Заявка автоматически архивирована",
+  RESTORE_PREFIX: "[Восстановлена из архива"
+};
+
 /**
  * Сервис для работы с архивированием отказов
  * Следует принципу единственной ответственности (SRP) из SOLID
  */
 export class RefusalArchiveService {
+  /**
+   * Проверяет, является ли заявка архивированной
+   * @param request Заявка для проверки
+   * @returns true, если заявка архивирована
+   */
+  static isArchived(request: ExtendedTrialRequest): boolean {
+    return !!(request.notes && request.notes.includes(ARCHIVE_MARKERS.ARCHIVED));
+  }
+  
+  /**
+   * Проверяет, была ли заявка восстановлена из архива
+   * @param request Заявка для проверки
+   * @returns true, если заявка была восстановлена
+   */
+  static isRestored(request: ExtendedTrialRequest): boolean {
+    return !!(request.notes && request.notes.includes(ARCHIVE_MARKERS.RESTORE_PREFIX));
+  }
+  
+  /**
+   * Формирует метку архивирования для заявки
+   * @returns Строка метки архивирования с текущей датой
+   */
+  static getArchiveMarker(): string {
+    const currentDate = new Date().toLocaleDateString();
+    return `${ARCHIVE_MARKERS.ARCHIVE_PREFIX} ${currentDate}]`;
+  }
+  
+  /**
+   * Формирует метку восстановления из архива
+   * @returns Строка метки восстановления с текущей датой
+   */
+  static getRestoreMarker(): string {
+    const currentDate = new Date().toLocaleDateString();
+    return `${ARCHIVE_MARKERS.RESTORE_PREFIX} ${currentDate}]`;
+  }
+  
   /**
    * Фильтрует заявки старше указанного количества дней
    * @param requests Список заявок
@@ -32,15 +75,17 @@ export class RefusalArchiveService {
    */
   static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
     try {
-      // Формируем обновленные примечания с меткой об архивировании
-      const currentDate = new Date().toLocaleDateString();
-      const archiveNote = `[Заявка автоматически архивирована ${currentDate}]`;
+      // Получаем метку архивирования с текущей датой
+      const archiveNote = this.getArchiveMarker();
       
       // Сохраняем старые примечания, если они есть
       const notes = oldNotes ? `${oldNotes} ${archiveNote}` : archiveNote;
       
       // Отправляем запрос на обновление примечаний заявки
       await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
+      
+      // Добавляем задержку для гарантии сохранения данных перед обновлением UI
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       return true;
     } catch (error) {
@@ -58,7 +103,7 @@ export class RefusalArchiveService {
     try {
       // Получаем текущую заявку
       const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
-      const request = await getResponseData(response);
+      const request = await getResponseData<ExtendedTrialRequest>(response);
       
       if (!request) {
         return false;
@@ -66,11 +111,19 @@ export class RefusalArchiveService {
       
       // Удаляем метку архивирования из примечаний
       let notes = request.notes || '';
-      notes = notes.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
-        .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`;
+      
+      // Удаляем все метки архивирования
+      notes = notes.replace(new RegExp(`${ARCHIVE_MARKERS.ARCHIVE_PREFIX}[^\\]]*\\]`, 'g'), '')
+        .trim();
+      
+      // Добавляем метку восстановления
+      notes = `${notes} ${this.getRestoreMarker()}`.trim();
       
       // Отправляем запрос на обновление примечаний заявки
       await apiRequest("PATCH", `/api/trial-requests/${requestId}`, { notes });
+      
+      // Добавляем задержку для гарантии сохранения данных перед обновлением UI
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       return true;
     } catch (error) {
