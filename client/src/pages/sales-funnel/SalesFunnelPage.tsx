@@ -133,7 +133,31 @@ export default function SalesFunnelPage() {
       return;
     }
 
-    // Для остальных статусов сразу обновляем статус
+    // Проверяем, перетаскиваем ли мы в статус "Записан"
+    if (targetStatus === "SIGNED") {
+      console.log('Обрабатываем заявку в статусе "Записан":', request);
+      
+      // Сначала обновляем статус заявки (оптимистичное обновление UI)
+      updateStatus({ 
+        id: requestId, 
+        status: targetStatus
+      });
+      
+      // Затем импортируем сервис динамически для избежания циклических зависимостей
+      import("@/services/StudentFromTrialService").then(({ StudentFromTrialService }) => {
+        // Создаем ученика из заявки автоматически
+        StudentFromTrialService.createStudentFromTrialRequest(request)
+          .then(createdStudent => {
+            console.log('Автоматически создан новый ученик:', createdStudent);
+          })
+          .catch(error => {
+            console.error('Ошибка при автоматическом создании ученика:', error);
+          });
+      });
+      return;
+    }
+    
+    // Для других статусов сразу обновляем статус
     console.log('Updating status to:', targetStatus);
     updateStatus({ 
       id: requestId, 

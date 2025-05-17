@@ -36,7 +36,7 @@ export default function StudentsPage() {
   // Локальный стейт для фильтров и режима отображения
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [tabValue, setTabValue] = useState<'all' | 'active' | 'archived'>('all');
+  const [tabValue, setTabValue] = useState<'all' | 'active' | 'archived' | 'newStudents'>('all');
   
   // Определяем стратегию фильтрации на основе выбранной вкладки
   const showArchived = useMemo(() => {
@@ -136,6 +136,7 @@ export default function StudentsPage() {
           <TabsList>
             <TabsTrigger value="all">Все ученики</TabsTrigger>
             <TabsTrigger value="active">Активные</TabsTrigger>
+            <TabsTrigger value="newStudents">Новые ученики</TabsTrigger>
             <TabsTrigger value="archived">Архивные</TabsTrigger>
           </TabsList>
           
