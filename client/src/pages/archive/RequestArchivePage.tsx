@@ -26,6 +26,20 @@ type SuccessStat = {
 };
 
 /**
+ * Функция для безопасного получения имени секции
+ * Обрабатывает разные форматы данных поля section
+ */
+const getSectionName = (section: any): string => {
+  if (!section) return 'Не указана';
+  
+  if (typeof section === 'object' && section !== null) {
+    return section.name || 'Не указана';
+  }
+  
+  return String(section);
+};
+
+/**
  * Страница архива заявок
  * Отвечает за отображение архивированных заявок (отказов и успешных) и работу с ними
  * Следует принципу единственной ответственности (SRP) из SOLID
@@ -542,9 +556,16 @@ export default function RequestArchivePage() {
       
       archivedSuccessfulList.forEach(request => {
         // Используем сведения о секции или направлении
-        let section = request.section || 'Не указана';
+        let sectionName = 'Не указана';
         
-        sectionGroups[section] = (sectionGroups[section] || 0) + 1;
+        if (request.section) {
+          // Преобразуем объект section в строковое имя секции
+          sectionName = typeof request.section === 'object' && request.section !== null 
+            ? (request.section.name || 'Не указана') 
+            : String(request.section);
+        }
+        
+        sectionGroups[sectionName] = (sectionGroups[sectionName] || 0) + 1;
       });
       
       // Преобразуем в массив и сортируем по убыванию количества

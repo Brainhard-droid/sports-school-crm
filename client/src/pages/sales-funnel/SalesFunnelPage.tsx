@@ -205,7 +205,7 @@ export default function SalesFunnelPage() {
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
         // Используем сервис для проверки, является ли заявка архивированной
-        const isArchived = RefusalArchiveService.isArchived(r);
+        const isArchived = RequestArchiveService.isArchived(r);
         if (isArchived) {
           console.log(`Заявка ${r.id} скрыта из колонки "Отказ", т.к. архивирована (${r.notes})`);
         }
@@ -303,7 +303,7 @@ export default function SalesFunnelPage() {
             variant="outline" 
             size="sm" 
             className="gap-1"
-            onClick={() => setLocation('/refusal-archive')}
+            onClick={() => setLocation('/archive')}
           >
             <Archive className="h-4 w-4" />
             Архив
