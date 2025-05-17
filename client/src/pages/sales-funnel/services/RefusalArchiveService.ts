@@ -8,17 +8,17 @@ import { ExtendedTrialRequest } from "@shared/schema";
  * - закрыт для модификации (существующие теги не меняются)
  */
 export const ARCHIVE_MARKERS = {
-  // Уникальный маркер для архивирования - гарантирует точную идентификацию
-  ARCHIVE_TAG: "___ARCHIVED_REFUSAL___",
+  // Уникальный маркер для архивирования - скрыт для пользователя
+  ARCHIVE_TAG: "__AR__",
   
-  // Маркер восстановления из архива
-  RESTORE_TAG: "___RESTORED_REFUSAL___",
+  // Маркер восстановления из архива - скрыт для пользователя
+  RESTORE_TAG: "__RS__",
   
   // Текстовые метки для пользовательского интерфейса
   ARCHIVE_LABEL: "Архивирована",
   RESTORE_LABEL: "Восстановлена",
   
-  // Маркеры для сообщений в примечаниях
+  // Маркеры для сообщений в примечаниях - без технических меток
   ARCHIVE_MESSAGE: "Заявка архивирована",
   RESTORE_MESSAGE: "Восстановлена из архива"
 };
@@ -58,7 +58,7 @@ export class RefusalArchiveService {
    */
   static getArchiveMarker(): string {
     const date = new Date().toLocaleDateString();
-    return `[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE} ${date}] [${ARCHIVE_MARKERS.ARCHIVE_TAG}]`;
+    return `[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE} ${date}] ${ARCHIVE_MARKERS.ARCHIVE_TAG}`;
   }
   
   /**
@@ -67,23 +67,44 @@ export class RefusalArchiveService {
    */
   static getRestoreMarker(): string {
     const date = new Date().toLocaleDateString();
-    return `[${ARCHIVE_MARKERS.RESTORE_MESSAGE} ${date}] [${ARCHIVE_MARKERS.RESTORE_TAG}]`;
+    return `[${ARCHIVE_MARKERS.RESTORE_MESSAGE} ${date}] ${ARCHIVE_MARKERS.RESTORE_TAG}`;
+  }
+  
+  /**
+   * Очищает примечания от технических маркеров
+   * @param notes Исходный текст примечаний
+   * @returns Текст примечаний без технических маркеров
+   */
+  static cleanNotesForDisplay(notes?: string): string {
+    if (!notes) return '';
+    
+    // Удаляем все технические маркеры
+    return notes
+      .replace(new RegExp(ARCHIVE_MARKERS.ARCHIVE_TAG, 'g'), '')
+      .replace(new RegExp(ARCHIVE_MARKERS.RESTORE_TAG, 'g'), '')
+      .replace(/\s{2,}/g, ' ') // Убираем лишние пробелы
+      .trim();
   }
   
   /**
    * Архивирует заявку на отказ
    * @param requestId ID заявки для архивирования
    * @param oldNotes Предыдущие примечания (если есть)
-   * @returns Promise<boolean> Результат операции
+   * @param optimisticCallback Колбэк для оптимистичного обновления UI
+   * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
    */
-  static async archiveRefusal(requestId: number, oldNotes?: string): Promise<boolean> {
+  static async archiveRefusal(
+    requestId: number, 
+    oldNotes?: string, 
+    optimisticCallback?: (id: number, notes: string) => void
+  ): Promise<{success: boolean, notes: string}> {
     try {
       console.log(`RefusalArchiveService: Архивирование заявки ID=${requestId}`);
       
       // Проверяем, архивирована ли уже заявка
       if (oldNotes && oldNotes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG)) {
         console.log('Заявка уже содержит тег архивирования');
-        return true;
+        return { success: true, notes: oldNotes };
       }
       
       // Создаем текст примечаний с маркером архивирования
@@ -92,10 +113,14 @@ export class RefusalArchiveService {
         ? `${oldNotes.trim()} ${archiveMarker}`
         : archiveMarker;
       
+      // Вызываем оптимистичный колбэк до выполнения запроса для мгновенного обновления UI
+      if (optimisticCallback) {
+        optimisticCallback(requestId, notes);
+      }
+      
       console.log('Архивирование с примечаниями:', notes);
       
       // Отправляем запрос к API с обновленными примечаниями и статусом REFUSED
-      // Бэкенд не распознает поле archived, поэтому используем существующие поля
       const response = await apiRequest(
         "PATCH",
         `/api/trial-requests/${requestId}/status`,
@@ -114,19 +139,23 @@ export class RefusalArchiveService {
         console.error('Ошибка при архивировании:', await response.text());
       }
       
-      return success;
+      return { success, notes };
     } catch (error) {
       console.error('Ошибка при архивировании заявки:', error);
-      return false;
+      return { success: false, notes: oldNotes || '' };
     }
   }
   
   /**
    * Восстанавливает заявку из архива
    * @param requestId ID заявки для восстановления
-   * @returns Promise<boolean> Результат операции
+   * @param optimisticCallback Колбэк для оптимистичного обновления UI
+   * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
    */
-  static async restoreFromArchive(requestId: number): Promise<boolean> {
+  static async restoreFromArchive(
+    requestId: number, 
+    optimisticCallback?: (id: number, notes: string) => void
+  ): Promise<{success: boolean, notes: string}> {
     try {
       console.log(`RefusalArchiveService: Восстановление заявки ID=${requestId}`);
       
@@ -134,7 +163,7 @@ export class RefusalArchiveService {
       const response = await apiRequest("GET", `/api/trial-requests/${requestId}`);
       if (!response.ok) {
         console.error('Не удалось получить данные заявки:', await response.text());
-        return false;
+        return { success: false, notes: '' };
       }
       
       const request = await getResponseData<ExtendedTrialRequest>(response);
@@ -142,21 +171,27 @@ export class RefusalArchiveService {
       // Подготавливаем текст примечаний без маркера архивирования
       let notes = request.notes || '';
       
-      // Удаляем все маркеры архивирования
+      // Удаляем все маркеры архивирования более эффективным способом
       notes = notes
-        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}[^\\]]*\\]`, 'g'), '')
-        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_TAG}\\]`, 'g'), '')
-        .replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '') // Удаляем метки автоматического архивирования
+        .replace(new RegExp(ARCHIVE_MARKERS.ARCHIVE_TAG, 'g'), '')
+        .replace(/\[[^\]]*архивирован[^\]]*\]/gi, '') // Удаляем все метки архивирования
         .trim();
       
       // Добавляем маркер восстановления
       const restoreMarker = this.getRestoreMarker();
       notes = `${notes} ${restoreMarker}`.trim();
       
-      console.log('Восстановление с примечаниями:', notes);
+      // Очищаем текст для отображения
+      const displayNotes = this.cleanNotesForDisplay(notes);
+      
+      // Вызываем оптимистичный колбэк до выполнения запроса для мгновенного обновления UI
+      if (optimisticCallback) {
+        optimisticCallback(requestId, notes);
+      }
+      
+      console.log('Восстановление с примечаниями:', displayNotes);
       
       // Отправляем запрос к API для обновления заявки через маршрут status
-      // Важно: подтверждаем статус REFUSED, но с обновленными примечаниями
       const updateResponse = await apiRequest(
         "PATCH",
         `/api/trial-requests/${requestId}/status`,
@@ -175,29 +210,72 @@ export class RefusalArchiveService {
         console.error('Ошибка при восстановлении:', await updateResponse.text());
       }
       
-      return success;
+      return { success, notes };
     } catch (error) {
       console.error('Ошибка при восстановлении заявки из архива:', error);
-      return false;
+      return { success: false, notes: '' };
     }
   }
   
   /**
    * Архивирует сразу несколько заявок
    * @param requests Список заявок для архивирования
+   * @param optimisticCallback Колбэк для оптимистичного обновления UI
    * @returns Promise<number> Количество успешно архивированных заявок
    */
-  static async archiveBatch(requests: ExtendedTrialRequest[]): Promise<number> {
+  static async archiveBatch(
+    requests: ExtendedTrialRequest[], 
+    optimisticCallback?: (id: number, notes: string) => void
+  ): Promise<number> {
     let successCount = 0;
     
-    for (const request of requests) {
-      const success = await this.archiveRefusal(request.id, request.notes || undefined);
-      if (success) {
-        successCount++;
-      }
-    }
+    // Создаем копию списка для параллельной обработки
+    const promises = requests.map(async (request) => {
+      const { success, notes } = await this.archiveRefusal(
+        request.id, 
+        request.notes || undefined,
+        optimisticCallback
+      );
+      
+      return { success, requestId: request.id, notes };
+    });
+    
+    // Дожидаемся выполнения всех запросов параллельно
+    const results = await Promise.all(promises);
+    
+    // Подсчитываем количество успешных операций
+    successCount = results.filter(r => r.success).length;
     
     return successCount;
+  }
+  
+  /**
+   * Получает текст для отображения в пользовательском интерфейсе
+   * Удаляет технические маркеры из примечаний
+   * @param request Заявка
+   * @returns Объект с очищенными текстами
+   */
+  static getDisplayTexts(request: ExtendedTrialRequest): { 
+    notes: string, 
+    status: string,
+    archiveStatus?: string
+  } {
+    const cleanNotes = this.cleanNotesForDisplay(request.notes);
+    
+    // Определяем статус архивирования для отображения
+    let archiveStatus = undefined;
+    
+    if (this.isArchived(request)) {
+      archiveStatus = ARCHIVE_MARKERS.ARCHIVE_LABEL;
+    } else if (this.isRestored(request)) {
+      archiveStatus = ARCHIVE_MARKERS.RESTORE_LABEL;
+    }
+    
+    return {
+      notes: cleanNotes,
+      status: request.status,
+      archiveStatus
+    };
   }
   
   /**
