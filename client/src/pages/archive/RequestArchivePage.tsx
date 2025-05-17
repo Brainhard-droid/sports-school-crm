@@ -439,99 +439,68 @@ export default function RequestArchivePage() {
   useEffect(() => {
     if (!requests || !requests.length) return;
     
-    // Обрабатываем заявки
-    console.log(`Обработка ${requests.length} заявок...`);
+    console.log("Обработка заявок...");
     
-    // Разделяем заявки на отказы и успешные
-    const refusals: ExtendedTrialRequest[] = [];
-    const successful: ExtendedTrialRequest[] = [];
+    // Находим все заявки со статусом "Отказ", фильтруем архивированные/активные
+    const refusals = requests.filter(request => 
+      request.status === TrialRequestStatus.REFUSED
+    );
     
-    requests.forEach(request => {
-      // Создаем клон заявки, чтобы не мутировать оригинальные данные
-      const cleanedRequest = {
-        ...request,
-        // Очищаем примечания от всех технических меток для отображения
-        notes: RequestArchiveService.cleanNotesForDisplay(request.notes || '')
-      };
-      
-      if (request.status === "REFUSED") {
-        refusals.push(cleanedRequest);
-      } else if (request.status === "SIGNED") {
-        successful.push(cleanedRequest);
-      }
-    });
+    // Разделяем отказы на архивированные и активные
+    const archivedRefusalList = refusals.filter(request => 
+      RequestArchiveService.isArchived(request)
+    );
     
-    // Делим отказы на активные и архивированные
-    const activeRefusalsList: ExtendedTrialRequest[] = [];
-    const archivedRefusalsList: ExtendedTrialRequest[] = [];
+    const activeRefusalList = refusals.filter(request => 
+      !RequestArchiveService.isArchived(request)
+    );
     
-    refusals.forEach(request => {
-      // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
-      const originalRequest = requests.find(r => r.id === request.id);
-      if (originalRequest) {
-        const isArchived = RequestArchiveService.isArchived(originalRequest);
-        if (isArchived) {
-          archivedRefusalsList.push(request);
-        } else {
-          activeRefusalsList.push(request);
-        }
-      }
-    });
+    // Находим "старые" отказы, которые созданы давно и можно архивировать
+    const oldRefusalList = activeRefusalList.filter(request => 
+      RequestArchiveService.isOld(request)
+    );
     
-    // Делим успешные заявки на активные и архивированные
-    const activeSuccessfulList: ExtendedTrialRequest[] = [];
-    const archivedSuccessfulList: ExtendedTrialRequest[] = [];
+    // Находим успешные заявки (со статусом "Записан")
+    const successful = requests.filter(request => 
+      request.status === TrialRequestStatus.SIGNED
+    );
     
-    successful.forEach(request => {
-      // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
-      const originalRequest = requests.find(r => r.id === request.id);
-      if (originalRequest) {
-        const isArchived = RequestArchiveService.isArchived(originalRequest);
-        if (isArchived) {
-          archivedSuccessfulList.push(request);
-        } else {
-          activeSuccessfulList.push(request);
-        }
-      }
-    });
+    // Разделяем успешные на архивированные и активные
+    const archivedSuccessfulList = successful.filter(request => 
+      RequestArchiveService.isArchived(request)
+    );
     
-    // Отбираем старые отказы для архивирования
-    const oldRefusalsList = RequestArchiveService.filterOldRefusals(activeRefusalsList, 5);
+    const activeSuccessfulList = successful.filter(request => 
+      !RequestArchiveService.isArchived(request)
+    );
     
-    // Отбираем старые успешные заявки для архивирования
-    const oldSuccessfulList = RequestArchiveService.filterOldSuccessful(activeSuccessfulList, 3);
+    // Находим "старые" успешные заявки, которые созданы давно и можно архивировать
+    const oldSuccessfulList = activeSuccessfulList.filter(request => 
+      RequestArchiveService.isOld(request)
+    );
     
-    // Устанавливаем очищенные данные в состояние
-    setActiveRefusals(activeRefusalsList);
-    setArchivedRefusals(archivedRefusalsList);
-    setOldRefusals(oldRefusalsList);
-    
+    // Обновляем состояние
+    setActiveRefusals(activeRefusalList);
+    setArchivedRefusals(archivedRefusalList);
+    setOldRefusals(oldRefusalList);
     setActiveSuccessful(activeSuccessfulList);
     setArchivedSuccessful(archivedSuccessfulList);
     setOldSuccessful(oldSuccessfulList);
     
-    // Обрабатываем статистику отказов
-    if (archivedRefusalsList.length > 0) {
-      // Группируем отказы по причинам
+    console.log(
+      `Обработано: ${activeRefusalList.length} активных отказов, ` +
+      `${archivedRefusalList.length} архивированных отказов, ` +
+      `${activeSuccessfulList.length} активных успешных, ` +
+      `${archivedSuccessfulList.length} архивированных успешных`
+    );
+    
+    // Статистика по архивированным отказам
+    if (archivedRefusalList.length > 0) {
+      // Группируем отказы по причине
       const reasonGroups: { [key: string]: number } = {};
       
-      archivedRefusalsList.forEach(request => {
-        const notes = request.notes || '';
-        // Простой алгоритм определения причины - первая строка примечаний
-        // или ключевые слова
-        let reason = 'Не указана';
-        
-        if (notes) {
-          // Попытка определить причину из примечаний
-          const firstLine = notes.split('\n')[0].trim();
-          reason = firstLine || 'Не указана';
-          
-          // Если первая строка слишком длинная, ограничиваем её
-          if (reason.length > 50) {
-            reason = reason.substring(0, 47) + '...';
-          }
-        }
-        
+      archivedRefusalList.forEach(request => {
+        const reason = request.refusalReason || 'Не указана';
         reasonGroups[reason] = (reasonGroups[reason] || 0) + 1;
       });
       
@@ -540,16 +509,14 @@ export default function RequestArchivePage() {
         .map(([reason, count]) => ({
           reason,
           count,
-          percentage: Math.round((count / archivedRefusalsList.length) * 100)
+          percentage: Math.round((count / archivedRefusalList.length) * 100)
         }))
         .sort((a, b) => b.count - a.count);
       
       setRefusalStats(sortedReasons);
-    } else {
-      setRefusalStats([]);
     }
     
-    // Обрабатываем статистику успешных заявок
+    // Статистика по архивированным успешным заявкам
     if (archivedSuccessfulList.length > 0) {
       // Группируем успешные заявки по секции/направлению
       const sectionGroups: { [key: string]: number } = {};
@@ -571,162 +538,193 @@ export default function RequestArchivePage() {
         .sort((a, b) => b.count - a.count);
       
       setSuccessStats(sortedSections);
-    } else {
-      setSuccessStats([]);
     }
     
-  }, [requests, queryClient]);
-
+  }, [requests]);
+  
+  // Возвращаемся на страницу воронки
+  const handleBackClick = () => {
+    setLocation("/sales-funnel");
+  };
+  
   return (
-    <div className="container mx-auto py-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Архив заявок</h1>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={forceRefresh}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Обновить
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center">
+          <Button variant="ghost" onClick={handleBackClick} className="mr-2">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Назад
           </Button>
-          <Button 
-            variant="outline"
-            className="gap-1"
-            onClick={() => setLocation('/sales-funnel')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Вернуться к воронке продаж
-          </Button>
+          <h1 className="text-xl font-bold">Архив заявок</h1>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={forceRefresh} 
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
+          Обновить
+        </Button>
       </div>
       
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[200px]">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Управление архивом заявок</CardTitle>
-            <CardDescription>
-              Архивирование и восстановление заявок из архива
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Основные вкладки: Отказы / Успешные заявки */}
-            <Tabs 
-              defaultValue="refusals" 
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="space-y-4"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="refusals" className="flex items-center gap-1">
-                  <Ban className="h-4 w-4" />
-                  <span>Отказы</span> <span className="ml-1 text-xs">({activeRefusals.length + archivedRefusals.length})</span>
-                </TabsTrigger>
-                <TabsTrigger value="successful" className="flex items-center gap-1">
-                  <ThumbsUp className="h-4 w-4" />
-                  <span>Успешные заявки</span> <span className="ml-1 text-xs">({activeSuccessful.length + archivedSuccessful.length})</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Содержимое вкладки "Отказы" */}
-              <TabsContent value="refusals" className="space-y-4">
-                <Tabs 
-                  defaultValue="active" 
-                  value={refusalSubTab}
-                  onValueChange={setRefusalSubTab}
-                  className="space-y-4"
-                >
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="active">
-                      Активные отказы <span className="ml-1 text-xs">({activeRefusals.length})</span>
+      <Tabs defaultValue="refusals" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="refusals" className="flex-1">
+            <Ban className="h-4 w-4 mr-2" />
+            Отказы ({archivedRefusals.length})
+          </TabsTrigger>
+          <TabsTrigger value="successful" className="flex-1">
+            <ThumbsUp className="h-4 w-4 mr-2" />
+            Успешные заявки ({archivedSuccessful.length})
+          </TabsTrigger>
+        </TabsList>
+        
+        {/* Вкладка с отказами */}
+        <TabsContent value="refusals">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Статистика */}
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <PieChart className="h-5 w-5 mr-2" />
+                  Статистика отказов
+                </CardTitle>
+                <CardDescription>
+                  Распределение причин отказов
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {refusalStats.length > 0 ? (
+                  <ul className="space-y-2">
+                    {refusalStats.map((stat, index) => (
+                      <li key={index} className="flex justify-between items-center">
+                        <div className="text-sm">
+                          {stat.reason} 
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({stat.percentage}%)
+                          </span>
+                        </div>
+                        <div className="font-medium">{stat.count}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Нет данных для отображения
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Список заявок */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Архивированные отказы</CardTitle>
+                <CardDescription>
+                  Всего архивировано: {archivedRefusals.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="active" value={refusalSubTab} onValueChange={setRefusalSubTab}>
+                  <TabsList className="w-full mb-4">
+                    <TabsTrigger value="active" className="flex-1">
+                      Архив
                     </TabsTrigger>
-                    <TabsTrigger value="archived">
-                      Архив <span className="ml-1 text-xs">({archivedRefusals.length})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="stats">
-                      Статистика
+                    <TabsTrigger value="candidates" className="flex-1">
+                      Кандидаты на архивирование ({oldRefusals.length})
                     </TabsTrigger>
                   </TabsList>
                   
-                  {/* Активные отказы */}
-                  <TabsContent value="active" className="min-h-[400px]">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="text-sm font-medium">
-                            Неархивированные отказы
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            Активные отказы, которые отображаются в колонке "Отказ"
-                          </p>
+                  {/* Подвкладка с архивом */}
+                  <TabsContent value="active">
+                    {archivedRefusals.length > 0 ? (
+                      <ScrollArea className="h-[400px]">
+                        <div className="space-y-3">
+                          {archivedRefusals.map(request => (
+                            <Card key={request.id} className="p-3">
+                              <div className="flex justify-between items-start mb-1">
+                                <div>
+                                  <h4 className="font-medium">{request.childName}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    {request.childAge} лет • Отказ: {new Date(request.updatedAt || '').toLocaleDateString()}
+                                  </p>
+                                  <p className="text-xs mt-1 text-red-500">
+                                    Причина: {request.refusalReason || 'Не указана'}
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    Направление: {getSectionName(request.section)}
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleRestoreRequest(request)}
+                                  disabled={restoring === request.id}
+                                >
+                                  {restoring === request.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <ArrowUp className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              {request.notes && (
+                                <div className="text-xs bg-muted p-2 rounded">
+                                  {request.notes}
+                                </div>
+                              )}
+                            </Card>
+                          ))}
                         </div>
-                        
-                        {activeRefusals.length > 0 && (
-                          <Button 
-                            onClick={handleArchiveAllRefusals} 
-                            size="sm" 
-                            className="gap-1"
+                      </ScrollArea>
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        Архив отказов пуст
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  {/* Подвкладка с кандидатами на архивирование */}
+                  <TabsContent value="candidates">
+                    {oldRefusals.length > 0 ? (
+                      <>
+                        <div className="mb-4 flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">
+                            Отказы, которые можно архивировать
+                          </p>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleArchiveAllRefusals}
                             disabled={archivingAllRefusals}
                           >
                             {archivingAllRefusals ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Архивирование...
-                              </>
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
                             ) : (
-                              <>
-                                <Archive className="h-3 w-3" />
-                                Архивировать все
-                              </>
+                              <Archive className="h-4 w-4 mr-1" />
                             )}
+                            Архивировать все
                           </Button>
-                        )}
-                      </div>
-                      
-                      {oldRefusals.length > 0 && (
-                        <Card className="shadow-none border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                          <CardHeader className="py-2 px-3">
-                            <CardTitle className="text-xs">
-                              Рекомендуется архивировать
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-3 pt-0">
-                            <p className="text-xs text-muted-foreground mb-2">
-                              Эти заявки старше 5 дней и могут быть архивированы
-                            </p>
-                            <ScrollArea className="h-[80px]">
-                              <ul className="space-y-1">
-                                {oldRefusals.map(request => (
-                                  <li key={request.id} className="text-xs p-1 bg-muted/50 rounded flex justify-between items-center">
-                                    <span>
-                                      {request.childName} ({new Date(request.updatedAt || '').toLocaleDateString()})
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      ID: {request.id}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
-                      )}
-                      
-                      {activeRefusals.length > 0 ? (
+                        </div>
                         <ScrollArea className="h-[400px]">
-                          <ul className="space-y-2">
-                            {activeRefusals.map(request => (
-                              <li key={request.id} className="p-3 rounded border bg-card">
+                          <div className="space-y-3">
+                            {oldRefusals.map(request => (
+                              <Card key={request.id} className="p-3">
                                 <div className="flex justify-between items-start mb-1">
                                   <div>
                                     <h4 className="font-medium">{request.childName}</h4>
                                     <p className="text-xs text-muted-foreground">
-                                      {request.childAge} лет • {new Date(request.createdAt || '').toLocaleDateString()}
+                                      {request.childAge} лет • Отказ: {new Date(request.updatedAt || '').toLocaleDateString()}
+                                    </p>
+                                    <p className="text-xs mt-1 text-red-500">
+                                      Причина: {request.refusalReason || 'Не указана'}
+                                    </p>
+                                    <p className="text-xs mt-1">
+                                      Направление: {getSectionName(request.section)}
                                     </p>
                                   </div>
                                   <Button 
@@ -747,219 +745,160 @@ export default function RequestArchivePage() {
                                     {request.notes}
                                   </div>
                                 )}
-                              </li>
+                              </Card>
                             ))}
-                          </ul>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          Нет активных отказов
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  {/* Архивированные отказы */}
-                  <TabsContent value="archived" className="min-h-[400px]">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-medium">
-                          Архив отказов
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Заявки, которые были архивированы и не отображаются в основном списке
-                        </p>
-                      </div>
-                      
-                      {archivedRefusals.length > 0 ? (
-                        <ScrollArea className="h-[400px]">
-                          <ul className="space-y-2">
-                            {archivedRefusals.map(request => (
-                              <li key={request.id} className="p-3 rounded border bg-card">
-                                <div className="flex justify-between items-start mb-1">
-                                  <div>
-                                    <h4 className="font-medium">{request.childName}</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                      {request.childAge} лет • Архивирована: {
-                                        new Date(request.updatedAt || '').toLocaleDateString()
-                                      }
-                                    </p>
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => handleRestoreRequest(request)}
-                                    disabled={restoring === request.id}
-                                  >
-                                    {restoring === request.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <ArrowUp className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </div>
-                                {request.notes && (
-                                  <div className="text-xs bg-muted p-2 rounded">
-                                    {request.notes}
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          В архиве нет отказов
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  {/* Статистика отказов */}
-                  <TabsContent value="stats" className="min-h-[400px]">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-medium">
-                          Статистика отказов
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Анализ причин отказов для улучшения процесса продаж
-                        </p>
-                      </div>
-                      
-                      {refusalStats.length > 0 ? (
-                        <div className="space-y-4">
-                          <div className="flex justify-between text-xs text-muted-foreground font-medium">
-                            <span>Причина</span>
-                            <span>Количество</span>
                           </div>
-                          <ul className="space-y-2">
-                            {refusalStats.map((stat, index) => (
-                              <li key={index} className="flex justify-between items-center">
-                                <div className="text-sm">{stat.reason}</div>
-                                <div className="flex items-center gap-2">
-                                  <div className="text-sm font-medium">{stat.count}</div>
-                                  <div className="text-xs text-muted-foreground">({stat.percentage}%)</div>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <div className="flex items-center gap-2 justify-center text-sm mt-6">
-                            <PieChart className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Всего отказов: {archivedRefusals.length}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          Нет данных для статистики
-                        </div>
-                      )}
-                    </div>
+                        </ScrollArea>
+                      </>
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        Нет отказов для архивирования
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
-              </TabsContent>
-              
-              {/* Содержимое вкладки "Успешные заявки" */}
-              <TabsContent value="successful" className="space-y-4">
-                <Tabs 
-                  defaultValue="active" 
-                  value={successSubTab}
-                  onValueChange={setSuccessSubTab}
-                  className="space-y-4"
-                >
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="active">
-                      Активные <span className="ml-1 text-xs">({activeSuccessful.length})</span>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Вкладка с успешными заявками */}
+        <TabsContent value="successful">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Статистика */}
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <PieChart className="h-5 w-5 mr-2" />
+                  Статистика по направлениям
+                </CardTitle>
+                <CardDescription>
+                  Распределение успешных заявок по направлениям
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {successStats.length > 0 ? (
+                  <ul className="space-y-2">
+                    {successStats.map((stat, index) => (
+                      <li key={index} className="flex justify-between items-center">
+                        <div className="text-sm">
+                          {stat.section} 
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({stat.percentage}%)
+                          </span>
+                        </div>
+                        <div className="font-medium">{stat.count}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Нет данных для отображения
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Список успешных заявок */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Архивированные успешные заявки</CardTitle>
+                <CardDescription>
+                  Всего архивировано: {archivedSuccessful.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="active" value={successSubTab} onValueChange={setSuccessSubTab}>
+                  <TabsList className="w-full mb-4">
+                    <TabsTrigger value="active" className="flex-1">
+                      Архив
                     </TabsTrigger>
-                    <TabsTrigger value="archived">
-                      Архив <span className="ml-1 text-xs">({archivedSuccessful.length})</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="stats">
-                      Статистика
+                    <TabsTrigger value="candidates" className="flex-1">
+                      Кандидаты на архивирование ({oldSuccessful.length})
                     </TabsTrigger>
                   </TabsList>
                   
-                  {/* Активные успешные заявки */}
-                  <TabsContent value="active" className="min-h-[400px]">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="text-sm font-medium">
-                            Активные успешные заявки
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            Заявки в статусе "Записан", для которых созданы ученики
-                          </p>
+                  {/* Подвкладка с архивом успешных заявок */}
+                  <TabsContent value="active">
+                    {archivedSuccessful.length > 0 ? (
+                      <ScrollArea className="h-[400px]">
+                        <div className="space-y-3">
+                          {archivedSuccessful.map(request => (
+                            <Card key={request.id} className="p-3">
+                              <div className="flex justify-between items-start mb-1">
+                                <div>
+                                  <h4 className="font-medium">{request.childName}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    {request.childAge} лет • Записан: {new Date(request.updatedAt || '').toLocaleDateString()}
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    Направление: {getSectionName(request.section)}
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleRestoreRequest(request)}
+                                  disabled={restoring === request.id}
+                                >
+                                  {restoring === request.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <ArrowUp className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              {request.notes && (
+                                <div className="text-xs bg-muted p-2 rounded">
+                                  {request.notes}
+                                </div>
+                              )}
+                            </Card>
+                          ))}
                         </div>
-                        
-                        {activeSuccessful.length > 0 && (
-                          <Button 
+                      </ScrollArea>
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        Архив успешных заявок пуст
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  {/* Подвкладка с кандидатами на архивирование */}
+                  <TabsContent value="candidates">
+                    {oldSuccessful.length > 0 ? (
+                      <>
+                        <div className="mb-4 flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">
+                            Успешные заявки, которые можно архивировать
+                          </p>
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={handleArchiveAllSuccessful}
-                            size="sm" 
-                            className="gap-1"
                             disabled={archivingAllSuccessful}
                           >
                             {archivingAllSuccessful ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Архивирование...
-                              </>
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
                             ) : (
-                              <>
-                                <Archive className="h-3 w-3" />
-                                Архивировать все
-                              </>
+                              <Archive className="h-4 w-4 mr-1" />
                             )}
+                            Архивировать все
                           </Button>
-                        )}
-                      </div>
-                      
-                      {oldSuccessful.length > 0 && (
-                        <Card className="shadow-none border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                          <CardHeader className="py-2 px-3">
-                            <CardTitle className="text-xs">
-                              Рекомендуется архивировать
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-3 pt-0">
-                            <p className="text-xs text-muted-foreground mb-2">
-                              Эти успешные заявки старше 3 дней и могут быть архивированы
-                            </p>
-                            <ScrollArea className="h-[80px]">
-                              <ul className="space-y-1">
-                                {oldSuccessful.map(request => (
-                                  <li key={request.id} className="text-xs p-1 bg-muted/50 rounded flex justify-between items-center">
-                                    <span>
-                                      {request.childName} ({new Date(request.updatedAt || '').toLocaleDateString()})
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      ID: {request.id}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
-                      )}
-                      
-                      {activeSuccessful.length > 0 ? (
+                        </div>
                         <ScrollArea className="h-[400px]">
-                          <ul className="space-y-2">
-                            {activeSuccessful.map(request => (
-                              <li key={request.id} className="p-3 rounded border bg-card">
+                          <div className="space-y-3">
+                            {oldSuccessful.map(request => (
+                              <Card key={request.id} className="p-3">
                                 <div className="flex justify-between items-start mb-1">
                                   <div>
                                     <h4 className="font-medium">{request.childName}</h4>
                                     <p className="text-xs text-muted-foreground">
                                       {request.childAge} лет • Записан: {new Date(request.updatedAt || '').toLocaleDateString()}
                                     </p>
-                                    {request.section && (
-                                      <p className="text-xs mt-1">
-                                        Направление: {request.section}
-                                      </p>
-                                    )}
+                                    <p className="text-xs mt-1">
+                                      Направление: {getSectionName(request.section)}
+                                    </p>
                                   </div>
                                   <Button 
                                     variant="ghost" 
@@ -979,127 +918,23 @@ export default function RequestArchivePage() {
                                     {request.notes}
                                   </div>
                                 )}
-                              </li>
+                              </Card>
                             ))}
-                          </ul>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          Нет активных успешных заявок
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  {/* Архивированные успешные заявки */}
-                  <TabsContent value="archived" className="min-h-[400px]">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-medium">
-                          Архив успешных заявок
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Успешные заявки, которые были архивированы
-                        </p>
-                      </div>
-                      
-                      {archivedSuccessful.length > 0 ? (
-                        <ScrollArea className="h-[400px]">
-                          <ul className="space-y-2">
-                            {archivedSuccessful.map(request => (
-                              <li key={request.id} className="p-3 rounded border bg-card">
-                                <div className="flex justify-between items-start mb-1">
-                                  <div>
-                                    <h4 className="font-medium">{request.childName}</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                      {request.childAge} лет • Архивирована: {
-                                        new Date(request.updatedAt || '').toLocaleDateString()
-                                      }
-                                    </p>
-                                    {request.section && (
-                                      <p className="text-xs mt-1">
-                                        Направление: {request.section}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => handleRestoreRequest(request)}
-                                    disabled={restoring === request.id}
-                                  >
-                                    {restoring === request.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <ArrowUp className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </div>
-                                {request.notes && (
-                                  <div className="text-xs bg-muted p-2 rounded">
-                                    {request.notes}
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          В архиве нет успешных заявок
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  {/* Статистика успешных заявок */}
-                  <TabsContent value="stats" className="min-h-[400px]">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-medium">
-                          Статистика успешных заявок
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Анализ успешных заявок по направлениям
-                        </p>
-                      </div>
-                      
-                      {successStats.length > 0 ? (
-                        <div className="space-y-4">
-                          <div className="flex justify-between text-xs text-muted-foreground font-medium">
-                            <span>Направление</span>
-                            <span>Количество</span>
                           </div>
-                          <ul className="space-y-2">
-                            {successStats.map((stat, index) => (
-                              <li key={index} className="flex justify-between items-center">
-                                <div className="text-sm">{stat.section}</div>
-                                <div className="flex items-center gap-2">
-                                  <div className="text-sm font-medium">{stat.count}</div>
-                                  <div className="text-xs text-muted-foreground">({stat.percentage}%)</div>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <div className="flex items-center gap-2 justify-center text-sm mt-6">
-                            <PieChart className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Всего успешных заявок: {archivedSuccessful.length}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                          Нет данных для статистики
-                        </div>
-                      )}
-                    </div>
+                        </ScrollArea>
+                      </>
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        Нет успешных заявок для архивирования
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
