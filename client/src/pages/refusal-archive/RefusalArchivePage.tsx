@@ -146,10 +146,14 @@ export default function RefusalArchivePage() {
       setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
       
       // Подготавливаем обновленный текст примечаний для восстановленной заявки
-      let updatedNotes = (request.notes || '').replace(
-        new RegExp(`${ARCHIVE_MARKERS.ARCHIVE_PREFIX}[^\\]]*\\]`, 'g'), 
-        ''
-      ).trim();
+      // Удаляем все метки архивирования
+      let updatedNotes = (request.notes || '');
+      
+      // Удаляем метку сообщения архивирования
+      updatedNotes = updatedNotes
+        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}[^\\]]*\\]`, 'g'), '')
+        .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_TAG}\\]`, 'g'), '')
+        .trim();
       
       updatedNotes = `${updatedNotes} ${RefusalArchiveService.getRestoreMarker()}`.trim();
       
@@ -287,7 +291,8 @@ export default function RefusalArchivePage() {
   const getArchiveDate = (notes: string | null | undefined): string => {
     if (!notes) return '';
     
-    const match = notes.match(/архивирована\s+(\d{1,2}\.\d{1,2}\.\d{4})/);
+    // Ищем дату в формате сообщения об архивировании: [Заявка архивирована 17.05.2025]
+    const match = notes.match(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}\\s+(\\d{1,2}\\.\\d{1,2}\\.\\d{4})\\]`));
     return match ? match[1] : '';
   };
 

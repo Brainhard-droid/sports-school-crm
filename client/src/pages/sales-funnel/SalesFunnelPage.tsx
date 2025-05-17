@@ -151,6 +151,9 @@ export default function SalesFunnelPage() {
       if (column.id === "REFUSED") {
         // Используем сервис для проверки, является ли заявка архивированной
         const isArchived = RefusalArchiveService.isArchived(r);
+        if (isArchived) {
+          console.log(`Заявка ${r.id} скрыта из колонки "Отказ", т.к. архивирована (${r.notes})`);
+        }
         return statusMatches && !isArchived;
       }
       
