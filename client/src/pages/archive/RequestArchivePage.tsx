@@ -555,15 +555,8 @@ export default function RequestArchivePage() {
       const sectionGroups: { [key: string]: number } = {};
       
       archivedSuccessfulList.forEach(request => {
-        // Используем сведения о секции или направлении
-        let sectionName = 'Не указана';
-        
-        if (request.section) {
-          // Преобразуем объект section в строковое имя секции
-          sectionName = typeof request.section === 'object' && request.section !== null 
-            ? (request.section.name || 'Не указана') 
-            : String(request.section);
-        }
+        // Используем вспомогательную функцию для получения имени секции
+        const sectionName = getSectionName(request.section);
         
         sectionGroups[sectionName] = (sectionGroups[sectionName] || 0) + 1;
       });
