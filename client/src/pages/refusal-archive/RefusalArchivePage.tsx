@@ -42,7 +42,10 @@ export default function RefusalArchivePage() {
   // Статистика по отказам
   const [stats, setStats] = useState<RefusalStat[]>([]);
   
-  const [archiving, setArchiving] = useState(false);
+  // Changed from boolean to track specific request IDs being archived
+  const [archivingIds, setArchivingIds] = useState<number[]>([]);
+  // Track if the "Archive All" operation is in progress
+  const [archivingAll, setArchivingAll] = useState(false);
   const [restoring, setRestoring] = useState<number | null>(null);
   
   // Функция для оптимистичного обновления UI при архивировании
@@ -331,10 +334,10 @@ export default function RefusalArchivePage() {
     
     console.log('Обрабатываем список отказов для архива');
     
-    // Фильтруем только отказы - включая статус REFUSED и ARCHIVED_REFUSAL
+    // Фильтруем только отказы со статусом REFUSED
+    // Архивированные отказы определяем по наличию маркера в примечаниях
     const refusals = requests.filter(r => 
-      r.status === TrialRequestStatus.REFUSED || 
-      r.status === TrialRequestStatus.ARCHIVED_REFUSAL
+      r.status === TrialRequestStatus.REFUSED
     );
     
     // Разделяем на активные и архивированные
