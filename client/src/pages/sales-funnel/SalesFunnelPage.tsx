@@ -7,10 +7,10 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { EditTrialRequestModal } from "./components/EditTrialRequestModal";
 import { AssignTrialModal } from "./components/AssignTrialModal";
 import { RejectTrialModal } from "./components/RejectTrialModal";
-// Удалена ссылка на модальное окно статистики отказов
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { RefusalArchiveService } from "./services/RefusalArchiveService";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -149,8 +149,8 @@ export default function SalesFunnelPage() {
       
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
-        // Заявка считается архивированной, если в notes содержится текст "архивирована"
-        const isArchived = r.notes && r.notes.includes('архивирована');
+        // Используем сервис для проверки, является ли заявка архивированной
+        const isArchived = RefusalArchiveService.isArchived(r);
         return statusMatches && !isArchived;
       }
       

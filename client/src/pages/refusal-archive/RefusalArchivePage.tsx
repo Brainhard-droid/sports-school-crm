@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTrialRequests } from "../sales-funnel/hooks/useTrialRequests";
 import { ExtendedTrialRequest, TrialRequestStatus } from "@shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Archive, ArrowUp, ChevronLeft, PieChart } from "lucide-react";
+import { Loader2, Archive, ArrowUp, ChevronLeft, PieChart, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefusalArchiveService } from "../sales-funnel/services/RefusalArchiveService";
+import { RefusalArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RefusalArchiveService";
 
 // Тип для статистики по отказам
 type RefusalStat = {
@@ -49,7 +49,17 @@ export default function RefusalArchivePage() {
   const handleArchiveRefusal = async (request: ExtendedTrialRequest) => {
     setArchiving(true);
     try {
-      // Архивируем заявку
+      // Оптимистично обновляем UI - удаляем из активных и добавляем в архивированные
+      setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
+      
+      // Добавляем в список архивированных с оптимистичным обновлением
+      const updatedRequest = {
+        ...request,
+        notes: `${request.notes || ''} ${RefusalArchiveService.getArchiveMarker()}`
+      };
+      setArchivedRefusals(prev => [updatedRequest, ...prev]);
+      
+      // Архивируем заявку в БД
       const success = await RefusalArchiveService.archiveRefusal(
         request.id, 
         request.notes || undefined
@@ -63,24 +73,22 @@ export default function RefusalArchivePage() {
           variant: "default",
         });
         
-        // Обновляем данные с сервера
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
-        
-        // Обновляем локальные списки
-        setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
-        setArchivedRefusals(prev => [
-          {
-            ...request,
-            notes: `${request.notes || ''} [Заявка автоматически архивирована ${new Date().toLocaleDateString()}]`
-          },
-          ...prev
-        ]);
+        // Обновляем данные с сервера с задержкой,
+        // чтобы дать время на обновление БД
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+          refreshData();
+        }, 500);
       } else {
+        // Если произошла ошибка, откатываем UI изменения
         toast({
           title: "Ошибка",
           description: "Не удалось архивировать заявку",
           variant: "destructive",
         });
+        
+        // Запрашиваем обновленные данные с сервера
+        refreshData();
       }
     } catch (error) {
       console.error('Ошибка при архивировании:', error);
@@ -89,6 +97,9 @@ export default function RefusalArchivePage() {
         description: "Не удалось архивировать заявку",
         variant: "destructive",
       });
+      
+      // Запрашиваем обновленные данные с сервера
+      refreshData();
     } finally {
       setArchiving(false);
     }
@@ -131,7 +142,25 @@ export default function RefusalArchivePage() {
   const handleRestoreRefusal = async (request: ExtendedTrialRequest) => {
     setRestoring(request.id);
     try {
-      // Восстанавливаем заявку из архива
+      // Оптимистично обновляем UI - удаляем из архивированных и добавляем в активные
+      setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
+      
+      // Подготавливаем обновленный текст примечаний для восстановленной заявки
+      let updatedNotes = (request.notes || '').replace(
+        new RegExp(`${ARCHIVE_MARKERS.ARCHIVE_PREFIX}[^\\]]*\\]`, 'g'), 
+        ''
+      ).trim();
+      
+      updatedNotes = `${updatedNotes} ${RefusalArchiveService.getRestoreMarker()}`.trim();
+      
+      const updatedRequest = {
+        ...request,
+        notes: updatedNotes
+      };
+      
+      setActiveRefusals(prev => [updatedRequest, ...prev]);
+      
+      // Восстанавливаем заявку из архива в БД
       const success = await RefusalArchiveService.restoreFromArchive(request.id);
       
       if (success) {
@@ -142,22 +171,22 @@ export default function RefusalArchivePage() {
           variant: "default",
         });
         
-        // Обновляем данные запросов
-        queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
-        
-        // Обновляем локальные списки
-        setArchivedRefusals(prev => prev.filter(r => r.id !== request.id));
-        setActiveRefusals(prev => [{
-          ...request,
-          notes: request.notes?.replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '')
-            .trim() + ` [Восстановлена из архива ${new Date().toLocaleDateString()}]`
-        }, ...prev]);
+        // Обновляем данные с сервера с задержкой,
+        // чтобы дать время на обновление БД
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+          refreshData();
+        }, 500);
       } else {
+        // Если произошла ошибка, откатываем UI изменения
         toast({
           title: "Ошибка",
           description: "Не удалось восстановить заявку",
           variant: "destructive",
         });
+        
+        // Запрашиваем обновленные данные с сервера
+        refreshData();
       }
     } catch (error) {
       console.error('Ошибка при восстановлении из архива:', error);
@@ -166,13 +195,16 @@ export default function RefusalArchivePage() {
         description: "Не удалось восстановить заявку из архива",
         variant: "destructive",
       });
+      
+      // Запрашиваем обновленные данные с сервера
+      refreshData();
     } finally {
       setRestoring(null);
     }
   };
 
-  // Обрабатываем список отказов при их изменении
-  useEffect(() => {
+  // Функция обновления данных
+  const refreshData = useCallback(() => {
     if (isLoading || !requests) return;
     
     console.log('Обрабатываем список отказов для архива');
@@ -185,8 +217,8 @@ export default function RefusalArchivePage() {
     const archived: ExtendedTrialRequest[] = [];
     
     refusals.forEach(request => {
-      // Отказ считается архивированным, если в примечаниях есть метка "архивирована"
-      const isArchived = request.notes && request.notes.includes('архивирована');
+      // Используем сервис для проверки, является ли заявка архивированной
+      const isArchived = RefusalArchiveService.isArchived(request);
       
       if (isArchived) {
         archived.push(request);
@@ -205,6 +237,11 @@ export default function RefusalArchivePage() {
     // Собираем статистику по причинам отказов
     collectReasonStats(refusals);
   }, [requests, isLoading]);
+  
+  // Обрабатываем список отказов при их изменении
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
   
   // Функция для сбора статистики по причинам отказов
   const collectReasonStats = (requests: ExtendedTrialRequest[]) => {
@@ -253,18 +290,40 @@ export default function RefusalArchivePage() {
     return match ? match[1] : '';
   };
 
+  // Функция принудительного обновления данных с сервера
+  const forceRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
+    refreshData();
+    toast({
+      title: "Данные обновлены",
+      description: "Информация об отказах актуализирована",
+      variant: "default",
+    });
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Архив отказов</h1>
-        <Button 
-          variant="outline"
-          className="gap-1"
-          onClick={() => setLocation('/sales-funnel')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Вернуться к воронке продаж
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={forceRefresh}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Обновить
+          </Button>
+          <Button 
+            variant="outline"
+            className="gap-1"
+            onClick={() => setLocation('/sales-funnel')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Вернуться к воронке продаж
+          </Button>
+        </div>
       </div>
       
       {isLoading ? (
