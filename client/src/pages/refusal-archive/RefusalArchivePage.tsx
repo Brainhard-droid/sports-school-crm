@@ -609,8 +609,12 @@ export default function RefusalArchivePage() {
                             <div className="flex justify-between items-start mb-1">
                               <div>
                                 <h4 className="font-medium">{request.childName}</h4>
+                                {/* Используем helper метод для получения и очистки даты */}
                                 <p className="text-xs text-muted-foreground">
-                                  {request.childAge} лет • Архивирована: {getArchiveDate(request.notes)}
+                                  {request.childAge} лет • Архивирована: {
+                                    RefusalArchiveService.getDisplayTexts(request).archiveDate || 
+                                    new Date().toLocaleDateString()
+                                  }
                                 </p>
                               </div>
                               <Button 
@@ -633,9 +637,10 @@ export default function RefusalArchivePage() {
                                 )}
                               </Button>
                             </div>
+                            {/* Используем helper метод для получения очищенных примечаний */}
                             {request.notes && (
                               <div className="text-xs bg-muted p-2 rounded mt-2">
-                                {RefusalArchiveService.cleanNotesForDisplay(request.notes)}
+                                {RefusalArchiveService.getDisplayTexts(request).notes}
                               </div>
                             )}
                           </li>

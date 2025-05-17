@@ -79,19 +79,38 @@ export class RefusalArchiveService {
     if (!notes) return '';
     
     // Удаляем все технические маркеры и сообщения о архивации/восстановлении
-    return notes
-      // Удаляем короткие коды
+    // Последовательно применяем регулярные выражения для полной очистки
+    const cleaned = notes
+      // Удаляем короткие коды маркеров
       .replace(new RegExp(ARCHIVE_MARKERS.ARCHIVE_TAG, 'g'), '')
       .replace(new RegExp(ARCHIVE_MARKERS.RESTORE_TAG, 'g'), '')
-      // Удаляем сообщения о архивации/восстановлении
-      .replace(/\[.*(архивирован|восстановлен).*\]/gi, '')
-      // Удаляем упоминания технических меток
+      
+      // Удаляем все метки с квадратными скобками, содержащие упоминания об архивировании/восстановлении
+      .replace(/\[[^\]]*(?:архивирован|архив|восстановлен)[^\]]*\]/gi, '')
+      
+      // Удаляем все форматы старых технических меток 
       .replace(/\[___[A-Z_]+___\]/gi, '')
-      // Удаляем старый формат тегов
       .replace(/___[A-Z_]+___/g, '')
-      // Оптимизируем оставшийся текст
+      
+      // Удаляем все метки __XXX__ любого формата (двойные подчеркивания)
+      .replace(/__[A-Z_]+__/g, '')
+      
+      // Удаляем остаточные упоминания о статусах, которые могли остаться
+      .replace(/статус:?\s*(?:архивировано|восстановлено)/gi, '')
+      
+      // Удаляем остаточные форматы с датой архивирования/восстановления
+      .replace(/(?:архивирован|восстановлен)[а]?\s+\d{1,2}\.\d{1,2}\.\d{4}/gi, '')
+      
+      // Оптимизируем оставшийся текст - удаляем множественные пробелы
       .replace(/\s{2,}/g, ' ')
+      
+      // Удаляем пробелы перед знаками препинания
+      .replace(/\s+([,.!?;:])/g, '$1')
+      
+      // Окончательная очистка и форматирование
       .trim();
+    
+    return cleaned;
   }
   
   /**
@@ -259,22 +278,47 @@ export class RefusalArchiveService {
   
   /**
    * Получает текст для отображения в пользовательском интерфейсе
-   * Удаляет технические маркеры из примечаний
+   * Полностью удаляет все технические маркеры из примечаний
    * @param request Заявка
    * @returns Объект с очищенными текстами
    */
   static getDisplayTexts(request: ExtendedTrialRequest): { 
     notes: string, 
     status: string,
-    archiveStatus?: string
+    archiveStatus?: string,
+    archiveDate?: string
   } {
+    // Получаем чистые примечания без технических меток
     const cleanNotes = this.cleanNotesForDisplay(request.notes || '');
     
     // Определяем статус архивирования для отображения
     let archiveStatus = undefined;
+    let archiveDate = undefined;
     
-    if (this.isArchived(request)) {
+    // Определяем дату архивирования, если есть
+    if (this.isArchived(request) && request.notes) {
       archiveStatus = ARCHIVE_MARKERS.ARCHIVE_LABEL;
+      
+      // Попытка извлечь дату архивирования
+      const datePatterns = [
+        // Стандартный шаблон для новых заявок
+        new RegExp(`${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}\\s+(\\d{1,2}\\.\\d{1,2}\\.\\d{4})`),
+        // Шаблон для старых заявок 
+        /(?:автоматически )?архивирована\s+(\d{1,2}\.\d{1,2}\.\d{4})/i,
+      ];
+      
+      for (const pattern of datePatterns) {
+        const match = request.notes.match(pattern);
+        if (match && match[1]) {
+          archiveDate = match[1];
+          break;
+        }
+      }
+      
+      // Если дату найти не удалось, возвращаем текущую
+      if (!archiveDate) {
+        archiveDate = new Date().toLocaleDateString();
+      }
     } else if (this.isRestored(request)) {
       archiveStatus = ARCHIVE_MARKERS.RESTORE_LABEL;
     }
@@ -282,7 +326,8 @@ export class RefusalArchiveService {
     return {
       notes: cleanNotes,
       status: request.status,
-      archiveStatus
+      archiveStatus,
+      archiveDate
     };
   }
   
