@@ -2,7 +2,7 @@ import {
   TrialRequest, InsertTrialRequest, trialRequests, TrialRequestStatus,
   sportsSections, branches
 } from "@shared/schema";
-import { eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { ITrialRequestStorage } from "../interfaces/storage/ITrialRequestStorage";
 
@@ -17,12 +17,7 @@ export class TrialRequestStorage implements ITrialRequestStorage {
    */
   async getAllTrialRequests(): Promise<TrialRequest[]> {
     try {
-      console.log('Getting all trial requests with archived filter');
-      return await db
-        .select()
-        .from(trialRequests)
-        .where(eq(trialRequests.archived, false))
-        .orderBy(desc(trialRequests.createdAt));
+      return await db.select().from(trialRequests);
     } catch (error) {
       console.error('Error getting all trial requests:', error);
       throw error;
@@ -127,17 +122,11 @@ export class TrialRequestStorage implements ITrialRequestStorage {
    * @param data Данные для обновления
    * @returns Обновленная заявка
    */
-  async updateTrialRequest(id: number, data: Partial<InsertTrialRequest> & { archived?: boolean }): Promise<TrialRequest> {
+  async updateTrialRequest(id: number, data: Partial<InsertTrialRequest>): Promise<TrialRequest> {
     try {
-      // Если установлен флаг archived, обновляем его вместе с остальными данными
-      const updateData = {
-        ...data,
-        archived: data.archived
-      };
-      
       const [request] = await db
         .update(trialRequests)
-        .set(updateData)
+        .set(data)
         .where(eq(trialRequests.id, id))
         .returning();
       
