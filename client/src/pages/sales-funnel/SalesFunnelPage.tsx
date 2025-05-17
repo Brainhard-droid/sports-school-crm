@@ -10,7 +10,7 @@ import { RejectTrialModal } from "./components/RejectTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { RequestArchiveService } from "./services/RefusalArchiveService";
+import { RequestArchiveService } from "./services/RequestArchiveService";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;

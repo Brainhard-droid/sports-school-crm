@@ -9,7 +9,7 @@ import { Loader2, Archive, ArrowUp, ChevronLeft, PieChart, RefreshCw } from "luc
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { RequestArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RefusalArchiveService";
+import { RequestArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RequestArchiveService";
 
 // Тип для статистики по отказам
 type RefusalStat = {
@@ -36,17 +36,8 @@ export default function RefusalArchivePage() {
   // Архивированные отказы
   const [archivedRefusals, setArchivedRefusals] = useState<ExtendedTrialRequest[]>([]);
   
-  // Активные успешные заявки (статус "Записан", не архивированные)
-  const [activeSuccessful, setActiveSuccessful] = useState<ExtendedTrialRequest[]>([]);
-  
-  // Архивированные успешные заявки
-  const [archivedSuccessful, setArchivedSuccessful] = useState<ExtendedTrialRequest[]>([]);
-  
   // Старые отказы, которые можно архивировать
   const [oldRefusals, setOldRefusals] = useState<ExtendedTrialRequest[]>([]);
-  
-  // Старые успешные заявки, которые можно архивировать
-  const [oldSuccessful, setOldSuccessful] = useState<ExtendedTrialRequest[]>([]);
   
   // Статистика по отказам
   const [stats, setStats] = useState<RefusalStat[]>([]);
@@ -375,7 +366,7 @@ export default function RefusalArchivePage() {
       };
       
       // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
-      const isArchived = RefusalArchiveService.isArchived(request);
+      const isArchived = RequestArchiveService.isArchived(request);
       
       if (isArchived) {
         archived.push(cleanedRequest);
@@ -466,7 +457,7 @@ export default function RefusalArchivePage() {
   return (
     <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Архив отказов</h1>
+        <h1 className="text-2xl font-semibold">Архив заявок</h1>
         <div className="flex gap-2">
           <Button 
             variant="outline"
