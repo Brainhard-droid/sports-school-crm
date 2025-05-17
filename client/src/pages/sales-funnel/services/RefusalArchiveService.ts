@@ -94,11 +94,15 @@ export class RefusalArchiveService {
       
       console.log('Архивирование с примечаниями:', notes);
       
-      // Отправляем запрос к API для обновления заявки
+      // ВАЖНО: отправляем запрос к API с флагом archived: true
+      // Это сообщает бэкенду, что заявка должна быть архивирована
       const response = await apiRequest(
         "PATCH",
-        `/api/trial-requests/${requestId}`,
-        { notes }
+        `/api/trial-requests/${requestId}/status`,
+        { 
+          notes,
+          archived: true // Ключевое изменение: отмечаем заявку как архивированную
+        }
       );
       
       // Проверяем успешность запроса
@@ -142,6 +146,7 @@ export class RefusalArchiveService {
       notes = notes
         .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE}[^\\]]*\\]`, 'g'), '')
         .replace(new RegExp(`\\[${ARCHIVE_MARKERS.ARCHIVE_TAG}\\]`, 'g'), '')
+        .replace(/\[Заявка автоматически архивирована[^\]]*\]/g, '') // Удаляем метки автоматического архивирования
         .trim();
       
       // Добавляем маркер восстановления
@@ -150,10 +155,12 @@ export class RefusalArchiveService {
       
       console.log('Восстановление с примечаниями:', notes);
       
-      // Отправляем запрос к API для обновления заявки
+      // Отправляем запрос к API для обновления заявки через маршрут status
+      // Важно: используем тот же маршрут, что и для архивирования,
+      // но без параметра archived
       const updateResponse = await apiRequest(
         "PATCH",
-        `/api/trial-requests/${requestId}`,
+        `/api/trial-requests/${requestId}/status`,
         { notes }
       );
       

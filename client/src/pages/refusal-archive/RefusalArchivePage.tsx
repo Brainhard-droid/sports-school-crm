@@ -49,6 +49,8 @@ export default function RefusalArchivePage() {
   const handleArchiveRefusal = async (request: ExtendedTrialRequest) => {
     setArchiving(true);
     try {
+      console.log(`Начинаем архивирование заявки ID=${request.id}`);
+      
       // Оптимистично обновляем UI - удаляем из активных и добавляем в архивированные
       setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
       
@@ -59,13 +61,16 @@ export default function RefusalArchivePage() {
       };
       setArchivedRefusals(prev => [updatedRequest, ...prev]);
       
-      // Архивируем заявку в БД
+      // Архивируем заявку в БД - используем обновленный сервис,
+      // который отправляет запрос через правильный API-маршрут с флагом archived: true
       const success = await RefusalArchiveService.archiveRefusal(
         request.id, 
         request.notes || undefined
       );
       
       if (success) {
+        console.log(`Заявка ID=${request.id} успешно архивирована`);
+        
         // Показываем уведомление об успешном архивировании
         toast({
           title: "Архивирование выполнено",
@@ -78,8 +83,10 @@ export default function RefusalArchivePage() {
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
           refreshData();
-        }, 500);
+        }, 1000); // Увеличиваем задержку для гарантии обновления на сервере
       } else {
+        console.error(`Ошибка при архивировании заявки ID=${request.id}`);
+        
         // Если произошла ошибка, откатываем UI изменения
         toast({
           title: "Ошибка",
