@@ -74,7 +74,7 @@ export class TrialRequestController {
    */
   static createTrialRequest = asyncHandler(async (req: Request, res: Response) => {
     console.log('Получен запрос на создание пробного занятия:', JSON.stringify(req.body));
-    
+
     const {
       childName,
       childAge,
@@ -128,34 +128,25 @@ export class TrialRequestController {
     }
 
     const { status, scheduledDate, notes, archived } = req.body;
-
-    // Проверяем, существует ли заявка
-    const existingRequest = await storage.getTrialRequestById(id);
-    if (!existingRequest) {
-      throw new ApiErrorClass('Заявка не найдена', 404);
-    }
-
-    // Проверяем статус
-    if (status && !Object.values(TrialRequestStatus).includes(status)) {
-      throw new ApiErrorClass('Некорректный статус заявки', 400);
-    }
-
-    // Подготавливаем данные для обновления
     const updateData: any = {};
-    
+
+    if (archived !== undefined) {
+      updateData.archived = archived;
+    }
+
     if (status) {
       updateData.status = status;
     }
-    
+
     if (scheduledDate) {
       updateData.scheduledDate = new Date(scheduledDate);
     }
-    
+
     // Обработка архивирования и примечаний
     if (archived === true) {
       // Если заявка архивируется, добавляем отметку в примечания
       const archiveNote = `Заявка автоматически архивирована ${new Date().toLocaleDateString()}`;
-      
+
       // Если уже есть примечания, добавляем к ним; иначе создаем новые
       if (notes) {
         updateData.notes = `${notes} [${archiveNote}]`;
@@ -178,7 +169,7 @@ export class TrialRequestController {
         // Получаем дополнительные данные для уведомления
         const section = await storage.getSectionById(updatedRequest.sectionId);
         const branch = await storage.getBranchById(updatedRequest.branchId);
-        
+
         if (section && branch) {
           await sendTrialAssignmentNotification(updatedRequest, section, branch);
         } else {

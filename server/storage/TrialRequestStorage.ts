@@ -122,11 +122,17 @@ export class TrialRequestStorage implements ITrialRequestStorage {
    * @param data Данные для обновления
    * @returns Обновленная заявка
    */
-  async updateTrialRequest(id: number, data: Partial<InsertTrialRequest>): Promise<TrialRequest> {
+  async updateTrialRequest(id: number, data: Partial<InsertTrialRequest> & { archived?: boolean }): Promise<TrialRequest> {
     try {
+      // Если установлен флаг archived, обновляем его вместе с остальными данными
+      const updateData = {
+        ...data,
+        archived: data.archived
+      };
+      
       const [request] = await db
         .update(trialRequests)
-        .set(data)
+        .set(updateData)
         .where(eq(trialRequests.id, id))
         .returning();
       
