@@ -45,27 +45,34 @@ export default function RefusalArchivePage() {
   const [archiving, setArchiving] = useState(false);
   const [restoring, setRestoring] = useState<number | null>(null);
   
-  // Функция архивирования заявки
+  // Функция для оптимистичного обновления UI при архивировании
+  const optimisticArchiveUpdate = (requestId: number, updatedNotes: string) => {
+    // Находим заявку
+    const request = activeRefusals.find(r => r.id === requestId);
+    if (!request) return;
+    
+    // Оптимистично обновляем UI - удаляем из активных и добавляем в архивированные
+    setActiveRefusals(prev => prev.filter(r => r.id !== requestId));
+    
+    // Добавляем в список архивированных с оптимистичным обновлением
+    const updatedRequest = {
+      ...request,
+      notes: updatedNotes
+    };
+    setArchivedRefusals(prev => [updatedRequest, ...prev]);
+  };
+
+  // Функция архивирования заявки с оптимистичным обновлением
   const handleArchiveRefusal = async (request: ExtendedTrialRequest) => {
     setArchiving(true);
     try {
       console.log(`Начинаем архивирование заявки ID=${request.id}`);
       
-      // Оптимистично обновляем UI - удаляем из активных и добавляем в архивированные
-      setActiveRefusals(prev => prev.filter(r => r.id !== request.id));
-      
-      // Добавляем в список архивированных с оптимистичным обновлением
-      const updatedRequest = {
-        ...request,
-        notes: `${request.notes || ''} ${RefusalArchiveService.getArchiveMarker()}`
-      };
-      setArchivedRefusals(prev => [updatedRequest, ...prev]);
-      
-      // Архивируем заявку в БД - используем обновленный сервис,
-      // который отправляет запрос через правильный API-маршрут с флагом archived: true
-      const success = await RefusalArchiveService.archiveRefusal(
+      // Архивируем заявку в БД с оптимистичным обновлением UI
+      const { success, notes } = await RefusalArchiveService.archiveRefusal(
         request.id, 
-        request.notes || undefined
+        request.notes || undefined,
+        optimisticArchiveUpdate // Передаем колбэк для оптимистичного обновления
       );
       
       if (success) {
@@ -78,23 +85,21 @@ export default function RefusalArchivePage() {
           variant: "default",
         });
         
-        // Обновляем данные с сервера с задержкой,
-        // чтобы дать время на обновление БД
+        // Обновляем данные с сервера с небольшой задержкой
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ["/api/trial-requests"] });
-          refreshData();
-        }, 1000); // Увеличиваем задержку для гарантии обновления на сервере
+        }, 300); // Уменьшаем задержку для более быстрого обновления
       } else {
         console.error(`Ошибка при архивировании заявки ID=${request.id}`);
         
-        // Если произошла ошибка, откатываем UI изменения
+        // Восстанавливаем состояние при ошибке
         toast({
           title: "Ошибка",
           description: "Не удалось архивировать заявку",
           variant: "destructive",
         });
         
-        // Запрашиваем обновленные данные с сервера
+        // Возвращаем оптимистично обновленные данные в исходное состояние
         refreshData();
       }
     } catch (error) {

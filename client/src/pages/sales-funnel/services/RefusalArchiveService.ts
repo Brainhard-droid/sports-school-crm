@@ -260,7 +260,7 @@ export class RefusalArchiveService {
     status: string,
     archiveStatus?: string
   } {
-    const cleanNotes = this.cleanNotesForDisplay(request.notes);
+    const cleanNotes = this.cleanNotesForDisplay(request.notes || '');
     
     // Определяем статус архивирования для отображения
     let archiveStatus = undefined;
