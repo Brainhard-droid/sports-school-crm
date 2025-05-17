@@ -1,12 +1,25 @@
 import { apiRequest, getResponseData } from "@/lib/api";
 import { ExtendedTrialRequest } from "@shared/schema";
 
-// Константы для маркеров архивирования (соблюдаем Open/Closed принцип SOLID)
+/**
+ * Константы для маркеров архивирования
+ * Соблюдаем принцип Open/Closed (OCP) из SOLID:
+ * - открыто для расширения (можно добавить новые теги)
+ * - закрыто для модификации (существующие теги не меняются)
+ */
 export const ARCHIVE_MARKERS = {
-  // Строгий формат маркера архивирования - всегда один и тот же
-  ARCHIVE_TAG: "ARCHIVED_REFUSAL",
-  ARCHIVED: "Архивирована:",  // Текст, который отображается пользователю
-  ARCHIVE_PREFIX: "[Заявка автоматически архивирована",
+  // Уникальный и стабильный тег для идентификации архивированных заявок
+  ARCHIVE_TAG: "___ARCHIVED_REFUSAL___",
+  
+  // Тег восстановленных заявок
+  RESTORE_TAG: "___RESTORED_REFUSAL___",
+  
+  // Визуальные маркеры (отображаются пользователю)
+  ARCHIVED_LABEL: "Архивирована:",
+  RESTORED_LABEL: "Восстановлена:",
+  
+  // Префиксы для сообщений (с датой)
+  ARCHIVE_PREFIX: "[Заявка архивирована",
   RESTORE_PREFIX: "[Восстановлена из архива"
 };
 
@@ -22,21 +35,26 @@ export class RefusalArchiveService {
    * @returns true, если заявка архивирована
    */
   static isArchived(request: ExtendedTrialRequest): boolean {
-    return !!(
-      request.notes && 
-      (request.notes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG) || 
-       request.notes.includes(ARCHIVE_MARKERS.ARCHIVED))
-    );
+    // Проверяем наличие уникального тега архивирования
+    return !!(request.notes && request.notes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG));
   }
   
   /**
    * Проверяет, была ли заявка восстановлена из архива
+   * Использует специальный тег RESTORE_TAG для точного определения
    * @param request Заявка для проверки
-   * @returns true, если заявка была восстановлена
+   * @returns true, если заявка восстановлена из архива
    */
   static isRestored(request: ExtendedTrialRequest): boolean {
-    return !!(request.notes && request.notes.includes(ARCHIVE_MARKERS.RESTORE_PREFIX));
+    // Проверяем наличие уникального тега восстановления
+    return !!(
+      request.notes && 
+      request.notes.includes(ARCHIVE_MARKERS.RESTORE_TAG) &&
+      !this.isArchived(request) // Не считаем восстановленной, если она снова архивирована
+    );
   }
+  
+  // Удаляю дублирующийся метод isRestored
   
   /**
    * Формирует метку архивирования для заявки
