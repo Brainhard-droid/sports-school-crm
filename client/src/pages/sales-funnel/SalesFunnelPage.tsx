@@ -306,7 +306,7 @@ export default function SalesFunnelPage() {
             onClick={() => setLocation('/refusal-archive')}
           >
             <Archive className="h-4 w-4" />
-            Архив отказов
+            Архив
           </Button>
         </CardHeader>
         <CardContent>

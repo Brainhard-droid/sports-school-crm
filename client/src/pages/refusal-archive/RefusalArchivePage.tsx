@@ -19,8 +19,8 @@ type RefusalStat = {
 };
 
 /**
- * Страница архива отказов
- * Отвечает за отображение архивированных отказов и работу с ними
+ * Страница архива заявок
+ * Отвечает за отображение архивированных заявок (отказов и успешных) и работу с ними
  * Следует принципу единственной ответственности (SRP) из SOLID
  */
 export default function RefusalArchivePage() {
@@ -36,8 +36,17 @@ export default function RefusalArchivePage() {
   // Архивированные отказы
   const [archivedRefusals, setArchivedRefusals] = useState<ExtendedTrialRequest[]>([]);
   
+  // Активные успешные заявки (статус "Записан", не архивированные)
+  const [activeSuccessful, setActiveSuccessful] = useState<ExtendedTrialRequest[]>([]);
+  
+  // Архивированные успешные заявки
+  const [archivedSuccessful, setArchivedSuccessful] = useState<ExtendedTrialRequest[]>([]);
+  
   // Старые отказы, которые можно архивировать
   const [oldRefusals, setOldRefusals] = useState<ExtendedTrialRequest[]>([]);
+  
+  // Старые успешные заявки, которые можно архивировать
+  const [oldSuccessful, setOldSuccessful] = useState<ExtendedTrialRequest[]>([]);
   
   // Статистика по отказам
   const [stats, setStats] = useState<RefusalStat[]>([]);
