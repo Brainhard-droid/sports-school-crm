@@ -9,7 +9,7 @@ import { Loader2, Archive, ArrowUp, ChevronLeft, PieChart, RefreshCw } from "luc
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefusalArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RefusalArchiveService";
+import { RequestArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RefusalArchiveService";
 
 // Тип для статистики по отказам
 type RefusalStat = {
