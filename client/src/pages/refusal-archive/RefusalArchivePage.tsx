@@ -9,7 +9,7 @@ import { Loader2, Archive, ArrowUp, ChevronLeft, PieChart, RefreshCw } from "luc
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { RequestArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RequestArchiveService";
+import { RefusalArchiveService, ARCHIVE_MARKERS } from "../sales-funnel/services/RefusalArchiveService";
 
 // Тип для статистики по отказам
 type RefusalStat = {
@@ -19,8 +19,8 @@ type RefusalStat = {
 };
 
 /**
- * Страница архива заявок
- * Отвечает за отображение архивированных заявок (отказов и успешных) и работу с ними
+ * Страница архива отказов
+ * Отвечает за отображение архивированных отказов и работу с ними
  * Следует принципу единственной ответственности (SRP) из SOLID
  */
 export default function RefusalArchivePage() {
@@ -366,7 +366,7 @@ export default function RefusalArchivePage() {
       };
       
       // Используем сервис для точной проверки архивирования на ОРИГИНАЛЬНОЙ заявке
-      const isArchived = RequestArchiveService.isArchived(request);
+      const isArchived = RefusalArchiveService.isArchived(request);
       
       if (isArchived) {
         archived.push(cleanedRequest);
@@ -457,7 +457,7 @@ export default function RefusalArchivePage() {
   return (
     <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Архив заявок</h1>
+        <h1 className="text-2xl font-semibold">Архив отказов</h1>
         <div className="flex gap-2">
           <Button 
             variant="outline"

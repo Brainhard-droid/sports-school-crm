@@ -14,26 +14,20 @@ export const ARCHIVE_MARKERS = {
   // Маркер восстановления из архива - скрыт для пользователя
   RESTORE_TAG: "__RS__",
   
-  // Маркер успешной заявки (записанный ученик)
-  SUCCESS_TAG: "__SU__",
-  
   // Текстовые метки для пользовательского интерфейса
   ARCHIVE_LABEL: "Архивирована",
   RESTORE_LABEL: "Восстановлена",
-  SUCCESS_LABEL: "Успешно записан",
   
   // Маркеры для сообщений в примечаниях - без технических меток
   ARCHIVE_MESSAGE: "Заявка архивирована",
-  RESTORE_MESSAGE: "Восстановлена из архива",
-  SUCCESS_MESSAGE: "Успешная запись ученика"
+  RESTORE_MESSAGE: "Восстановлена из архива"
 };
 
 /**
- * Сервис для работы с архивированием заявок (отказы и успешные заявки)
+ * Сервис для работы с архивированием отказов
  * Следует принципу единственной ответственности (SRP) из SOLID
- * Переименован для отражения более широкой функциональности
  */
-export class RequestArchiveService {
+export class RefusalArchiveService {
   /**
    * Проверяет, является ли заявка архивированной
    * @param request Заявка для проверки
@@ -42,33 +36,6 @@ export class RequestArchiveService {
   static isArchived(request: ExtendedTrialRequest): boolean {
     // Используем стабильный тег для точной идентификации
     return !!(request.notes && request.notes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG));
-  }
-  
-  /**
-   * Проверяет, является ли заявка успешной и архивированной
-   * @param request Заявка для проверки
-   * @returns true, если заявка успешная и архивирована
-   */
-  static isSuccessfulArchived(request: ExtendedTrialRequest): boolean {
-    // Заявка считается успешной архивной, если она содержит маркер успеха и архивации
-    return !!(
-      request.notes && 
-      request.notes.includes(ARCHIVE_MARKERS.SUCCESS_TAG) && 
-      request.notes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG)
-    );
-  }
-  
-  /**
-   * Проверяет, является ли заявка успешной (записанный ученик)
-   * @param request Заявка для проверки
-   * @returns true, если заявка помечена как успешная
-   */
-  static isSuccessful(request: ExtendedTrialRequest): boolean {
-    // Заявка успешная, если содержит маркер успеха или находится в статусе "Записан"
-    return !!(
-      (request.notes && request.notes.includes(ARCHIVE_MARKERS.SUCCESS_TAG)) || 
-      request.status === "SIGNED"
-    );
   }
   
   /**
@@ -92,15 +59,6 @@ export class RequestArchiveService {
   static getArchiveMarker(): string {
     const date = new Date().toLocaleDateString();
     return `[${ARCHIVE_MARKERS.ARCHIVE_MESSAGE} ${date}] ${ARCHIVE_MARKERS.ARCHIVE_TAG}`;
-  }
-  
-  /**
-   * Формирует метку успешной заявки для примечаний
-   * @returns Строка с меткой успешной заявки
-   */
-  static getSuccessMarker(): string {
-    const date = new Date().toLocaleDateString();
-    return `[${ARCHIVE_MARKERS.SUCCESS_MESSAGE} ${date}] ${ARCHIVE_MARKERS.SUCCESS_TAG}`;
   }
   
   /**
@@ -162,81 +120,13 @@ export class RequestArchiveService {
    * @param optimisticCallback Колбэк для оптимистичного обновления UI
    * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
    */
-  /**
-   * Архивирует успешную заявку (ученик был записан)
-   * @param requestId ID заявки для архивирования
-   * @param oldNotes Предыдущие примечания (если есть)
-   * @param optimisticCallback Колбэк для оптимистичного обновления UI
-   * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
-   */
-  static async archiveSuccessfulRequest(
-    requestId: number, 
-    oldNotes?: string, 
-    optimisticCallback?: (id: number, notes: string) => void
-  ): Promise<{success: boolean, notes: string}> {
-    try {
-      console.log(`RequestArchiveService: Архивирование успешной заявки ID=${requestId}`);
-      
-      // Проверяем, архивирована ли уже заявка
-      if (oldNotes && oldNotes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG)) {
-        console.log('Заявка уже содержит тег архивирования');
-        return { success: true, notes: oldNotes };
-      }
-      
-      // Создаем текст примечаний с маркерами успешной заявки и архивирования
-      const successMarker = this.getSuccessMarker();
-      const archiveMarker = this.getArchiveMarker();
-      const notes = oldNotes 
-        ? `${oldNotes.trim()} ${successMarker} ${archiveMarker}`
-        : `${successMarker} ${archiveMarker}`;
-      
-      // Вызываем оптимистичный колбэк до выполнения запроса для мгновенного обновления UI
-      if (optimisticCallback) {
-        optimisticCallback(requestId, notes);
-      }
-      
-      console.log('Архивирование успешной заявки с примечаниями:', notes);
-      
-      // Отправляем запрос к API с обновленными примечаниями и сохраняем статус SIGNED
-      const response = await apiRequest(
-        "PATCH",
-        `/api/trial-requests/${requestId}/status`,
-        { 
-          notes,
-          status: "SIGNED" // Сохраняем статус "Записан"
-        }
-      );
-      
-      // Проверяем успешность запроса
-      const success = response.ok;
-      
-      if (success) {
-        console.log('Успешная заявка архивирована');
-      } else {
-        console.error('Ошибка при архивировании:', await response.text());
-      }
-      
-      return { success, notes };
-    } catch (error) {
-      console.error('Ошибка при архивировании успешной заявки:', error);
-      return { success: false, notes: oldNotes || '' };
-    }
-  }
-  
-  /**
-   * Архивирует заявку на отказ
-   * @param requestId ID заявки для архивирования
-   * @param oldNotes Предыдущие примечания (если есть)
-   * @param optimisticCallback Колбэк для оптимистичного обновления UI
-   * @returns Promise<{success: boolean, notes: string}> Результат операции и обновленные примечания
-   */
   static async archiveRefusal(
     requestId: number, 
     oldNotes?: string, 
     optimisticCallback?: (id: number, notes: string) => void
   ): Promise<{success: boolean, notes: string}> {
     try {
-      console.log(`RequestArchiveService: Архивирование заявки ID=${requestId}`);
+      console.log(`RefusalArchiveService: Архивирование заявки ID=${requestId}`);
       
       // Проверяем, архивирована ли уже заявка
       if (oldNotes && oldNotes.includes(ARCHIVE_MARKERS.ARCHIVE_TAG)) {

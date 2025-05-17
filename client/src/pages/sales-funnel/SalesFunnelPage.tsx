@@ -10,7 +10,7 @@ import { RejectTrialModal } from "./components/RejectTrialModal";
 import { TrialRequestCard } from "./components/TrialRequestCard";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { RequestArchiveService } from "./services/RequestArchiveService";
+import { RefusalArchiveService } from "./services/RefusalArchiveService";
 
 type StatusColumn = {
   id: keyof typeof TrialRequestStatus;
@@ -205,7 +205,7 @@ export default function SalesFunnelPage() {
       // Для колонки "Отказ" дополнительно проверяем, что заявка не архивирована
       if (column.id === "REFUSED") {
         // Используем сервис для проверки, является ли заявка архивированной
-        const isArchived = RequestArchiveService.isArchived(r);
+        const isArchived = RefusalArchiveService.isArchived(r);
         if (isArchived) {
           console.log(`Заявка ${r.id} скрыта из колонки "Отказ", т.к. архивирована (${r.notes})`);
         }
@@ -303,10 +303,10 @@ export default function SalesFunnelPage() {
             variant="outline" 
             size="sm" 
             className="gap-1"
-            onClick={() => setLocation('/archive')}
+            onClick={() => setLocation('/refusal-archive')}
           >
             <Archive className="h-4 w-4" />
-            Архив
+            Архив отказов
           </Button>
         </CardHeader>
         <CardContent>
