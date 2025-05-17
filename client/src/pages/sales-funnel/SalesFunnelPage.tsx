@@ -143,15 +143,46 @@ export default function SalesFunnelPage() {
         status: targetStatus
       });
       
+      // Показываем уведомление о том, что начался процесс создания ученика
+      import("@/hooks/use-toast").then(({ useToast }) => {
+        const { toast } = useToast();
+        toast({
+          title: "Создание ученика",
+          description: `Автоматическое создание ученика из заявки ${request.childName} в процессе...`,
+          duration: 3000,
+        });
+      });
+      
       // Затем импортируем сервис динамически для избежания циклических зависимостей
       import("@/services/StudentFromTrialService").then(({ StudentFromTrialService }) => {
         // Создаем ученика из заявки автоматически
         StudentFromTrialService.createStudentFromTrialRequest(request)
           .then(createdStudent => {
             console.log('Автоматически создан новый ученик:', createdStudent);
+            
+            // Показываем уведомление об успешном создании ученика
+            import("@/hooks/use-toast").then(({ useToast }) => {
+              const { toast } = useToast();
+              toast({
+                title: "Ученик создан",
+                description: `Ученик ${createdStudent.firstName} ${createdStudent.lastName} успешно создан. Вы можете найти его на вкладке "Новые ученики"`,
+                duration: 5000,
+              });
+            });
           })
           .catch(error => {
             console.error('Ошибка при автоматическом создании ученика:', error);
+            
+            // Показываем уведомление об ошибке
+            import("@/hooks/use-toast").then(({ useToast }) => {
+              const { toast } = useToast();
+              toast({
+                title: "Ошибка",
+                description: `Не удалось автоматически создать ученика: ${error.message}`,
+                variant: "destructive",
+                duration: 5000,
+              });
+            });
           });
       });
       return;
