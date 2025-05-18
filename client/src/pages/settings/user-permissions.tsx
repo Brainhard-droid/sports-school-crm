@@ -140,15 +140,15 @@ const UserManagementTab = () => {
                     {t('loading')}
                   </TableCell>
                 </TableRow>
-              ) : users.length === 0 ? (
+              ) : users?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-4">
                     {t('settings.users.noUsers')}
                   </TableCell>
                 </TableRow>
               ) : (
-                users
-                  .filter((user: User) => 
+                (users as User[])
+                  .filter((user) => 
                     !selectedRole || user.role === selectedRole
                   )
                   .map((user: User) => (
@@ -315,7 +315,7 @@ const GroupAssignmentTab = () => {
                     {t('loading')}
                   </SelectItem>
                 ) : (
-                  admins.map((admin: User) => (
+                  (admins as User[]).map((admin) => (
                     <SelectItem key={admin.id} value={admin.id.toString()}>
                       {admin.username}
                     </SelectItem>
@@ -343,17 +343,17 @@ const GroupAssignmentTab = () => {
                       {t('loading')}
                     </TableCell>
                   </TableRow>
-                ) : groups.length === 0 ? (
+                ) : groups?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-4">
                       {t('settings.groups.noGroups')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  groups.map((group: any) => (
+                  (groups as Group[]).map((group) => (
                     <TableRow key={group.id}>
                       <TableCell>{group.name}</TableCell>
-                      <TableCell>{group.trainerName || t('settings.groups.noTrainer')}</TableCell>
+                      <TableCell>{t('settings.groups.noTrainer')}</TableCell>
                       <TableCell>
                         <Button
                           variant={isGroupAssigned(group.id) ? "destructive" : "default"}
