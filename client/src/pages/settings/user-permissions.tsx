@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
-import { User, UserRole } from '@shared/schema';
+import { User, UserRole, Group } from '@shared/schema';
 
 // Импорт компонентов
 import {
@@ -47,15 +47,17 @@ const UserManagementTab = () => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   // Получение всех пользователей
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ['/api/users'],
     enabled: isOwner, // Загружаем данные только для владельца
   });
 
   // Мутация для обновления роли пользователя
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: number; role: string }) =>
-      apiRequest(`/api/users/${userId}/role`, 'PATCH', { role }),
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const response = await apiRequest('PATCH', `/api/users/${userId}/role`, { role });
+      return getResponseData(response);
+    },
     onSuccess: () => {
       toast({
         title: t('settings.users.roleUpdated'),
@@ -203,29 +205,28 @@ const GroupAssignmentTab = () => {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
   // Получение пользователей с ролью администратора
-  const { data: admins = [], isLoading: isLoadingAdmins } = useQuery({
+  const { data: admins = [], isLoading: isLoadingAdmins } = useQuery<User[]>({
     queryKey: ['/api/users/role/admin'],
     enabled: isOwner, // Загружаем данные только для владельца
   });
 
   // Получение всех групп
-  const { data: groups = [], isLoading: isLoadingGroups } = useQuery({
+  const { data: groups = [], isLoading: isLoadingGroups } = useQuery<Group[]>({
     queryKey: ['/api/groups'],
   });
 
   // Получение групп, назначенных выбранному пользователю
-  const { data: userGroups = [], isLoading: isLoadingUserGroups } = useQuery({
+  const { data: userGroups = [], isLoading: isLoadingUserGroups } = useQuery<Group[]>({
     queryKey: ['/api/users', selectedUser, 'groups'],
     enabled: !!selectedUser,
   });
 
   // Мутация для назначения группы пользователю
   const assignGroupMutation = useMutation({
-    mutationFn: async ({ userId, groupId }: { userId: number; groupId: number }) =>
-      apiRequest('/api/users/assign-group', {
-        method: 'POST',
-        body: { userId, groupId },
-      }),
+    mutationFn: async ({ userId, groupId }: { userId: number; groupId: number }) => {
+      const response = await apiRequest('POST', '/api/users/assign-group', { userId, groupId });
+      return getResponseData(response);
+    },
     onSuccess: () => {
       toast({
         title: t('settings.groups.assigned'),
@@ -244,10 +245,10 @@ const GroupAssignmentTab = () => {
 
   // Мутация для удаления группы у пользователя
   const removeGroupMutation = useMutation({
-    mutationFn: async ({ userId, groupId }: { userId: number; groupId: number }) =>
-      apiRequest(`/api/users/${userId}/groups/${groupId}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: async ({ userId, groupId }: { userId: number; groupId: number }) => {
+      const response = await apiRequest('DELETE', `/api/users/${userId}/groups/${groupId}`);
+      return getResponseData(response);
+    },
     onSuccess: () => {
       toast({
         title: t('settings.groups.removed'),
@@ -266,7 +267,7 @@ const GroupAssignmentTab = () => {
 
   // Проверка, назначена ли группа пользователю
   const isGroupAssigned = (groupId: number) => {
-    return userGroups.some((group: any) => group.id === groupId);
+    return (userGroups as any[]).some((group) => group.id === groupId);
   };
 
   // Обработчик назначения/удаления группы
