@@ -1,15 +1,18 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
-import { Settings as SettingsIcon, User, Building, Bell } from "lucide-react";
+import { Settings as SettingsIcon, User, Building, Bell, ShieldCheck } from "lucide-react";
 import { Layout } from "@/components/layout/navbar";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import GeneralSettings from "./components/GeneralSettings";
 import ProfileSettings from "./components/ProfileSettings";
 import BranchesSettings from "./components/BranchesSettings";
 import NotificationsSettings from "./components/NotificationsSettings";
+import UserPermissions from "./user-permissions";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+  const { isOwner } = usePermissions();
   
   return (
     <div className="container mx-auto py-6 px-4">
@@ -38,6 +41,12 @@ export default function SettingsPage() {
             <Bell className="h-4 w-4 mr-2" />
             Уведомления
           </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="permissions" className="flex items-center">
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Права доступа
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general">
@@ -55,6 +64,12 @@ export default function SettingsPage() {
         <TabsContent value="notifications">
           <NotificationsSettings />
         </TabsContent>
+        
+        {isOwner && (
+          <TabsContent value="permissions">
+            <UserPermissions />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
