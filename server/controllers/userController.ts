@@ -6,6 +6,50 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { users, userGroups } from '@shared/schema';
 import { db } from '../db';
+import crypto from 'crypto';
+import { MailService } from '@sendgrid/mail';
+
+// Настройка SendGrid
+const mailService = new MailService();
+if (process.env.SENDGRID_API_KEY) {
+  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Функция для генерации случайного пароля
+const generatePassword = (length = 10) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Функция для отправки email с данными для входа
+const sendCredentialsEmail = async (email: string, username: string, password: string) => {
+  try {
+    await mailService.send({
+      to: email,
+      from: 'no-reply@sportschool.com', // Замените на ваш подтвержденный email в SendGrid
+      subject: 'Данные для входа в систему Sports School CRM',
+      html: `
+        <h1>Добро пожаловать в Sports School CRM!</h1>
+        <p>Для вас был создан аккаунт в системе управления спортивной школой.</p>
+        <p>Ваши данные для входа:</p>
+        <ul>
+          <li><strong>Логин:</strong> ${username}</li>
+          <li><strong>Пароль:</strong> ${password}</li>
+        </ul>
+        <p>Рекомендуем сменить пароль после первого входа в систему.</p>
+        <p>С уважением,<br>Команда Sports School CRM</p>
+      `
+    });
+    return true;
+  } catch (error) {
+    console.error('Ошибка отправки email:', error);
+    return false;
+  }
+};
 
 // Схемы валидации
 const updateRoleSchema = z.object({
@@ -15,6 +59,11 @@ const updateRoleSchema = z.object({
 const assignGroupSchema = z.object({
   userId: z.number().int().positive(),
   groupId: z.number().int().positive()
+});
+
+const createUserSchema = z.object({
+  email: z.string().email('Введите корректный email адрес'),
+  role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER]).default(UserRole.TRAINER)
 });
 
 /**
@@ -28,6 +77,7 @@ export class UserController {
   static validationSchemas = {
     updateRole: updateRoleSchema,
     assignGroup: assignGroupSchema,
+    createUser: createUserSchema,
     params: z.object({
       id: z.string().transform((val) => parseInt(val))
     })
@@ -236,5 +286,97 @@ export class UserController {
     
     // По умолчанию возвращаем пустой массив
     res.json([]);
+  });
+
+  /**
+   * Создание нового пользователя
+   */
+  static createUser = asyncHandler(async (req: Request, res: Response) => {
+    const { email, role } = req.body;
+    
+    // Проверяем, существует ли уже пользователь с таким email
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+      
+    if (existingUser.length > 0) {
+      throw new ApiErrorClass('Пользователь с таким email уже существует', 400);
+    }
+    
+    // Имя пользователя - email без домена
+    const username = email.split('@')[0];
+    
+    // Генерируем случайный пароль
+    const plainPassword = generatePassword();
+    
+    // Хешируем пароль для хранения в БД
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(plainPassword, salt, 1000, 64, 'sha512').toString('hex');
+    const password = `${hash}.${salt}`;
+    
+    // Создаем нового пользователя
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        username,
+        email,
+        role,
+        password
+      })
+      .returning();
+    
+    // Отправляем email с данными для входа
+    const emailSent = await sendCredentialsEmail(email, username, plainPassword);
+    
+    res.status(201).json({
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+      emailSent
+    });
+  });
+
+  /**
+   * Удаление пользователя
+   */
+  static deleteUser = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id);
+    
+    // Проверяем, существует ли пользователь
+    const user = await storage.getUser(userId);
+    if (!user) {
+      throw new ApiErrorClass('Пользователь не найден', 404);
+    }
+    
+    // Проверяем, не пытается ли пользователь удалить сам себя
+    if (req.user && req.user.id === userId) {
+      throw new ApiErrorClass('Вы не можете удалить собственную учетную запись', 400);
+    }
+    
+    // Если это единственный владелец, запрещаем удаление
+    if (user.role === UserRole.OWNER) {
+      const owners = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, UserRole.OWNER));
+      
+      if (owners.length <= 1) {
+        throw new ApiErrorClass('Нельзя удалить единственного владельца системы', 400);
+      }
+    }
+    
+    // Удаляем пользователя
+    await db
+      .delete(users)
+      .where(eq(users.id, userId));
+    
+    // Удаляем связи с группами
+    await db
+      .delete(userGroups)
+      .where(eq(userGroups.userId, userId));
+    
+    res.json({ success: true, message: 'Пользователь успешно удален' });
   });
 }

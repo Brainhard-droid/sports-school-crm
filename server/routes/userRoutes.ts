@@ -15,6 +15,14 @@ router.get(
   UserController.getAllUsers
 );
 
+// Создание нового пользователя (только владелец)
+router.post(
+  '/',
+  isOwner,
+  validateRequest({ body: UserController.validationSchemas.createUser }),
+  UserController.createUser
+);
+
 // Получение пользователей с определенной ролью (только владелец)
 router.get(
   '/role/:role',
@@ -50,6 +58,13 @@ router.delete(
   '/:userId/groups/:groupId',
   isOwner,
   UserController.removeGroupFromUser
+);
+
+// Удаление пользователя (только владелец)
+router.delete(
+  '/:id',
+  isOwner,
+  UserController.deleteUser
 );
 
 export default router;
