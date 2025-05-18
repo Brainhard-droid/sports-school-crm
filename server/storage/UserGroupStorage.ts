@@ -1,7 +1,14 @@
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
-import { InsertUser, User, UserGroup, userGroups, users, groups, Group } from '@shared/schema';
-import { studentGroups } from '@shared/schema';
+import { 
+  User, 
+  userGroups, 
+  users, 
+  groups, 
+  Group, 
+  studentGroups as studentGroupsTable,
+  UserGroup
+} from '@shared/schema';
 import { BaseStorage } from './BaseStorage';
 
 /**
