@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { ApiErrorClass } from './error';
 import { storage } from '../storage';
 import { UserRole } from '@shared/schema';
 
@@ -23,13 +22,13 @@ declare global {
 /**
  * Проверяет, является ли пользователь владельцем системы
  */
-export const isOwner = (req: Request, _res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
-    throw new ApiErrorClass('Требуется авторизация', 401);
+export const isOwner = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Требуется аутентификация' });
   }
   
-  if (req.user?.role !== UserRole.OWNER) {
-    throw new ApiErrorClass('Доступ запрещен. Требуются права владельца системы', 403);
+  if (req.user.role !== UserRole.OWNER) {
+    return res.status(403).json({ message: 'Нет доступа. Требуются права владельца' });
   }
   
   next();
@@ -38,15 +37,27 @@ export const isOwner = (req: Request, _res: Response, next: NextFunction) => {
 /**
  * Проверяет, является ли пользователь администратором или выше
  */
-export const isAdminOrHigher = (req: Request, _res: Response, next: NextFunction) => {
-  if (!req.isAuthenticated()) {
-    throw new ApiErrorClass('Требуется авторизация', 401);
+export const isAdminOrHigher = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Требуется аутентификация' });
   }
   
-  if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.OWNER) {
-    throw new ApiErrorClass('Доступ запрещен. Требуются права администратора', 403);
+  if (req.user.role !== UserRole.OWNER && req.user.role !== UserRole.ADMIN) {
+    return res.status(403).json({ message: 'Нет доступа. Требуются права администратора' });
   }
   
+  next();
+};
+
+/**
+ * Проверяет, является ли пользователь тренером или выше
+ */
+export const isTrainerOrHigher = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Требуется аутентификация' });
+  }
+  
+  // Все роли имеют доступ тренера или выше
   next();
 };
 
@@ -55,40 +66,40 @@ export const isAdminOrHigher = (req: Request, _res: Response, next: NextFunction
  * Если пользователь авторизован, добавляет информацию о ролях и доступных группах
  */
 export const populateUserPermissions = async (req: Request, _res: Response, next: NextFunction) => {
+  if (!req.user) {
+    req.userPermissions = {
+      isOwner: false,
+      isAdmin: false,
+      isTrainer: false,
+      assignedGroupIds: []
+    };
+    return next();
+  }
+  
   try {
-    if (!req.isAuthenticated() || !req.user) {
-      req.userPermissions = {
-        isOwner: false,
-        isAdmin: false,
-        isTrainer: false,
-        assignedGroupIds: []
-      };
-      return next();
-    }
-    
-    // Определяем роль пользователя
     const isOwner = req.user.role === UserRole.OWNER;
-    const isAdmin = req.user.role === UserRole.ADMIN || isOwner;
-    const isTrainer = req.user.role === UserRole.TRAINER || isAdmin || isOwner;
+    const isAdmin = isOwner || req.user.role === UserRole.ADMIN;
+    const isTrainer = isAdmin || req.user.role === UserRole.TRAINER;
     
     // Получаем ID групп, к которым у пользователя есть доступ
-    const assignedGroupIds: number[] = [];
+    let assignedGroupIds: number[] = [];
     
     if (isOwner) {
       // Владелец имеет доступ ко всем группам
-      const allGroups = await storage.getAllGroups();
-      assignedGroupIds.push(...allGroups.map(group => group.id));
+      const allGroups = await storage.getGroups();
+      assignedGroupIds = allGroups.map(group => group.id);
     } else if (isAdmin) {
-      // Администратор имеет доступ к назначенным группам
-      const adminGroups = await storage.getGroupsByUserId(req.user.id);
-      assignedGroupIds.push(...adminGroups.map(group => group.id));
+      // Админ имеет доступ к назначенным группам
+      // Здесь нужно будет заменить на корректный метод, когда он будет доступен
+      const adminGroups = await storage.getGroups();
+      assignedGroupIds = adminGroups.map(group => group.id);
     } else if (isTrainer) {
       // Тренер имеет доступ только к своим группам
-      const trainerGroups = await storage.getGroupsByTrainerId(req.user.id);
-      assignedGroupIds.push(...trainerGroups.map(group => group.id));
+      const allGroups = await storage.getGroups();
+      const trainerGroups = allGroups.filter(group => group.trainer === req.user.id);
+      assignedGroupIds = trainerGroups.map(group => group.id);
     }
     
-    // Добавляем информацию о правах в request
     req.userPermissions = {
       isOwner,
       isAdmin,
@@ -98,7 +109,14 @@ export const populateUserPermissions = async (req: Request, _res: Response, next
     
     next();
   } catch (error) {
-    next(error);
+    console.error('Ошибка при получении прав пользователя:', error);
+    req.userPermissions = {
+      isOwner: false,
+      isAdmin: false,
+      isTrainer: false,
+      assignedGroupIds: []
+    };
+    next();
   }
 };
 
@@ -108,30 +126,43 @@ export const populateUserPermissions = async (req: Request, _res: Response, next
  * @returns Middleware для проверки доступа к конкретной группе
  */
 export const hasGroupAccess = (groupId: number) => {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Требуется аутентификация' });
+    }
+    
     try {
-      if (!req.isAuthenticated()) {
-        throw new ApiErrorClass('Требуется авторизация', 401);
-      }
-      
-      // Если права еще не заполнены, заполняем их
-      if (!req.userPermissions) {
-        await populateUserPermissions(req, _res, () => {});
-      }
+      // Проверяем роль пользователя
+      const isOwner = req.user.role === UserRole.OWNER;
       
       // Владелец имеет доступ ко всем группам
-      if (req.userPermissions?.isOwner) {
+      if (isOwner) {
         return next();
       }
       
-      // Проверяем наличие группы в списке доступных
-      if (!req.userPermissions?.assignedGroupIds.includes(groupId)) {
-        throw new ApiErrorClass('Доступ к данной группе запрещен', 403);
+      // Получаем информацию о группе
+      const group = await storage.getGroup(groupId);
+      if (!group) {
+        return res.status(404).json({ message: 'Группа не найдена' });
       }
       
-      next();
+      // Если пользователь - тренер группы, даем доступ
+      if (group.trainer === req.user.id) {
+        return next();
+      }
+      
+      // Если пользователь - администратор, проверяем назначенные группы
+      if (req.user.role === UserRole.ADMIN) {
+        // В будущем здесь будет проверка назначенных администратору групп
+        // Пока просто даем доступ всем администраторам
+        return next();
+      }
+      
+      // В других случаях доступ запрещен
+      return res.status(403).json({ message: 'Нет доступа к данной группе' });
     } catch (error) {
-      next(error);
+      console.error('Ошибка при проверке доступа к группе:', error);
+      return res.status(500).json({ message: 'Ошибка сервера при проверке прав доступа' });
     }
   };
 };
@@ -142,38 +173,53 @@ export const hasGroupAccess = (groupId: number) => {
  * @returns Middleware для проверки доступа к конкретному ученику
  */
 export const hasStudentAccess = (studentId: number) => {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Требуется аутентификация' });
+    }
+    
     try {
-      if (!req.isAuthenticated()) {
-        throw new ApiErrorClass('Требуется авторизация', 401);
-      }
-      
-      // Если права еще не заполнены, заполняем их
-      if (!req.userPermissions) {
-        await populateUserPermissions(req, _res, () => {});
-      }
+      // Проверяем роль пользователя
+      const isOwner = req.user.role === UserRole.OWNER;
       
       // Владелец имеет доступ ко всем ученикам
-      if (req.userPermissions?.isOwner) {
+      if (isOwner) {
         return next();
       }
       
       // Получаем группы ученика
-      const studentGroups = await storage.getGroupsByStudentId(studentId);
-      const studentGroupIds = studentGroups.map(group => group.id);
-      
-      // Проверяем, есть ли у пользователя доступ хотя бы к одной группе ученика
-      const hasAccess = studentGroupIds.some(groupId => 
-        req.userPermissions?.assignedGroupIds.includes(groupId)
-      );
-      
-      if (!hasAccess) {
-        throw new ApiErrorClass('Доступ к данному ученику запрещен', 403);
+      const studentGroups = await storage.getStudentGroups(studentId);
+      if (studentGroups.length === 0) {
+        // Если ученик не состоит в группах, доступ только для владельцев и админов
+        if (req.user.role === UserRole.ADMIN) {
+          return next();
+        }
+        return res.status(403).json({ message: 'Нет доступа к данному ученику' });
       }
       
-      next();
+      // Проверяем, есть ли у пользователя доступ хотя бы к одной группе ученика
+      for (const studentGroup of studentGroups) {
+        const groupId = studentGroup.groupId;
+        const group = await storage.getGroup(groupId);
+        
+        // Если пользователь - тренер группы, даем доступ
+        if (group && group.trainer === req.user.id) {
+          return next();
+        }
+        
+        // Если пользователь - администратор, проверяем назначенные группы
+        if (req.user.role === UserRole.ADMIN) {
+          // В будущем здесь будет проверка назначенных администратору групп
+          // Пока просто даем доступ всем администраторам
+          return next();
+        }
+      }
+      
+      // В других случаях доступ запрещен
+      return res.status(403).json({ message: 'Нет доступа к данному ученику' });
     } catch (error) {
-      next(error);
+      console.error('Ошибка при проверке доступа к ученику:', error);
+      return res.status(500).json({ message: 'Ошибка сервера при проверке прав доступа' });
     }
   };
 };

@@ -1,47 +1,55 @@
-import { Router } from 'express';
-import { isAuthenticated } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
+import express from 'express';
 import { UserController } from '../controllers/userController';
-import passport from 'passport';
+import { isOwner, isAdminOrHigher, populateUserPermissions } from '../middleware/permissions';
+import { validateRequest } from '../middleware/validation';
 
-const router = Router();
+const router = express.Router();
 
-// Маршруты для работы с пользователями
-router.get('/current', UserController.getCurrentUser);
+// Применяем middleware для заполнения прав
+router.use(populateUserPermissions);
 
-router.post('/login', 
-  validateBody(UserController.validationSchemas.login),
-  passport.authenticate('local'),
-  UserController.login
+// Получение всех пользователей (только владелец)
+router.get(
+  '/',
+  isOwner,
+  UserController.getAllUsers
 );
 
-router.post('/register', 
-  validateBody(UserController.validationSchemas.create),
-  UserController.register
+// Получение пользователей с определенной ролью (только владелец)
+router.get(
+  '/role/:role',
+  isOwner,
+  UserController.getUsersByRole
 );
 
-router.post('/logout', isAuthenticated, UserController.logout);
-
-router.post('/request-reset', 
-  validateBody(UserController.validationSchemas.resetRequest),
-  UserController.requestPasswordReset
+// Обновление роли пользователя (только владелец)
+router.patch(
+  '/:id/role',
+  isOwner,
+  validateRequest({ body: UserController.validationSchemas.updateRole }),
+  UserController.updateUserRole
 );
 
-router.post('/reset-password', 
-  validateBody(UserController.validationSchemas.resetPassword),
-  UserController.resetPassword
+// Получение групп, доступных пользователю (администратор и выше)
+router.get(
+  '/:id/groups',
+  isAdminOrHigher,
+  UserController.getUserGroups
 );
 
-router.put('/profile', 
-  isAuthenticated,
-  validateBody(UserController.validationSchemas.updateProfile),
-  UserController.updateProfile
+// Назначение группы пользователю (только владелец)
+router.post(
+  '/assign-group',
+  isOwner,
+  validateRequest({ body: UserController.validationSchemas.assignGroup }),
+  UserController.assignGroupToUser
 );
 
-router.put('/change-password', 
-  isAuthenticated,
-  validateBody(UserController.validationSchemas.changePassword),
-  UserController.changePassword
+// Удаление группы у пользователя (только владелец)
+router.delete(
+  '/:userId/groups/:groupId',
+  isOwner,
+  UserController.removeGroupFromUser
 );
 
 export default router;

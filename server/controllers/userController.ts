@@ -1,266 +1,240 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { storage } from '../storage';
-import { hashPassword, comparePasswords } from '../utils/security/password';
 import { asyncHandler, ApiErrorClass } from '../middleware/error';
-import { sendPasswordResetEmail } from '../services/email';
-import { insertUserSchema } from '@shared/schema';
+import { UserRole } from '@shared/schema';
 import { z } from 'zod';
-import crypto from 'crypto';
+import { eq, and } from 'drizzle-orm';
+import { users, userGroups } from '@shared/schema';
+import { db } from '../db';
 
 // Схемы валидации
-const loginSchema = z.object({
-  username: z.string().min(1, 'Имя пользователя обязательно'),
-  password: z.string().min(1, 'Пароль обязателен')
+const updateRoleSchema = z.object({
+  role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER])
 });
 
-const passwordResetRequestSchema = z.object({
-  email: z.string().email('Некорректный email')
-});
-
-const passwordResetSchema = z.object({
-  token: z.string().min(1, 'Токен обязателен'),
-  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов')
-});
-
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Текущий пароль обязателен'),
-  newPassword: z.string().min(6, 'Новый пароль должен содержать минимум 6 символов')
-});
-
-const updateProfileSchema = z.object({
-  username: z.string().min(1).optional(),
-  email: z.string().email().optional(),
+const assignGroupSchema = z.object({
+  userId: z.number().int().positive(),
+  groupId: z.number().int().positive()
 });
 
 /**
- * Контроллер для управления пользователями
+ * Контроллер для управления пользователями и их правами
+ * Соответствует принципу единственной ответственности (SRP) из SOLID
  */
 export class UserController {
   /**
-   * Схемы валидации для контроллера
+   * Схемы валидации для повторного использования
    */
   static validationSchemas = {
-    login: loginSchema,
-    create: insertUserSchema,
-    resetRequest: passwordResetRequestSchema,
-    resetPassword: passwordResetSchema,
-    changePassword: changePasswordSchema,
-    updateProfile: updateProfileSchema
+    updateRole: updateRoleSchema,
+    assignGroup: assignGroupSchema,
+    params: z.object({
+      id: z.string().transform((val) => parseInt(val))
+    })
   };
 
   /**
-   * Получение информации о текущем пользователе
+   * Получение всех пользователей системы
    */
-  static getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: { message: 'Требуется аутентификация' } });
-    }
-    res.json(req.user);
-  });
-
-  /**
-   * Вход в систему
-   */
-  static login = (req: Request, res: Response) => {
-    console.log('Login request received:', req.body.username);
-    // Аутентификация обработана Passport middleware
-    res.json(req.user);
-  };
-
-  /**
-   * Регистрация нового пользователя
-   */
-  static register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { username, password, email } = req.body;
-
-    // Проверяем, существует ли пользователь с таким именем
-    const existingUser = await storage.getUserByUsername(username);
-    if (existingUser) {
-      throw new ApiErrorClass('Пользователь с таким именем уже существует', 400);
-    }
-
-    // Проверяем, существует ли пользователь с таким email
-    const existingEmail = await storage.getUserByEmail(email);
-    if (existingEmail) {
-      throw new ApiErrorClass('Пользователь с таким email уже существует', 400);
-    }
-
-    // Хешируем пароль
-    const hashedPassword = await hashPassword(password);
-
-    // Создаем пользователя
-    const user = await storage.createUser({
-      username,
-      password: hashedPassword,
-      role: 'admin', // Пока все пользователи создаются с ролью admin
-      email
-    });
-
-    // Автоматически входим после регистрации
-    req.login(user, (err) => {
-      if (err) {
-        return next(err);
-      }
-      console.log('Registration and auto-login successful for user:', user.id);
-      res.status(201).json(user);
-    });
-  });
-
-  /**
-   * Выход из системы
-   */
-  static logout = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    req.logout((err) => {
-      if (err) {
-        return next(err);
-      }
-      console.log('Logout successful');
-      res.sendStatus(200);
-    });
-  });
-
-  /**
-   * Запрос на сброс пароля
-   */
-  static requestPasswordReset = asyncHandler(async (req: Request, res: Response) => {
-    const { email } = req.body;
-
-    const user = await storage.getUserByEmail(email);
-    if (!user) {
-      throw new ApiErrorClass('Пользователь с таким email не найден', 404);
-    }
-
-    // Генерируем и сохраняем токен для сброса
-    const resetToken = crypto.randomBytes(32).toString('hex');
+  static getAllUsers = asyncHandler(async (req: Request, res: Response) => {
+    // Получаем всех пользователей (без чувствительных данных)
+    const allUsers = await db.select({
+      id: users.id,
+      username: users.username,
+      role: users.role,
+      email: users.email
+    }).from(users);
     
-    // Устанавливаем срок действия токена (1 час)
-    const now = new Date();
-    const resetTokenExpiry = new Date(now.getTime() + 60 * 60 * 1000);
-
-    // Обновляем пользователя с токеном
-    await storage.updateUser(user.id, {
-      resetToken,
-      resetTokenExpiry
-    });
-
-    // Отправляем email со ссылкой для сброса
-    try {
-      await sendPasswordResetEmail(email, resetToken);
-      res.json({ message: 'Инструкции по сбросу пароля отправлены на ваш email' });
-    } catch (error) {
-      console.error('Failed to send password reset email:', error);
-      throw new ApiErrorClass('Не удалось отправить email для сброса пароля', 500);
-    }
+    res.json(allUsers);
   });
 
   /**
-   * Сброс пароля
+   * Получение пользователей с определенной ролью
    */
-  static resetPassword = asyncHandler(async (req: Request, res: Response) => {
-    const { token, password } = req.body;
-
-    // Проверяем токен
-    const user = await storage.getUserByResetToken(token);
-    if (!user) {
-      throw new ApiErrorClass('Недействительный или истекший токен сброса пароля', 400);
+  static getUsersByRole = asyncHandler(async (req: Request, res: Response) => {
+    const { role } = req.params;
+    
+    // Проверяем, что роль валидна
+    if (!Object.values(UserRole).includes(role as any)) {
+      throw new ApiErrorClass('Неверная роль', 400);
     }
-
-    // Проверяем срок действия токена
-    const now = new Date();
-    if (!user.resetTokenExpiry || now > new Date(user.resetTokenExpiry)) {
-      throw new ApiErrorClass('Срок действия токена истек', 400);
-    }
-
-    // Хешируем новый пароль и обновляем пользователя
-    const hashedPassword = await hashPassword(password);
-    await storage.updateUser(user.id, {
-      password: hashedPassword,
-      resetToken: null,
-      resetTokenExpiry: null
-    });
-
-    res.json({ message: 'Пароль успешно изменен' });
+    
+    // Получаем пользователей с указанной ролью
+    const filteredUsers = await db.select({
+      id: users.id,
+      username: users.username,
+      role: users.role,
+      email: users.email
+    })
+    .from(users)
+    .where(eq(users.role, role));
+    
+    res.json(filteredUsers);
   });
 
   /**
-   * Обновление профиля пользователя
+   * Обновление роли пользователя
    */
-  static updateProfile = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      throw new ApiErrorClass('Требуется аутентификация', 401);
-    }
-
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new ApiErrorClass('ID пользователя не найден', 400);
-    }
-
-    // Получаем поля для обновления (кроме пароля, роли и токенов)
-    const { username, email } = req.body;
-
-    // Создаем объект для обновления
-    const updateData: Partial<typeof req.user> = {};
-
-    if (username) {
-      // Проверяем, не занято ли это имя пользователя
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser && existingUser.id !== userId) {
-        throw new ApiErrorClass('Пользователь с таким именем уже существует', 400);
-      }
-      updateData.username = username;
-    }
-
-    if (email) {
-      // Проверяем, не занят ли этот email
-      const existingEmail = await storage.getUserByEmail(email);
-      if (existingEmail && existingEmail.id !== userId) {
-        throw new ApiErrorClass('Пользователь с таким email уже существует', 400);
-      }
-      updateData.email = email;
-    }
-
-    // Если обновляемых полей нет, возвращаем текущего пользователя
-    if (Object.keys(updateData).length === 0) {
-      return res.json(req.user);
-    }
-
-    // Обновляем пользователя
-    const updatedUser = await storage.updateUser(userId, updateData);
-    res.json(updatedUser);
-  });
-
-  /**
-   * Изменение пароля
-   */
-  static changePassword = asyncHandler(async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      throw new ApiErrorClass('Требуется аутентификация', 401);
-    }
-
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new ApiErrorClass('ID пользователя не найден', 400);
-    }
-
-    const { currentPassword, newPassword } = req.body;
-
-    // Проверяем текущий пароль
+  static updateUserRole = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id);
+    const { role } = req.body;
+    
+    // Проверяем, существует ли пользователь
     const user = await storage.getUser(userId);
     if (!user) {
       throw new ApiErrorClass('Пользователь не найден', 404);
     }
-
-    const isValid = await comparePasswords(currentPassword, user.password);
-    if (!isValid) {
-      throw new ApiErrorClass('Текущий пароль неверен', 400);
+    
+    // Проверяем, что текущий пользователь не меняет свою роль (для избежания случая, когда владелец лишает себя прав)
+    if (req.user && req.user.id === userId && req.user.role === UserRole.OWNER && role !== UserRole.OWNER) {
+      throw new ApiErrorClass('Нельзя понизить собственную роль владельца', 403);
     }
+    
+    // Обновляем роль пользователя
+    const [updatedUser] = await db
+      .update(users)
+      .set({ role })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      role: updatedUser.role,
+      email: updatedUser.email
+    });
+  });
 
-    // Хешируем новый пароль
-    const hashedPassword = await hashPassword(newPassword);
+  /**
+   * Назначение группы пользователю (для администраторов)
+   */
+  static assignGroupToUser = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, groupId } = req.body;
+    
+    // Проверяем, существует ли пользователь
+    const user = await storage.getUser(userId);
+    if (!user) {
+      throw new ApiErrorClass('Пользователь не найден', 404);
+    }
+    
+    // Проверяем, существует ли группа
+    const group = await storage.getGroup(groupId);
+    if (!group) {
+      throw new ApiErrorClass('Группа не найдена', 404);
+    }
+    
+    // Проверяем, есть ли уже такая связь
+    const existingRelation = await db
+      .select()
+      .from(userGroups)
+      .where(
+        and(
+          eq(userGroups.userId, userId),
+          eq(userGroups.groupId, groupId)
+        )
+      );
+    
+    if (existingRelation.length > 0) {
+      return res.json(existingRelation[0]);
+    }
+    
+    // Создаем новую связь
+    const [newRelation] = await db
+      .insert(userGroups)
+      .values({
+        userId,
+        groupId
+      })
+      .returning();
+    
+    res.status(201).json(newRelation);
+  });
 
-    // Обновляем пароль
-    await storage.updateUser(userId, { password: hashedPassword });
+  /**
+   * Удаление группы у пользователя
+   */
+  static removeGroupFromUser = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const groupId = parseInt(req.params.groupId);
+    
+    // Проверяем, существует ли пользователь
+    const user = await storage.getUser(userId);
+    if (!user) {
+      throw new ApiErrorClass('Пользователь не найден', 404);
+    }
+    
+    // Проверяем, существует ли группа
+    const group = await storage.getGroup(groupId);
+    if (!group) {
+      throw new ApiErrorClass('Группа не найдена', 404);
+    }
+    
+    // Удаляем связь
+    const deleted = await db
+      .delete(userGroups)
+      .where(
+        and(
+          eq(userGroups.userId, userId),
+          eq(userGroups.groupId, groupId)
+        )
+      )
+      .returning();
+    
+    if (deleted.length === 0) {
+      throw new ApiErrorClass('Связь не найдена', 404);
+    }
+    
+    res.json({ success: true, message: 'Группа успешно отвязана от пользователя' });
+  });
 
-    res.json({ message: 'Пароль успешно изменен' });
+  /**
+   * Получение групп, доступных пользователю
+   */
+  static getUserGroups = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id);
+    
+    // Проверяем, существует ли пользователь
+    const user = await storage.getUser(userId);
+    if (!user) {
+      throw new ApiErrorClass('Пользователь не найден', 404);
+    }
+    
+    // Если пользователь владелец, получаем все группы
+    if (user.role === UserRole.OWNER) {
+      const allGroups = await storage.getGroups();
+      return res.json(allGroups);
+    }
+    
+    // Для администратора получаем назначенные группы
+    if (user.role === UserRole.ADMIN) {
+      // Получаем связи пользователя с группами
+      const userGroupRelations = await db
+        .select()
+        .from(userGroups)
+        .where(eq(userGroups.userId, userId));
+      
+      // Если нет связей, возвращаем пустой массив
+      if (userGroupRelations.length === 0) {
+        return res.json([]);
+      }
+      
+      // Получаем группы по их ID
+      const groupIds = userGroupRelations.map(relation => relation.groupId);
+      const groups = await Promise.all(
+        groupIds.map(groupId => storage.getGroup(groupId))
+      );
+      
+      return res.json(groups.filter(Boolean));
+    }
+    
+    // Для тренера получаем только его группы
+    if (user.role === UserRole.TRAINER) {
+      const trainerGroups = await storage.getGroups();
+      const filterGroups = trainerGroups.filter(group => group.trainer === userId);
+      return res.json(filterGroups);
+    }
+    
+    // По умолчанию возвращаем пустой массив
+    res.json([]);
   });
 }

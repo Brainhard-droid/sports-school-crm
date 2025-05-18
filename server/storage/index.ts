@@ -10,6 +10,7 @@ import { GroupStorage } from './GroupStorage';
 import { StudentGroupStorage } from './StudentGroupStorage';
 import { AttendanceStorage } from './AttendanceStorage';
 import { DateCommentStorage } from './DateCommentStorage';
+import { UserGroupStorage } from './UserGroupStorage';
 
 /**
  * Класс для объединения всех хранилищ

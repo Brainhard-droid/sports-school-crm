@@ -1,92 +1,131 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodError, ZodSchema } from 'zod';
+import { z } from 'zod';
+import { ApiErrorClass } from './error';
+
+type ValidationSchema = {
+  body?: z.ZodTypeAny;
+  params?: z.ZodTypeAny;
+  query?: z.ZodTypeAny;
+};
 
 /**
- * Middleware для валидации тела запроса с использованием схемы Zod
- * 
- * @param schema Схема валидации
- * @returns Middleware функция
+ * Middleware для валидации запросов с использованием Zod
+ * @param schema Схемы валидации для разных частей запроса
  */
-export function validateBody<T>(schema: ZodSchema<T>) {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validateRequest = (schema: ValidationSchema) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const validated = schema.parse(req.body);
-      req.body = validated;
+      // Валидация тела запроса
+      if (schema.body) {
+        req.body = schema.body.parse(req.body);
+      }
+
+      // Валидация параметров URL
+      if (schema.params) {
+        req.params = schema.params.parse(req.params);
+      }
+
+      // Валидация query-параметров
+      if (schema.query) {
+        req.query = schema.query.parse(req.query);
+      }
+
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errors = error.errors.map(e => ({
-          path: e.path.join('.'),
-          message: e.message
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.errors.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message
         }));
         
         return res.status(400).json({
-          error: 'Validation Error',
-          details: errors
+          message: 'Ошибка валидации данных',
+          errors: formattedErrors
         });
       }
       
-      next(error);
+      next(new ApiErrorClass('Ошибка валидации', 400));
     }
   };
-}
+};
 
 /**
- * Middleware для валидации параметров запроса с использованием схемы Zod
- * 
- * @param schema Схема валидации
- * @returns Middleware функция
+ * Middleware для валидации тела запроса
+ * @param schema Zod схема для валидации
  */
-export function validateParams<T>(schema: ZodSchema<T>) {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validateBody = (schema: z.ZodTypeAny) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const validated = schema.parse(req.params);
-      req.params = validated as any;
+      req.body = schema.parse(req.body);
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errors = error.errors.map(e => ({
-          path: e.path.join('.'),
-          message: e.message
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.errors.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message
         }));
         
         return res.status(400).json({
-          error: 'Validation Error',
-          details: errors
+          message: 'Ошибка валидации тела запроса',
+          errors: formattedErrors
         });
       }
       
-      next(error);
+      next(new ApiErrorClass('Ошибка валидации', 400));
     }
   };
-}
+};
 
 /**
- * Middleware для валидации query-параметров с использованием схемы Zod
- * 
- * @param schema Схема валидации
- * @returns Middleware функция
+ * Middleware для валидации параметров URL
+ * @param schema Zod схема для валидации
  */
-export function validateQuery<T>(schema: ZodSchema<T>) {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validateParams = (schema: z.ZodTypeAny) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const validated = schema.parse(req.query);
-      req.query = validated as any;
+      req.params = schema.parse(req.params);
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errors = error.errors.map(e => ({
-          path: e.path.join('.'),
-          message: e.message
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.errors.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message
         }));
         
         return res.status(400).json({
-          error: 'Validation Error',
-          details: errors
+          message: 'Ошибка валидации параметров URL',
+          errors: formattedErrors
         });
       }
       
-      next(error);
+      next(new ApiErrorClass('Ошибка валидации', 400));
     }
   };
-}
+};
+
+/**
+ * Middleware для валидации query-параметров
+ * @param schema Zod схема для валидации
+ */
+export const validateQuery = (schema: z.ZodTypeAny) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      req.query = schema.parse(req.query);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.errors.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message
+        }));
+        
+        return res.status(400).json({
+          message: 'Ошибка валидации query-параметров',
+          errors: formattedErrors
+        });
+      }
+      
+      next(new ApiErrorClass('Ошибка валидации', 400));
+    }
+  };
+};

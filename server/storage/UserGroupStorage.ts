@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { InsertUser, User, UserGroup, userGroups, users, groups, Group } from '@shared/schema';
+import { studentGroups } from '@shared/schema';
 import { BaseStorage } from './BaseStorage';
 
 /**
@@ -69,8 +70,8 @@ export class UserGroupStorage extends BaseStorage {
     // Получаем связи студента с группами
     const studentGroups = await db
       .select()
-      .from(db.schema.studentGroups)
-      .where(eq(db.schema.studentGroups.studentId, studentId));
+      .from(studentGroups)
+      .where(eq(studentGroups.studentId, studentId));
     
     if (studentGroups.length === 0) {
       return [];
