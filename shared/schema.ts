@@ -2,15 +2,32 @@ import { pgTable, text, serial, integer, boolean, date, timestamp, time } from "
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Определение ролей пользователей
+export const UserRole = {
+  OWNER: "owner",    // Владелец системы - полный доступ ко всему
+  ADMIN: "admin",    // Администратор - доступ к назначенным группам
+  TRAINER: "trainer" // Тренер - доступ только к своим группам
+} as const;
+
+export type UserRoleType = typeof UserRole[keyof typeof UserRole];
+
 // Таблицы
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull(),
+  role: text("role").notNull().default(UserRole.TRAINER), // По умолчанию - тренер
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   email: text("email").notNull(),
+});
+
+// Таблица связей администраторов с группами
+export const userGroups = pgTable("user_groups", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), // ID пользователя (администратора)
+  groupId: integer("group_id").notNull(), // ID группы, к которой у админа есть доступ
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const students = pgTable("students", {
@@ -145,6 +162,12 @@ export type Payment = typeof payments.$inferSelect;
 export type StudentGroup = typeof studentGroups.$inferSelect;
 export type DateComment = typeof dateComments.$inferSelect;
 export type BaseStudent = typeof students.$inferSelect;
+export type UserGroup = typeof userGroups.$inferSelect;
+
+// Расширенный тип пользователя с информацией о доступных группах
+export type ExtendedUser = User & {
+  assignedGroups?: Group[]; // Группы, к которым пользователь имеет доступ
+};
 export type Student = BaseStudent & {
   groups?: {
     id: number;
