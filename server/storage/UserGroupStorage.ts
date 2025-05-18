@@ -75,19 +75,19 @@ export class UserGroupStorage extends BaseStorage {
    */
   async getGroupsByStudentId(studentId: number): Promise<Group[]> {
     // Получаем связи студента с группами
-    const studentGroups = await db
+    const studentGroupRelations = await db
       .select()
-      .from(studentGroups)
-      .where(eq(studentGroups.studentId, studentId));
+      .from(studentGroupsTable)
+      .where(eq(studentGroupsTable.studentId, studentId));
     
-    if (studentGroups.length === 0) {
+    if (studentGroupRelations.length === 0) {
       return [];
     }
     
     // Получаем данные групп по их ID
-    const groupIds = studentGroups.map(relation => relation.groupId);
+    const groupIds = studentGroupRelations.map((relation: {groupId: number}) => relation.groupId);
     const groupsData = await Promise.all(
-      groupIds.map(async (groupId) => {
+      groupIds.map(async (groupId: number) => {
         const [group] = await db
           .select()
           .from(groups)

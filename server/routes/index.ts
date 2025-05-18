@@ -13,8 +13,9 @@ const router = Router();
 router.use('/branches', branchRoutes);
 router.use('/sections', sectionRoutes);
 router.use('/branch-sections', branchSectionRoutes);
-// Временно отключаем маршруты пользователей до исправления проблем
-// router.use('/users', userRoutes);
+// Включаем маршруты для управления пользователями
+import userRoutes from './userRoutes';
+router.use('/users', userRoutes);
 router.use('/trial-requests', trialRequestRoutes);
 router.use('/students', studentRoutes);
 router.use('/attendance', attendanceRoutes);

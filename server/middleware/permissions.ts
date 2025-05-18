@@ -96,8 +96,11 @@ export const populateUserPermissions = async (req: Request, _res: Response, next
     } else if (isTrainer) {
       // Тренер имеет доступ только к своим группам
       const allGroups = await storage.getGroups();
-      const trainerGroups = allGroups.filter(group => group.trainer === req.user.id);
-      assignedGroupIds = trainerGroups.map(group => group.id);
+      // Проверяем, что req.user существует
+      if (req.user && req.user.id) {
+        const trainerGroups = allGroups.filter(group => group.trainer === req.user!.id);
+        assignedGroupIds = trainerGroups.map(group => group.id);
+      }
     }
     
     req.userPermissions = {
