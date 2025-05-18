@@ -16,6 +16,15 @@ export function usePermissions() {
   const isAdmin = !!user && (user.role === UserRole.ADMIN || user.role === UserRole.OWNER);
   const isTrainer = !!user && (user.role === UserRole.TRAINER || user.role === UserRole.ADMIN || user.role === UserRole.OWNER);
   
+  // Добавляем логирование для отладки
+  console.log("usePermissions:", { 
+    user, 
+    isAuthenticated, 
+    isOwner, 
+    isAdmin, 
+    isTrainer
+  });
+  
   /**
    * Проверяет наличие доступа к действию
    * @param requiredRole Минимальная требуемая роль
