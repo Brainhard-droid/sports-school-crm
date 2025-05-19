@@ -6,8 +6,7 @@ import { z } from "zod";
 export const UserRole = {
   OWNER: "owner",    // Владелец системы - полный доступ ко всему
   ADMIN: "admin",    // Администратор - доступ к назначенным группам
-  TRAINER: "trainer", // Тренер - доступ только к своим группам
-  EMPLOYEE: "employee" // Сотрудник - ограниченный доступ
+  TRAINER: "trainer" // Тренер - доступ только к своим группам
 } as const;
 
 export type UserRoleType = typeof UserRole[keyof typeof UserRole];
