@@ -387,25 +387,89 @@ export async function sendTrialRequestConfirmation(
 
 /**
  * Отправляет данные для входа новому пользователю
+ * Улучшенная версия с текстовым вариантом письма для максимальной доставляемости
  */
 export async function sendUserCredentialsEmail(
   email: string,
   username: string, 
   password: string
 ): Promise<boolean> {
-  return sendEmail({
-    to: email,
-    subject: "Данные для входа в систему Sports School CRM",
-    html: `
-<h1>Добро пожаловать в Sports School CRM!</h1>
-<p>Для вас был создан аккаунт в системе управления спортивной школой.</p>
-<p>Ваши данные для входа:</p>
-<ul>
-  <li><strong>Логин:</strong> ${username}</li>
-  <li><strong>Пароль:</strong> ${password}</li>
-</ul>
-<p>Рекомендуем сменить пароль после первого входа в систему.</p>
-<p>С уважением,<br>Команда Sports School CRM</p>
-    `,
-  });
+  // Простой текстовый вариант письма для клиентов без поддержки HTML
+  const textContent = `
+Добро пожаловать в Sports School CRM!
+
+Для вас был создан аккаунт в системе управления спортивной школой.
+
+Ваши данные для входа:
+- Логин: ${username}
+- Пароль: ${password}
+
+Рекомендуем сменить пароль после первого входа в систему.
+
+С уважением,
+Команда Sports School CRM
+  `;
+
+  // HTML-вариант письма для современных почтовых клиентов
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Данные для входа в систему Sports School CRM</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 5px; padding: 20px; }
+    h1 { color: #2c3e50; font-size: 24px; margin-top: 0; }
+    ul { padding-left: 20px; }
+    .credentials { background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    .footer { margin-top: 20px; font-size: 14px; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Добро пожаловать в Sports School CRM!</h1>
+    <p>Для вас был создан аккаунт в системе управления спортивной школой.</p>
+    
+    <div class="credentials">
+      <p><strong>Ваши данные для входа:</strong></p>
+      <ul>
+        <li><strong>Логин:</strong> ${username}</li>
+        <li><strong>Пароль:</strong> ${password}</li>
+      </ul>
+    </div>
+    
+    <p>Рекомендуем сменить пароль после первого входа в систему.</p>
+    
+    <div class="footer">
+      <p>С уважением,<br>Команда Sports School CRM</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  // Отправляем через централизованный сервис с улучшенной обработкой ошибок
+  try {
+    console.log(`Отправка данных для входа пользователю: ${email}`);
+    
+    const result = await sendEmail({
+      to: email,
+      subject: "Данные для входа в систему Sports School CRM",
+      text: textContent,  // Добавляем текстовую версию для лучшей доставляемости
+      html: htmlContent,
+    });
+    
+    if (result) {
+      console.log(`✓ Данные для входа успешно отправлены на ${email}`);
+    } else {
+      console.error(`✗ Не удалось отправить данные для входа на ${email}`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`Ошибка при отправке данных для входа: ${error}`);
+    return false;
+  }
 }
