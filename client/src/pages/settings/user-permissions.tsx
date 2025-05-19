@@ -149,6 +149,7 @@ const CreateUserForm = ({ onClose }: { onClose: () => void }) => {
                   <SelectItem value={UserRole.OWNER}>{t('roles.owner')}</SelectItem>
                   <SelectItem value={UserRole.ADMIN}>{t('roles.admin')}</SelectItem>
                   <SelectItem value={UserRole.TRAINER}>{t('roles.trainer')}</SelectItem>
+                  <SelectItem value={UserRole.EMPLOYEE}>{t('roles.employee')}</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
@@ -324,6 +325,14 @@ const UserPermissionsPage = () => {
                           onClick={() => handleRoleChange(user.id, UserRole.TRAINER)}
                         >
                           {t('roles.trainer')}
+                        </Button>
+                      )}
+                      {user.role !== UserRole.EMPLOYEE && (
+                        <Button 
+                          size="sm"
+                          onClick={() => handleRoleChange(user.id, UserRole.EMPLOYEE)}
+                        >
+                          {t('roles.employee')}
                         </Button>
                       )}
 
