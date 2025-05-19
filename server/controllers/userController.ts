@@ -125,10 +125,10 @@ export class UserController {
   });
 
   /**
-   * Назначение группы пользователю (для администраторов)
+   * Назначение группы пользователю с указанным типом доступа
    */
   static assignGroupToUser = asyncHandler(async (req: Request, res: Response) => {
-    const { userId, groupId } = req.body;
+    const { userId, groupId, accessType = 'view' } = req.body;
     
     // Проверяем, существует ли пользователь
     const user = await storage.getUser(userId);
@@ -154,15 +154,26 @@ export class UserController {
       );
     
     if (existingRelation.length > 0) {
+      // Обновляем тип доступа, если он отличается
+      if (existingRelation[0].accessType !== accessType) {
+        const [updatedRelation] = await db
+          .update(userGroups)
+          .set({ accessType })
+          .where(eq(userGroups.id, existingRelation[0].id))
+          .returning();
+        
+        return res.json(updatedRelation);
+      }
       return res.json(existingRelation[0]);
     }
     
-    // Создаем новую связь
+    // Создаем новую связь с указанным типом доступа
     const [newRelation] = await db
       .insert(userGroups)
       .values({
         userId,
-        groupId
+        groupId,
+        accessType
       })
       .returning();
     
@@ -218,14 +229,14 @@ export class UserController {
       throw new ApiErrorClass('Пользователь не найден', 404);
     }
     
-    // Если пользователь владелец, получаем все группы
-    if (user.role === UserRole.OWNER) {
+    // Если пользователь владелец или старший администратор, получаем все группы
+    if (user.role === UserRole.OWNER || user.role === UserRole.SENIOR_ADMIN) {
       const allGroups = await storage.getGroups();
       return res.json(allGroups);
     }
     
-    // Для администратора получаем назначенные группы
-    if (user.role === UserRole.ADMIN) {
+    // Для администратора или тренера получаем назначенные группы
+    if (user.role === UserRole.ADMIN || user.role === UserRole.TRAINER) {
       // Получаем связи пользователя с группами
       const userGroupRelations = await db
         .select()
@@ -237,20 +248,23 @@ export class UserController {
         return res.json([]);
       }
       
-      // Получаем группы по их ID
+      // Получаем группы по их ID и добавляем информацию о типе доступа
       const groupIds = userGroupRelations.map(relation => relation.groupId);
       const groups = await Promise.all(
-        groupIds.map(groupId => storage.getGroup(groupId))
+        groupIds.map(async (groupId) => {
+          const group = await storage.getGroup(groupId);
+          if (!group) return null;
+          
+          // Находим соответствующую связь для получения типа доступа
+          const relation = userGroupRelations.find(r => r.groupId === groupId);
+          return {
+            ...group,
+            accessType: relation ? relation.accessType : 'view'
+          };
+        })
       );
       
       return res.json(groups.filter(Boolean));
-    }
-    
-    // Для тренера получаем только его группы
-    if (user.role === UserRole.TRAINER) {
-      const trainerGroups = await storage.getGroups();
-      const filterGroups = trainerGroups.filter(group => group.trainer === userId);
-      return res.json(filterGroups);
     }
     
     // По умолчанию возвращаем пустой массив

@@ -8,6 +8,7 @@ import { User, UserRole } from '@shared/schema';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { UserGroupAccessForm } from './components/UserGroupAccessForm';
 
 // Импорт компонентов
 import {
@@ -177,6 +178,7 @@ const UserPermissionsPage = () => {
   const { isOwner } = usePermissions();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   
   // Получение всех пользователей
   const { data: users = [], isLoading } = useQuery<User[]>({
@@ -293,80 +295,101 @@ const UserPermissionsPage = () => {
           ) : (
             <div className="space-y-4">
               {users.map((user) => (
-                <div key={user.id} className="p-4 border rounded-md flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{user.username}</div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">
-                      {t(`roles.${user.role}`)}
-                    </Badge>
-                    <div className="flex gap-2">
-                      {user.role !== UserRole.OWNER && (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleRoleChange(user.id, UserRole.OWNER)}
-                        >
-                          {t('roles.owner')}
-                        </Button>
-                      )}
-                      {user.role !== UserRole.ADMIN && (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleRoleChange(user.id, UserRole.ADMIN)}
-                        >
-                          {t('roles.admin')}
-                        </Button>
-                      )}
-                      {user.role !== UserRole.TRAINER && (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleRoleChange(user.id, UserRole.TRAINER)}
-                        >
-                          {t('roles.trainer')}
-                        </Button>
-                      )}
-                      {user.role !== UserRole.SENIOR_ADMIN && (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleRoleChange(user.id, UserRole.SENIOR_ADMIN)}
-                        >
-                          {t('roles.senior_admin')}
-                        </Button>
-                      )}
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                <div key={user.id} className="p-4 border rounded-md">
+                  <div className="flex justify-between items-center mb-2">
+                    <div>
+                      <div className="font-medium">{user.username}</div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">
+                        {t(`roles.${user.role}`)}
+                      </Badge>
+                      <div className="flex gap-2">
+                        {user.role !== UserRole.OWNER && (
                           <Button 
-                            variant="destructive" 
                             size="sm"
-                            onClick={() => setUserToDelete(user)}
-                            disabled={user.role === UserRole.OWNER && users.filter(u => u.role === UserRole.OWNER).length === 1}
+                            onClick={() => handleRoleChange(user.id, UserRole.OWNER)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {t('roles.owner')}
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>{t('settings.users.deleteUser')}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {t('settings.users.deleteUserConfirm', { username: userToDelete?.username })}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDeleteUser}
-                              className="bg-red-600 hover:bg-red-700"
+                        )}
+                        {user.role !== UserRole.SENIOR_ADMIN && (
+                          <Button 
+                            size="sm"
+                            onClick={() => handleRoleChange(user.id, UserRole.SENIOR_ADMIN)}
+                          >
+                            {t('roles.senior_admin')}
+                          </Button>
+                        )}
+                        {user.role !== UserRole.ADMIN && (
+                          <Button 
+                            size="sm"
+                            onClick={() => handleRoleChange(user.id, UserRole.ADMIN)}
+                          >
+                            {t('roles.admin')}
+                          </Button>
+                        )}
+                        {user.role !== UserRole.TRAINER && (
+                          <Button 
+                            size="sm"
+                            onClick={() => handleRoleChange(user.id, UserRole.TRAINER)}
+                          >
+                            {t('roles.trainer')}
+                          </Button>
+                        )}
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => setUserToDelete(user)}
+                              disabled={user.role === UserRole.OWNER && users.filter(u => u.role === UserRole.OWNER).length === 1}
                             >
-                              {t('delete')}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('settings.users.deleteUser')}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t('settings.users.deleteUserConfirm', { username: userToDelete?.username })}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDeleteUser}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                {t('delete')}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Кнопка управления группами */}
+                  {(user.role === UserRole.ADMIN || user.role === UserRole.TRAINER) && (
+                    <div className="mt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setSelectedUserId(selectedUserId === user.id ? null : user.id)}
+                        className="text-xs"
+                      >
+                        {selectedUserId === user.id ? t('settings.users.hideGroupSettings') : t('settings.users.manageGroupAccess')}
+                      </Button>
+                      
+                      {/* Форма назначения доступа к группам */}
+                      {selectedUserId === user.id && (
+                        <UserGroupAccessForm userId={user.id} />
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
