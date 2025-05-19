@@ -90,50 +90,16 @@ class SendGridProvider implements EmailProvider {
   
   async send(params: EmailSendParams): Promise<EmailSendResult> {
     try {
-      // Создаем подробный объект для отправки через SendGrid
-      const mailOptions = {
+      await this.client.send({
         to: params.to,
         from: params.from,
         subject: params.subject,
         text: params.text || '',
         html: params.html || '',
-        // Добавляем свойства для повышения доставляемости
-        mailSettings: {
-          sandboxMode: {
-            enable: false // Выключаем режим sandbox
-          }
-        },
-        trackingSettings: {
-          clickTracking: {
-            enable: false // Отключаем отслеживание кликов для повышения доставляемости
-          },
-          openTracking: {
-            enable: false // Отключаем отслеживание открытий для повышения доставляемости
-          }
-        },
-        // Категории для лучшей аналитики
-        categories: ['important', 'sports-school-crm'],
-        // Флаг для байпаса спам-фильтров для важных транзакционных сообщений
-        isTransactional: true
-      };
+      });
       
-      // Добавляем специфическую обработку для mail.ru и других российских почтовых сервисов
-      if (params.to.endsWith('@mail.ru') || 
-          params.to.endsWith('@inbox.ru') || 
-          params.to.endsWith('@list.ru') ||
-          params.to.endsWith('@bk.ru') || 
-          params.to.endsWith('@yandex.ru')) {
-        console.log(`Обнаружен российский почтовый сервис: ${params.to}, применяем специальные настройки доставки`);
-        // Устанавливаем высокий приоритет для российских почтовых сервисов
-        Object.assign(mailOptions, {
-          priority: 'high'
-        });
-      }
-      
-      await this.client.send(mailOptions);
       return { success: true };
     } catch (error) {
-      console.error(`SendGrid ошибка при отправке на ${params.to}:`, error);
       return { success: false, error: error as Error };
     }
   }
@@ -161,23 +127,21 @@ class ConsoleProvider implements EmailProvider {
 // Инициализация провайдеров
 const emailProviders: EmailProvider[] = [];
 
-// Добавляем SendGrid первым (если есть ключ API), так как он обычно имеет лучшую доставляемость в российские почтовые сервисы
-if (process.env.SENDGRID_API_KEY) {
-  emailProviders.push(new SendGridProvider(process.env.SENDGRID_API_KEY));
-  console.log("SendGrid активирован как приоритетный провайдер для отправки писем");
-} else {
-  console.warn("SENDGRID_API_KEY не установлен, функциональность SendGrid будет отключена");
-}
-
-// Добавляем Resend в качестве запасного варианта
+// Добавляем Resend, если есть ключ API
 if (process.env.RESEND_API_KEY) {
   emailProviders.push(new ResendProvider(process.env.RESEND_API_KEY));
-  console.log("Resend активирован как вторичный провайдер для отправки писем");
 } else {
   console.warn("RESEND_API_KEY не установлен, функциональность Resend будет отключена");
 }
 
-// Всегда добавляем консольный провайдер как крайний запасной вариант
+// Добавляем SendGrid, если есть ключ API
+if (process.env.SENDGRID_API_KEY) {
+  emailProviders.push(new SendGridProvider(process.env.SENDGRID_API_KEY));
+} else {
+  console.warn("SENDGRID_API_KEY не установлен, функциональность SendGrid будет отключена");
+}
+
+// Всегда добавляем консольный провайдер как запасной вариант
 emailProviders.push(new ConsoleProvider());
 
 /**
