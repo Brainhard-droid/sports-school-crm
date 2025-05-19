@@ -61,9 +61,9 @@
   },
   "roles": {
     "owner": "Владелец",
+    "senior_admin": "Старший администратор",
     "admin": "Администратор",
-    "trainer": "Тренер",
-    "employee": "Сотрудник"
+    "trainer": "Тренер"
   },
   "permissions": {
     "accessDenied": "Доступ запрещен",

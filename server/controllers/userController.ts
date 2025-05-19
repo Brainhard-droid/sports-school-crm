@@ -21,17 +21,18 @@ const generatePassword = (length = 10) => {
 
 // Схемы валидации
 const updateRoleSchema = z.object({
-  role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER, UserRole.EMPLOYEE])
+  role: z.enum([UserRole.OWNER, UserRole.SENIOR_ADMIN, UserRole.ADMIN, UserRole.TRAINER])
 });
 
 const assignGroupSchema = z.object({
   userId: z.number().int().positive(),
-  groupId: z.number().int().positive()
+  groupId: z.number().int().positive(),
+  accessType: z.enum(['view', 'edit', 'manage']).default('view')
 });
 
 const createUserSchema = z.object({
   email: z.string().email('Введите корректный email адрес'),
-  role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER, UserRole.EMPLOYEE]).default(UserRole.TRAINER)
+  role: z.enum([UserRole.OWNER, UserRole.SENIOR_ADMIN, UserRole.ADMIN, UserRole.TRAINER]).default(UserRole.TRAINER)
 });
 
 /**

@@ -4,10 +4,10 @@ import { z } from "zod";
 
 // Определение ролей пользователей
 export const UserRole = {
-  OWNER: "owner",    // Владелец системы - полный доступ ко всему
-  ADMIN: "admin",    // Администратор - доступ к назначенным группам
-  TRAINER: "trainer", // Тренер - доступ только к своим группам
-  EMPLOYEE: "employee" // Сотрудник - ограниченный доступ к заявкам/лидам
+  OWNER: "owner",             // Владелец системы - полный доступ ко всему
+  SENIOR_ADMIN: "senior_admin", // Старший администратор - доступ ко всем группам и воронке продаж
+  ADMIN: "admin",             // Администратор - доступ к назначенным группам
+  TRAINER: "trainer"          // Тренер - доступ только к своим группам
 } as const;
 
 export type UserRoleType = typeof UserRole[keyof typeof UserRole];
@@ -23,11 +23,12 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
 });
 
-// Таблица связей администраторов с группами
+// Таблица связей пользователей с группами (для администраторов и тренеров)
 export const userGroups = pgTable("user_groups", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(), // ID пользователя (администратора)
-  groupId: integer("group_id").notNull(), // ID группы, к которой у админа есть доступ
+  userId: integer("user_id").notNull(), // ID пользователя (администратора или тренера)
+  groupId: integer("group_id").notNull(), // ID группы, к которой у пользователя есть доступ
+  accessType: text("access_type").notNull().default("view"), // Тип доступа: view, edit, manage
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

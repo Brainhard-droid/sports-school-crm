@@ -70,7 +70,7 @@ const CreateUserForm = ({ onClose }: { onClose: () => void }) => {
   // Определяем схему формы
   const formSchema = z.object({
     email: z.string().email(t('validation.emailInvalid')),
-    role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER, UserRole.EMPLOYEE])
+    role: z.enum([UserRole.OWNER, UserRole.SENIOR_ADMIN, UserRole.ADMIN, UserRole.TRAINER])
   });
 
   // Инициализируем форму
@@ -147,9 +147,9 @@ const CreateUserForm = ({ onClose }: { onClose: () => void }) => {
                 </FormControl>
                 <SelectContent>
                   <SelectItem value={UserRole.OWNER}>{t('roles.owner')}</SelectItem>
+                  <SelectItem value={UserRole.SENIOR_ADMIN}>{t('roles.senior_admin')}</SelectItem>
                   <SelectItem value={UserRole.ADMIN}>{t('roles.admin')}</SelectItem>
                   <SelectItem value={UserRole.TRAINER}>{t('roles.trainer')}</SelectItem>
-                  <SelectItem value={UserRole.EMPLOYEE}>{t('roles.employee')}</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription>
