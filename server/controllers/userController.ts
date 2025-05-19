@@ -6,14 +6,8 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { users, userGroups } from '@shared/schema';
 import { db } from '../db';
-import crypto from 'crypto';
-import { MailService } from '@sendgrid/mail';
-
-// Настройка SendGrid
-const mailService = new MailService();
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-}
+import { sendUserCredentialsEmail } from '../services/email';
+import { hashPassword } from '../utils/security/password';
 
 // Функция для генерации случайного пароля
 const generatePassword = (length = 10) => {
@@ -23,32 +17,6 @@ const generatePassword = (length = 10) => {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return password;
-};
-
-// Функция для отправки email с данными для входа
-const sendCredentialsEmail = async (email: string, username: string, password: string) => {
-  try {
-    await mailService.send({
-      to: email,
-      from: 'no-reply@sportschool.com', // Замените на ваш подтвержденный email в SendGrid
-      subject: 'Данные для входа в систему Sports School CRM',
-      html: `
-        <h1>Добро пожаловать в Sports School CRM!</h1>
-        <p>Для вас был создан аккаунт в системе управления спортивной школой.</p>
-        <p>Ваши данные для входа:</p>
-        <ul>
-          <li><strong>Логин:</strong> ${username}</li>
-          <li><strong>Пароль:</strong> ${password}</li>
-        </ul>
-        <p>Рекомендуем сменить пароль после первого входа в систему.</p>
-        <p>С уважением,<br>Команда Sports School CRM</p>
-      `
-    });
-    return true;
-  } catch (error) {
-    console.error('Ошибка отправки email:', error);
-    return false;
-  }
 };
 
 // Схемы валидации

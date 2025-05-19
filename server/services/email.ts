@@ -6,89 +6,219 @@ import { formatDate } from "../utils/date";
 /**
  * Централизованный сервис для отправки электронных писем
  * Поддерживает несколько провайдеров: Resend и SendGrid
+ * Реализация соответствует принципам SOLID
  */
 
-// Настройка Resend
-let resend: Resend | null = null;
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
-} else {
-  console.warn("RESEND_API_KEY не установлен, функциональность Resend будет отключена");
+// Интерфейс для email-провайдера (соблюдение принципа инверсии зависимостей)
+interface EmailProvider {
+  send(params: EmailSendParams): Promise<EmailSendResult>;
+  getName(): string;
 }
 
-// Настройка SendGrid
-let mailService: MailService | null = null;
-if (process.env.SENDGRID_API_KEY) {
-  mailService = new MailService();
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-} else {
-  console.warn("SENDGRID_API_KEY не установлен, функциональность SendGrid будет отключена");
+// Параметры для отправки email
+interface EmailSendParams {
+  to: string;
+  from: string;
+  subject: string;
+  text?: string;
+  html?: string;
 }
 
-/**
- * Базовые параметры для отправки электронной почты
- */
-interface EmailParams {
+// Результат отправки email
+interface EmailSendResult {
+  success: boolean;
+  error?: Error;
+  id?: string;
+}
+
+// Базовые параметры для отправки электронной почты без поля from
+export interface EmailParams {
   to: string;
   subject: string;
   text?: string;
   html?: string;
 }
 
+// Получение адреса отправителя из переменной окружения или значения по умолчанию
+const FROM_EMAIL = process.env.EMAIL_FROM || 'no-reply@sportschool-crm.ru';
+
+// Реализация провайдера Resend
+class ResendProvider implements EmailProvider {
+  private client: Resend;
+  
+  constructor(apiKey: string) {
+    this.client = new Resend(apiKey);
+  }
+  
+  getName(): string {
+    return 'Resend';
+  }
+  
+  async send(params: EmailSendParams): Promise<EmailSendResult> {
+    try {
+      const data = await this.client.emails.send({
+        from: params.from,
+        to: params.to,
+        subject: params.subject,
+        html: params.html || params.text || '',
+      });
+      
+      // Обрабатываем результат и возвращаем унифицированный ответ
+      return { success: true, id: typeof data === 'object' && data !== null ? String(data.id || '') : '' };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  }
+}
+
+// Реализация провайдера SendGrid
+class SendGridProvider implements EmailProvider {
+  private client: MailService;
+  
+  constructor(apiKey: string) {
+    this.client = new MailService();
+    this.client.setApiKey(apiKey);
+  }
+  
+  getName(): string {
+    return 'SendGrid';
+  }
+  
+  async send(params: EmailSendParams): Promise<EmailSendResult> {
+    try {
+      await this.client.send({
+        to: params.to,
+        from: params.from,
+        subject: params.subject,
+        text: params.text || '',
+        html: params.html || '',
+      });
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  }
+}
+
+// Реализация провайдера для вывода в консоль
+class ConsoleProvider implements EmailProvider {
+  getName(): string {
+    return 'Console';
+  }
+  
+  async send(params: EmailSendParams): Promise<EmailSendResult> {
+    console.log('========= EMAIL START =========');
+    console.log('От:', params.from);
+    console.log('Кому:', params.to);
+    console.log('Тема:', params.subject);
+    console.log('Текст:', params.text || '');
+    console.log('HTML:', params.html || '');
+    console.log('========= EMAIL END ===========');
+    
+    return { success: true };
+  }
+}
+
+// Инициализация провайдеров
+const emailProviders: EmailProvider[] = [];
+
+// Добавляем Resend, если есть ключ API
+if (process.env.RESEND_API_KEY) {
+  emailProviders.push(new ResendProvider(process.env.RESEND_API_KEY));
+} else {
+  console.warn("RESEND_API_KEY не установлен, функциональность Resend будет отключена");
+}
+
+// Добавляем SendGrid, если есть ключ API
+if (process.env.SENDGRID_API_KEY) {
+  emailProviders.push(new SendGridProvider(process.env.SENDGRID_API_KEY));
+} else {
+  console.warn("SENDGRID_API_KEY не установлен, функциональность SendGrid будет отключена");
+}
+
+// Всегда добавляем консольный провайдер как запасной вариант
+emailProviders.push(new ConsoleProvider());
+
 /**
- * Отправляет письмо используя доступный провайдер
- * Сначала пытается использовать Resend, затем SendGrid, и в случае неудачи выводит в консоль
+ * Сервис для отправки писем с механизмом повторных попыток через разные провайдеры
+ * Соблюдает принцип единственной ответственности (SRP) и принцип открытости/закрытости (OCP)
  */
-export async function sendEmail(params: EmailParams): Promise<boolean> {
-  try {
+class EmailService {
+  private readonly maxRetries: number = 2; // Максимальное количество попыток на одного провайдера
+  private readonly retryDelayMs: number = 1000; // Задержка между попытками в миллисекундах
+  
+  /**
+   * Отправляет email используя доступные провайдеры с механизмом повторных попыток
+   */
+  async send(params: EmailParams): Promise<boolean> {
     console.log('Попытка отправки email:');
     console.log('Кому:', params.to);
     console.log('Тема:', params.subject);
-
-    // Пробуем отправить через Resend
-    if (resend) {
-      try {
-        const data = await resend.emails.send({
-          from: 'no-reply@sportschool-crm.ru',
-          to: params.to,
-          subject: params.subject,
-          html: params.html || params.text || '',
+    
+    // Проверка корректности email адреса
+    if (!this.isValidEmail(params.to)) {
+      console.error('Неверный адрес получателя:', params.to);
+      return false;
+    }
+    
+    // Перебираем всех провайдеров
+    for (const provider of emailProviders) {
+      let retryCount = 0;
+      
+      // Пробуем отправить с повторными попытками
+      while (retryCount < this.maxRetries) {
+        console.log(`Попытка #${retryCount + 1} через провайдера ${provider.getName()}`);
+        
+        const result = await provider.send({
+          ...params,
+          from: FROM_EMAIL,
         });
-        console.log('Email отправлен через Resend:', data);
-        return true;
-      } catch (resendError) {
-        console.error('Ошибка Resend:', resendError);
-        // Если Resend не сработал, пробуем SendGrid
+        
+        if (result.success) {
+          console.log(`Email успешно отправлен через ${provider.getName()}`);
+          return true;
+        }
+        
+        console.error(`Ошибка отправки через ${provider.getName()}:`, result.error);
+        
+        // Если это не последняя попытка, ждем перед повтором
+        if (retryCount < this.maxRetries - 1) {
+          await this.delay(this.retryDelayMs);
+        }
+        
+        retryCount++;
       }
     }
-
-    // Пробуем отправить через SendGrid
-    if (mailService) {
-      try {
-        await mailService.send({
-          to: params.to,
-          from: 'no-reply@sportschool-crm.ru',
-          subject: params.subject,
-          text: params.text || '',
-          html: params.html || '',
-        });
-        console.log('Email отправлен через SendGrid');
-        return true;
-      } catch (sendgridError) {
-        console.error('Ошибка SendGrid:', sendgridError);
-      }
-    }
-
-    // Если ни один провайдер не сработал, выводим в консоль
-    console.log('Не удалось отправить email через провайдеры, выводим содержимое:');
-    console.log('Кому:', params.to);
-    console.log('Тема:', params.subject);
-    console.log('HTML:', params.html);
-    return true; // Возвращаем true, чтобы процесс мог продолжиться
-  } catch (error) {
-    console.error('Ошибка отправки email:', error);
+    
+    console.error('Не удалось отправить email через все доступные провайдеры');
     return false;
   }
+  
+  /**
+   * Проверяет, является ли строка корректным email-адресом
+   */
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+  
+  /**
+   * Создает промис, который разрешается через указанное время
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Создаем экземпляр сервиса
+const emailService = new EmailService();
+
+/**
+ * Отправляет письмо через централизованный сервис
+ */
+export async function sendEmail(params: EmailParams): Promise<boolean> {
+  return emailService.send(params);
 }
 
 /**
@@ -132,8 +262,17 @@ export async function sendTrialAssignmentNotification(request: TrialRequest,
     ? formatDate(scheduledDate) 
     : 'Дата не назначена';
 
-  // Используем parentPhone как основной контакт
+  // Используем родительские контактные данные
+  // Примечание: в схеме нет поля parentEmail, поэтому логика должна быть адаптирована
   const contactInfo = request.parentPhone;
+  
+  // Проверяем, является ли номер телефона email-адресом
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
+  
+  // Если это не email, просто логируем информацию и продолжаем
+  if (!isEmail) {
+    console.warn('Контактные данные не содержат email. Уведомление будет залогировано в консоли.');
+  }
   
   return sendEmail({
     to: contactInfo,
@@ -187,8 +326,16 @@ export async function sendTrialRequestConfirmation(
         : trialRequest.desiredDate)
     : new Date();
 
-  // Используем parentPhone как основной контакт
+  // Используем родительские контактные данные
   const contactInfo = trialRequest.parentPhone;
+  
+  // Проверяем, является ли номер телефона email-адресом
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
+  
+  // Если это не email, просто логируем информацию и продолжаем
+  if (!isEmail) {
+    console.warn('Контактные данные не содержат email. Уведомление будет залогировано в консоли.');
+  }
   
   return sendEmail({
     to: contactInfo,
@@ -209,6 +356,31 @@ export async function sendTrialRequestConfirmation(
 
 <p>С уважением,<br>
 Команда Sports School</p>
+    `,
+  });
+}
+
+/**
+ * Отправляет данные для входа новому пользователю
+ */
+export async function sendUserCredentialsEmail(
+  email: string,
+  username: string, 
+  password: string
+): Promise<boolean> {
+  return sendEmail({
+    to: email,
+    subject: "Данные для входа в систему Sports School CRM",
+    html: `
+<h1>Добро пожаловать в Sports School CRM!</h1>
+<p>Для вас был создан аккаунт в системе управления спортивной школой.</p>
+<p>Ваши данные для входа:</p>
+<ul>
+  <li><strong>Логин:</strong> ${username}</li>
+  <li><strong>Пароль:</strong> ${password}</li>
+</ul>
+<p>Рекомендуем сменить пароль после первого входа в систему.</p>
+<p>С уважением,<br>Команда Sports School CRM</p>
     `,
   });
 }
