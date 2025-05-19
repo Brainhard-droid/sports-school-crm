@@ -56,15 +56,19 @@ class ResendProvider implements EmailProvider {
   
   async send(params: EmailSendParams): Promise<EmailSendResult> {
     try {
-      const data = await this.client.emails.send({
+      // Используем any, чтобы избежать проблем с типами
+      const data: any = await this.client.emails.send({
         from: params.from,
         to: params.to,
         subject: params.subject,
         html: params.html || params.text || '',
       });
       
-      // Обрабатываем результат и возвращаем унифицированный ответ
-      return { success: true, id: typeof data === 'object' && data !== null ? String(data.id || '') : '' };
+      // Возвращаем унифицированный ответ
+      return { 
+        success: true, 
+        id: data && data.id ? String(data.id) : ''
+      };
     } catch (error) {
       return { success: false, error: error as Error };
     }

@@ -7,7 +7,7 @@ import { eq, and } from 'drizzle-orm';
 import { users, userGroups } from '@shared/schema';
 import { db } from '../db';
 import { sendUserCredentialsEmail } from '../services/email';
-import { hashPassword } from '../utils/security/password';
+import { hashPassword } from '../auth';
 
 // Функция для генерации случайного пароля
 const generatePassword = (length = 10) => {
@@ -278,10 +278,8 @@ export class UserController {
     // Генерируем случайный пароль
     const plainPassword = generatePassword();
     
-    // Хешируем пароль для хранения в БД
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(plainPassword, salt, 1000, 64, 'sha512').toString('hex');
-    const password = `${hash}.${salt}`;
+    // Хешируем пароль для хранения в БД, используя централизованную функцию
+    const hashedPassword = await hashPassword(plainPassword);
     
     // Создаем нового пользователя
     const [newUser] = await db
@@ -290,12 +288,12 @@ export class UserController {
         username,
         email,
         role,
-        password
+        password: hashedPassword
       })
       .returning();
     
-    // Отправляем email с данными для входа
-    const emailSent = await sendCredentialsEmail(email, username, plainPassword);
+    // Отправляем email с данными для входа, используя централизованный сервис
+    const emailSent = await sendUserCredentialsEmail(email, username, plainPassword);
     
     res.status(201).json({
       id: newUser.id,
