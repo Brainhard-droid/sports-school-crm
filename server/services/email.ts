@@ -266,18 +266,28 @@ export async function sendTrialAssignmentNotification(request: TrialRequest,
     ? formatDate(scheduledDate) 
     : 'Дата не назначена';
 
-  // Используем родительские контактные данные
-  // Примечание: в схеме нет поля parentEmail, поэтому логика должна быть адаптирована
+  // Используем parentPhone как контактную информацию, проверим, является ли она email-адресом
   const contactInfo = request.parentPhone;
   
-  // Проверяем, является ли номер телефона email-адресом
+  // Проверяем, является ли контакт email-адресом
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
   
-  // Если это не email, просто логируем информацию и продолжаем
+  // Если это не email, используем консольный вывод
   if (!isEmail) {
-    console.warn('Контактные данные не содержат email. Уведомление будет залогировано в консоли.');
+    console.warn('Предоставленные контактные данные не являются email-адресом. Уведомление будет залогировано в консоли.');
+    
+    // Выводим содержимое в консоль вместо отправки email
+    console.log(`========= TRIAL ASSIGNMENT EMAIL =========`);
+    console.log(`To: ${contactInfo} (SMS шлюз или другой метод доставки)`);
+    console.log(`Subject: Назначено пробное занятие`);
+    console.log(`Body: Здравствуйте, ${request.parentName}! Мы назначили пробное занятие для ${request.childName}. Дата и время: ${formattedDate}. Секция: ${section.name}. Адрес: ${branch.address}`);
+    console.log(`=========================================`);
+    
+    // Возвращаем true, чтобы не блокировать процесс
+    return true;
   }
   
+  // Если это email, отправляем через email-сервис
   return sendEmail({
     to: contactInfo,
     subject: "Назначено пробное занятие",
@@ -330,17 +340,28 @@ export async function sendTrialRequestConfirmation(
         : trialRequest.desiredDate)
     : new Date();
 
-  // Используем родительские контактные данные
+  // Используем parentPhone как контактную информацию
   const contactInfo = trialRequest.parentPhone;
   
-  // Проверяем, является ли номер телефона email-адресом
+  // Проверяем, является ли контакт email-адресом
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo);
   
-  // Если это не email, просто логируем информацию и продолжаем
+  // Если это не email, выводим информацию в консоль
   if (!isEmail) {
-    console.warn('Контактные данные не содержат email. Уведомление будет залогировано в консоли.');
+    console.warn('Предоставленные контактные данные не являются email-адресом. Уведомление будет залогировано в консоли.');
+    
+    // Выводим содержимое в консоль вместо отправки email
+    console.log(`========= TRIAL REQUEST CONFIRMATION =========`);
+    console.log(`To: ${contactInfo} (SMS шлюз или другой метод доставки)`);
+    console.log(`Subject: Заявка на пробное занятие получена`);
+    console.log(`Body: Здравствуйте, ${trialRequest.parentName}! Мы получили вашу заявку на пробное занятие для ${trialRequest.childName}. Секция: ${section.name}. Филиал: ${branch.name} (${branch.address}). Желаемая дата: ${formatDate(desiredDate)}. Наш администратор свяжется с вами в ближайшее время.`);
+    console.log(`============================================`);
+    
+    // Возвращаем true, чтобы не блокировать процесс
+    return true;
   }
   
+  // Если это email, отправляем через email-сервис
   return sendEmail({
     to: contactInfo,
     subject: "Заявка на пробное занятие получена",
