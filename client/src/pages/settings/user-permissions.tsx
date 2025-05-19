@@ -70,7 +70,7 @@ const CreateUserForm = ({ onClose }: { onClose: () => void }) => {
   // Определяем схему формы
   const formSchema = z.object({
     email: z.string().email(t('validation.emailInvalid')),
-    role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER])
+    role: z.enum([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER, UserRole.EMPLOYEE])
   });
 
   // Инициализируем форму
