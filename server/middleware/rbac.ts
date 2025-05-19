@@ -17,6 +17,14 @@ const permissionMap: Record<string, Permission[]> = {
     'manageUsers', 'manageGroups',
     'viewSettings', 'editSettings'
   ],
+  [UserRole.SENIOR_ADMIN]: [
+    'viewStudents', 'editStudents',
+    'viewTrialRequests', 'editTrialRequests', 'createTrialRequests',
+    'viewPayments', 'createPayments',
+    'viewAttendance', 'editAttendance',
+    'manageUsers', 'manageGroups',
+    'viewSettings', 'editSettings'
+  ],
   [UserRole.ADMIN]: [
     'viewStudents', 'editStudents',
     'viewTrialRequests', 'editTrialRequests', 'createTrialRequests',
@@ -29,10 +37,6 @@ const permissionMap: Record<string, Permission[]> = {
     'viewStudents',
     'viewTrialRequests',
     'viewAttendance', 'editAttendance'
-  ],
-  [UserRole.EMPLOYEE]: [
-    'viewTrialRequests', 'createTrialRequests', 'editTrialRequests',
-    'viewStudents'
   ]
 };
 
@@ -82,7 +86,7 @@ export const requireRole = (roles: string[]) => {
 };
 
 // Готовые middleware для часто используемых проверок
-export const isEmployee = requireRole([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER, UserRole.EMPLOYEE]);
-export const isTrainer = requireRole([UserRole.OWNER, UserRole.ADMIN, UserRole.TRAINER]);
-export const isAdmin = requireRole([UserRole.OWNER, UserRole.ADMIN]);
+export const isTrainer = requireRole([UserRole.OWNER, UserRole.SENIOR_ADMIN, UserRole.ADMIN, UserRole.TRAINER]);
+export const isAdmin = requireRole([UserRole.OWNER, UserRole.SENIOR_ADMIN, UserRole.ADMIN]);
+export const isSeniorAdmin = requireRole([UserRole.OWNER, UserRole.SENIOR_ADMIN]);
 export const isOwner = requireRole([UserRole.OWNER]);

@@ -327,12 +327,12 @@ const UserPermissionsPage = () => {
                           {t('roles.trainer')}
                         </Button>
                       )}
-                      {user.role !== UserRole.EMPLOYEE && (
+                      {user.role !== UserRole.SENIOR_ADMIN && (
                         <Button 
                           size="sm"
-                          onClick={() => handleRoleChange(user.id, UserRole.EMPLOYEE)}
+                          onClick={() => handleRoleChange(user.id, UserRole.SENIOR_ADMIN)}
                         >
-                          {t('roles.employee')}
+                          {t('roles.senior_admin')}
                         </Button>
                       )}
 
